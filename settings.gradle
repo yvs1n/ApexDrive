@@ -1,0 +1,2 @@
+rootProject.name = "ApexDriveLauncher"
+include ':app'

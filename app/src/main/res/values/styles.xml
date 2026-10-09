@@ -1,0 +1,10 @@
+<resources>
+    <style name="Theme.ApexDrive" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/cockpit_surface_base</item>
+        <item name="android:statusBarColor">@color/cockpit_surface_panel</item>
+        <item name="android:navigationBarColor">@color/cockpit_surface_base</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:colorBackground">@color/cockpit_surface_base</item>
+    </style>
+</resources>

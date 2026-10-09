@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matte Automotive Base Surfaces -->
+    <color name="cockpit_surface_base">#0C0D10</color>
+    <color name="cockpit_surface_panel">#13151A</color>
+    <color name="cockpit_surface_elevated">#1A1D24</color>
+    <color name="cockpit_surface_border">#232730</color>
+    <color name="cockpit_surface_border_subtle">#1C2027</color>
+
+    <!-- Typography -->
+    <color name="cockpit_text_primary">#ECEEF2</color>
+    <color name="cockpit_text_secondary">#8B92A0</color>
+    <color name="cockpit_text_tertiary">#525866</color>
+
+    <!-- Gauges & Accents -->
+    <color name="accent_amber">#E5A93C</color> <!-- Default Warm Amber (Porsche/BMW) -->
+    <color name="accent_hyundai_blue">#3B82F6</color> <!-- Cobalt Racing Blue (Hyundai N-Line) -->
+    <color name="accent_sport_red">#EF4444</color> <!-- Crimson Sport -->
+    <color name="accent_emerald">#10B981</color> <!-- Emerald Green -->
+    <color name="accent_platinum">#E2E8F0</color> <!-- Platinum White -->
+
+    <!-- Status Colors -->
+    <color name="status_active">#22C55E</color>
+    <color name="status_inactive">#6B7280</color>
+</resources>

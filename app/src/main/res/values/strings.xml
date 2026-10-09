@@ -1,0 +1,26 @@
+<resources>
+    <string name="app_name">ApexDrive</string>
+    <string name="title_dash">Dash</string>
+    <string name="title_carplay">CarPlay</string>
+    <string name="title_maps">Maps</string>
+    <string name="title_audio">Audio</string>
+    <string name="title_apps">Apps</string>
+    <string name="title_setup">Setup</string>
+
+    <string name="carplay_headline">Apple CarPlay</string>
+    <string name="carplay_desc">Wireless projection session available over 5GHz Wi-Fi.</string>
+    <string name="btn_open_carplay">Open CarPlay</string>
+
+    <string name="bt_default_device">SantafemR</string>
+    <string name="bt_connected_profile">Handsfree + A2DP Audio Connected</string>
+    <string name="bt_disconnected_profile">No Device Connected</string>
+
+    <string name="telemetry_header">VEHICLE TELEMETRY</string>
+    <string name="default_speed">0</string>
+    <string name="unit_kmh">KM/H</string>
+    <string name="unit_mph">MPH</string>
+
+    <string name="media_now_playing">NOW PLAYING</string>
+    <string name="media_placeholder_song">No Media Playing</string>
+    <string name="media_placeholder_artist">Play audio from Spotify, Radio, or CarPlay</string>
+</resources>

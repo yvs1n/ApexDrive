@@ -1,0 +1,1802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>ApexDrive — Automotive Cockpit Interface (Apple HIG & Design Engineering)</title>
+  <style>
+    /* -------------------------------------------------------------
+       APPLE HIG & DESIGN-ENGINEERING DESIGN TOKENS
+       ------------------------------------------------------------- */
+    :root {
+      --surface-base: #0a0b0e;
+      --surface-panel: #12141a;
+      --surface-elevated: #1a1d26;
+      --surface-border: #232733;
+      --surface-border-subtle: #191c24;
+      
+      --text-primary: #f5f6f8;
+      --text-secondary: #8e95a5;
+      --text-tertiary: #565d6d;
+      
+      --accent: #e5a93c; /* Default: Warm Amber */
+      --accent-dim: rgba(229, 169, 60, 0.15);
+      
+      --apple-blue: #0a84ff;
+      --apple-green: #30d158;
+      --apple-red: #ff453a;
+      --apple-orange: #ff9f0a;
+      --apple-purple: #bf5af2;
+      --apple-gray: #8e8e93;
+
+      --dock-width: 76px;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-squircle: 14px;
+      
+      /* Apple Fluid Motion */
+      --spring-fast: 160ms cubic-bezier(0.16, 1, 0.3, 1);
+      --spring-smooth: 240ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    [data-theme="day"] {
+      --surface-base: #e5e7eb;
+      --surface-panel: #f3f4f6;
+      --surface-elevated: #ffffff;
+      --surface-border: #d1d5db;
+      --surface-border-subtle: #e5e7eb;
+      --text-primary: #111827;
+      --text-secondary: #4b5563;
+      --text-tertiary: #9ca3af;
+      --accent-dim: rgba(229, 169, 60, 0.2);
+    }
+
+    /* -------------------------------------------------------------
+       BASELINE RESETS & ERGONOMICS (SKILL §5.1)
+       ------------------------------------------------------------- */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      background: #050608;
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px 12px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    button {
+      touch-action: manipulation;
+      cursor: pointer;
+      font-family: inherit;
+      border: none;
+      outline: none;
+    }
+
+    /* -------------------------------------------------------------
+       HEAD UNIT VIEWPORT (16:9 CHASSIS)
+       ------------------------------------------------------------- */
+    .head-unit-viewport {
+      width: 1024px;
+      max-width: 96vw;
+      aspect-ratio: 16 / 9;
+      background: var(--surface-base);
+      border: 1px solid #1c2029;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    /* -------------------------------------------------------------
+       TOP COCKPIT BAR
+       ------------------------------------------------------------- */
+    .cockpit-header {
+      height: 38px;
+      padding: 0 18px;
+      background: var(--surface-panel);
+      border-bottom: 1px solid var(--surface-border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .header-group {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .header-time {
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: -0.01em;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--apple-green);
+    }
+
+    .status-dot.offline {
+      background: var(--text-tertiary);
+    }
+
+    /* -------------------------------------------------------------
+       COCKPIT BODY & LEFT DRIVER RAIL
+       ------------------------------------------------------------- */
+    .cockpit-body {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .driver-rail {
+      width: var(--dock-width);
+      background: var(--surface-panel);
+      border-right: 1px solid var(--surface-border-subtle);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 0;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .rail-btn {
+      width: 58px;
+      height: 52px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      transition: transform var(--spring-fast), background-color 140ms ease, color 140ms ease;
+    }
+
+    .rail-btn svg {
+      width: 22px;
+      height: 22px;
+      stroke-width: 2;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .rail-btn:hover {
+        background: var(--surface-elevated);
+        color: var(--text-primary);
+      }
+    }
+
+    .rail-btn:active {
+      transform: scale(0.94);
+    }
+
+    .rail-btn.active {
+      background: var(--surface-elevated);
+      color: var(--accent);
+      border-color: var(--surface-border);
+    }
+
+    .rail-spacer {
+      flex: 1;
+    }
+
+    /* -------------------------------------------------------------
+       VIEW CONTAINER (DYNAMIC VIEWS)
+       ------------------------------------------------------------- */
+    .view-container {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .view-panel {
+      display: none;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .view-panel.active-view {
+      display: flex;
+      animation: viewFadeIn 180ms ease-out;
+    }
+
+    @keyframes viewFadeIn {
+      from { opacity: 0; transform: scale(0.99); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* Common Card Styles */
+    .panel-card {
+      background: var(--surface-panel);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .card-header {
+      height: 38px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--surface-border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    /* -------------------------------------------------------------
+       1. DASHBOARD VIEW (60/40 SPLIT)
+       ------------------------------------------------------------- */
+    .dashboard-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1.18fr 1fr;
+      gap: 12px;
+      padding: 12px;
+      overflow: hidden;
+    }
+
+    .column-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    /* CarPlay Hero Card */
+    .carplay-card {
+      flex: 1;
+    }
+
+    .carplay-surface {
+      flex: 1;
+      background: var(--surface-base);
+      border: 1px solid var(--surface-border-subtle);
+      border-radius: var(--radius-sm);
+      margin: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 18px 14px;
+      text-align: center;
+      gap: 10px;
+    }
+
+    .carplay-app-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: #1c1d22;
+      border: 1px solid var(--surface-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+    }
+
+    .carplay-title {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    .carplay-desc {
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--text-secondary);
+      max-width: 290px;
+    }
+
+    .btn-action-primary {
+      height: 42px;
+      padding: 0 22px;
+      background: var(--text-primary);
+      color: var(--surface-base);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform var(--spring-fast), opacity 140ms ease;
+    }
+
+    .btn-action-primary:active {
+      transform: scale(0.96);
+      opacity: 0.85;
+    }
+
+    /* Bluetooth Strip */
+    .bluetooth-compact-card {
+      height: 54px;
+      background: var(--surface-panel);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .bt-compact-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .bt-compact-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--surface-border);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+    }
+
+    .bt-device-name {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text-primary);
+    }
+
+    .bt-profile-detail {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .bt-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: var(--surface-elevated);
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--surface-border);
+    }
+
+    /* Speedometer & Gauge Panel */
+    .gauge-panel {
+      flex: 1.1;
+      padding: 14px 16px;
+      justify-content: space-between;
+    }
+
+    .gauge-readout {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin: 2px 0;
+    }
+
+    .gauge-value {
+      font-size: 64px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1;
+      color: var(--text-primary);
+    }
+
+    .gauge-unit {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+    }
+
+    .gauge-meta-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      padding-top: 8px;
+      border-top: 1px solid var(--surface-border-subtle);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Media Panel */
+    .media-panel {
+      flex: 1.3;
+      padding: 14px 16px;
+      justify-content: space-between;
+    }
+
+    .media-header-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .media-cover-squircle {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #1f232c, #14171d);
+      border: 1px solid var(--surface-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .media-song {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .media-artist {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 4px;
+      background: var(--surface-elevated);
+      border-radius: 2px;
+      margin: 8px 0;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 38%;
+      background: var(--text-primary);
+      border-radius: 2px;
+    }
+
+    .media-transport {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .transport-btn {
+      width: 42px;
+      height: 42px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform var(--spring-fast);
+    }
+
+    .transport-btn:active {
+      transform: scale(0.92);
+    }
+
+    .transport-btn.play {
+      background: var(--accent);
+      color: #0c0d10;
+      border: none;
+    }
+
+    /* -------------------------------------------------------------
+       2. CARPLAY VIEW
+       ------------------------------------------------------------- */
+    .carplay-full-view {
+      flex: 1;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .carplay-banner-card {
+      background: var(--surface-panel);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .carplay-options-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      flex: 1;
+    }
+
+    .option-card {
+      background: var(--surface-panel);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .option-card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .option-card p {
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--text-secondary);
+    }
+
+    /* -------------------------------------------------------------
+       3. MAPS VIEW (STYLED ACCORDING TO APPLE CARPLAY NAVIGATION)
+       ------------------------------------------------------------- */
+    .maps-stage-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1.45fr 1fr;
+      gap: 12px;
+      padding: 12px;
+      overflow: hidden;
+    }
+
+    /* Left: Simulated Apple Vector Road Canvas */
+    .map-canvas-container {
+      background: #0f1218;
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Vector Map Graphic Canvas Background */
+    .map-road-grid {
+      position: absolute;
+      inset: 0;
+      opacity: 0.9;
+    }
+
+    /* Floating Turn-by-Turn Card (Apple Maps HUD) */
+    .map-turn-hud {
+      position: relative;
+      z-index: 2;
+      margin: 12px;
+      background: rgba(18, 20, 26, 0.94);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .turn-icon-box {
+      width: 44px;
+      height: 44px;
+      background: var(--apple-blue);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+
+    .turn-text-group {
+      overflow: hidden;
+    }
+
+    .turn-distance {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      line-height: 1.1;
+    }
+
+    .turn-instruction {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* Bottom Map Route Strip */
+    .map-route-footer {
+      position: relative;
+      z-index: 2;
+      margin: 12px;
+      background: rgba(18, 20, 26, 0.94);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .route-eta-text {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--apple-green);
+      letter-spacing: -0.02em;
+    }
+
+    .route-sub-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-left: 8px;
+    }
+
+    .btn-end-route {
+      height: 32px;
+      padding: 0 14px;
+      background: rgba(255, 69, 58, 0.15);
+      border: 1px solid rgba(255, 69, 58, 0.3);
+      color: var(--apple-red);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      transition: transform var(--spring-fast);
+    }
+
+    .btn-end-route:active {
+      transform: scale(0.94);
+    }
+
+    /* Right: Apple Destinations & Search */
+    .maps-dest-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    .dest-card {
+      background: var(--surface-panel);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: transform var(--spring-fast), border-color 140ms ease;
+    }
+
+    .dest-card:active {
+      transform: scale(0.97);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .dest-card:hover {
+        border-color: var(--accent);
+      }
+    }
+
+    .dest-icon-squircle {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+
+    .dest-info {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .dest-name {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text-primary);
+    }
+
+    .dest-sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .map-apps-launcher-row {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .btn-map-app {
+      flex: 1;
+      height: 38px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: transform var(--spring-fast);
+    }
+
+    .btn-map-app:active {
+      transform: scale(0.95);
+    }
+
+    /* -------------------------------------------------------------
+       4. AUDIO VIEW
+       ------------------------------------------------------------- */
+    .audio-view {
+      flex: 1;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 12px;
+    }
+
+    .source-selector {
+      background: var(--surface-panel);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .source-btn {
+      height: 42px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px;
+      font-size: 13px;
+      font-weight: 600;
+      transition: transform var(--spring-fast);
+    }
+
+    .source-btn:active {
+      transform: scale(0.96);
+    }
+
+    .source-btn.active {
+      background: var(--surface-elevated);
+      color: var(--accent);
+      border-color: var(--surface-border);
+    }
+
+    .radio-tuner-panel {
+      background: var(--surface-panel);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .freq-display {
+      font-size: 64px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--text-primary);
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* -------------------------------------------------------------
+       5. ALL APPS VIEW (APPLE CARPLAY ICON SQUIRCLE GRID)
+       ------------------------------------------------------------- */
+    .apps-view {
+      flex: 1;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    .apps-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 40px;
+      flex-shrink: 0;
+    }
+
+    .apps-search-bar {
+      width: 260px;
+      height: 36px;
+      background: var(--surface-panel);
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      padding: 0 12px;
+      color: var(--text-primary);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 140ms ease;
+    }
+
+    .apps-search-bar:focus {
+      border-color: var(--accent);
+    }
+
+    /* Apple CarPlay App Grid (5x2 Perfectly Aligned) */
+    .apps-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 12px 16px;
+      align-items: center;
+      justify-items: center;
+      overflow-y: auto;
+      padding: 4px 0;
+    }
+
+    .app-tile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      transition: transform var(--spring-fast);
+    }
+
+    .app-tile:active {
+      transform: scale(0.9);
+    }
+
+    /* Apple Squircle Icon Container */
+    .app-squircle-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: var(--radius-squircle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+    }
+
+    .app-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      color: var(--text-primary);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 80px;
+    }
+
+    /* -------------------------------------------------------------
+       6. SETUP / SETTINGS VIEW
+       ------------------------------------------------------------- */
+    .setup-view {
+      flex: 1;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      overflow-y: auto;
+    }
+
+    .setup-card {
+      background: var(--surface-panel);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .setup-card h2 {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--surface-border-subtle);
+      padding-bottom: 8px;
+    }
+
+    .color-swatches {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .color-dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform var(--spring-fast);
+    }
+
+    .color-dot:active {
+      transform: scale(0.92);
+    }
+
+    .color-dot.active {
+      border-color: #ffffff;
+      transform: scale(1.08);
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .btn-toggle {
+      background: var(--surface-elevated);
+      border: 1px solid var(--surface-border);
+      color: var(--text-primary);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      transition: transform var(--spring-fast);
+    }
+
+    .btn-toggle:active {
+      transform: scale(0.95);
+    }
+
+    /* -------------------------------------------------------------
+       SIMULATION BAR (BELOW DISPLAY)
+       ------------------------------------------------------------- */
+    .simulation-bar {
+      margin-top: 16px;
+      width: 1024px;
+      max-width: 96vw;
+      background: #111317;
+      border: 1px solid #1c2026;
+      border-radius: 6px;
+      padding: 10px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .sim-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sim-btn {
+      background: #191c22;
+      border: 1px solid #292e38;
+      color: #d1d5db;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .sim-btn:hover {
+      background: #232730;
+      color: #ffffff;
+    }
+
+    input[type=range] {
+      accent-color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Head Unit 16:9 Display -->
+  <div class="head-unit-viewport">
+    
+    <!-- Status Header -->
+    <header class="cockpit-header">
+      <div class="header-group">
+        <span class="header-time" id="clockText">12:45</span>
+        <div class="header-badge">
+          <span>Santa Fe</span>
+          <span style="color: var(--text-tertiary);">•</span>
+          <span id="tempText">28°C</span>
+        </div>
+      </div>
+      <div class="header-group">
+        <div class="header-badge">
+          <span>BT: SantafemR</span>
+          <span style="color: var(--accent); font-size: 11px;">📶</span>
+        </div>
+        <div class="header-badge">
+          <span class="status-dot"></span>
+          <span>GPS 3D Fix</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Cockpit Body -->
+    <div class="cockpit-body">
+      
+      <!-- Driver Left Navigation Rail -->
+      <nav class="driver-rail">
+        <button class="rail-btn active" onclick="switchView('view-dash', this)" title="Dashboard">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          <span>Dash</span>
+        </button>
+        <button class="rail-btn" onclick="switchView('view-carplay', this)" title="Apple CarPlay">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          <span>CarPlay</span>
+        </button>
+        <button class="rail-btn" onclick="switchView('view-maps', this)" title="Navigation & Maps">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+          <span>Maps</span>
+        </button>
+        <button class="rail-btn" onclick="switchView('view-audio', this)" title="Radio & Media Sources">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+          <span>Audio</span>
+        </button>
+        <button class="rail-btn" onclick="switchView('view-apps', this)" title="All Installed Apps">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
+          <span>Apps</span>
+        </button>
+
+        <div class="rail-spacer"></div>
+
+        <button class="rail-btn" onclick="switchView('view-setup', this)" title="Settings & Colors">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <span>Setup</span>
+        </button>
+      </nav>
+
+      <!-- View Containers -->
+      <div class="view-container">
+
+        <!-- 1. DASHBOARD VIEW -->
+        <div class="view-panel active-view" id="view-dash">
+          <div class="dashboard-layout">
+            
+            <!-- LEFT COLUMN STACK: CarPlay + Compact Bluetooth -->
+            <div class="column-stack">
+              
+              <!-- Left Top: Apple CarPlay Hero -->
+              <section class="panel-card carplay-card">
+                <div class="card-header">
+                  <span>MOBILE PROJECTION</span>
+                  <span id="dashCarPlayProtocol" style="color: var(--accent);">ZLINK 5.3</span>
+                </div>
+                <div class="carplay-surface">
+                  <div class="carplay-app-icon">
+                    <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+                      <line x1="8" y1="21" x2="16" y2="21"></line>
+                      <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                  </div>
+                  <div>
+                    <h1 class="carplay-title">Apple CarPlay</h1>
+                    <p class="carplay-desc" id="cpSubDesc">5GHz Wi-Fi bridge ready for projection via Zlink 5.3.</p>
+                  </div>
+                  <button class="btn-action-primary" onclick="launchCarPlay()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    Open CarPlay
+                  </button>
+                </div>
+              </section>
+
+              <!-- Left Bottom: Compact Bluetooth Strip -->
+              <section class="bluetooth-compact-card">
+                <div class="bt-compact-left">
+                  <div class="bt-compact-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="bt-device-name" id="btDeviceName">SantafemR</div>
+                    <div class="bt-profile-detail" id="btProfileText">Handsfree + A2DP Audio Connected</div>
+                  </div>
+                </div>
+                
+                <div class="bt-status-pill">
+                  <span class="status-dot" id="btStatusIndicator"></span>
+                  <span id="btStatusState">Active</span>
+                </div>
+              </section>
+
+            </div>
+
+            <!-- RIGHT COLUMN STACK: Speedometer + Music -->
+            <div class="column-stack">
+              
+              <!-- Right Top: Speedometer & Telemetry -->
+              <section class="panel-card gauge-panel">
+                <div class="card-header" style="height: auto; padding: 0 0 6px 0; border: none;">
+                  <span>VEHICLE TELEMETRY</span>
+                  <span id="headingCompass" style="color: var(--text-primary); font-weight: 600;">NW 315°</span>
+                </div>
+                
+                <div class="gauge-readout">
+                  <span class="gauge-value" id="speedNumber">62</span>
+                  <span class="gauge-unit">KM/H</span>
+                </div>
+
+                <div class="gauge-meta-row">
+                  <div>Trip: <strong style="color: var(--text-primary);">18.4 km</strong></div>
+                  <div>Time: <strong style="color: var(--text-primary);">22 min</strong></div>
+                </div>
+              </section>
+
+              <!-- Right Bottom: Media Controller -->
+              <section class="panel-card media-panel">
+                <div class="card-header" style="height: auto; padding: 0 0 6px 0; border: none;">
+                  <span>NOW PLAYING</span>
+                  <span style="color: var(--accent);">SPOTIFY</span>
+                </div>
+
+                <div class="media-header-info">
+                  <div class="media-cover-squircle">🎵</div>
+                  <div style="overflow: hidden;">
+                    <div class="media-song" id="trackName">Blinding Lights</div>
+                    <div class="media-artist" id="artistName">The Weeknd</div>
+                  </div>
+                </div>
+
+                <div class="progress-track" onclick="scrubTrack(event)">
+                  <div class="progress-fill" id="trackBar"></div>
+                </div>
+
+                <div class="media-transport">
+                  <button class="transport-btn" onclick="prevSong()" title="Previous">
+                    <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><polygon points="11 19 2 12 11 5 11 19"></polygon><polygon points="22 19 13 12 22 5 22 19"></polygon></svg>
+                  </button>
+                  <button class="transport-btn play" onclick="togglePlayback()" id="playToggle" title="Play/Pause">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" id="playIconSvg"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                  </button>
+                  <button class="transport-btn" onclick="nextSong()" title="Next">
+                    <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><polygon points="13 19 22 12 13 5 13 19"></polygon><polygon points="2 19 11 12 2 5 2 19"></polygon></svg>
+                  </button>
+                </div>
+              </section>
+
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 2. CARPLAY VIEW -->
+        <div class="view-panel" id="view-carplay">
+          <div class="carplay-full-view">
+            <div class="carplay-banner-card">
+              <div>
+                <h2 style="font-size: 19px; font-weight: 700; letter-spacing: -0.02em;">Apple CarPlay Controller</h2>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;" id="carplayFullSub">Active Projection Engine: Zlink 5.3 (Hyundai Santa Fe)</p>
+              </div>
+              <button class="btn-action-primary" onclick="launchCarPlay()">Launch Fullscreen Projection</button>
+            </div>
+
+            <div class="carplay-options-grid">
+              <div class="option-card">
+                <h3>Wireless CarPlay</h3>
+                <p>Auto-connects over Bluetooth (SantafemR) and migrates to 5GHz Wi-Fi direct tunnel.</p>
+                <div style="margin-top: auto; font-size: 11px; color: var(--accent); font-weight: 600;">Status: Ready</div>
+              </div>
+              <div class="option-card">
+                <h3>Wired CarPlay (OTG)</h3>
+                <p>Plug into OEM USB Port 1 on the Santa Fe center console for zero-latency audio and charging.</p>
+                <div style="margin-top: auto; font-size: 11px; color: var(--text-secondary);">USB Port Ready</div>
+              </div>
+              <div class="option-card">
+                <h3>Audio Stream Routing</h3>
+                <p>Direct digital I2S audio stream routing to Rohm37XXX / SI473X DSP tuner ICs.</p>
+                <div style="margin-top: auto; font-size: 11px; color: var(--apple-green); font-weight: 600;">DSP Sync OK</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. MAPS VIEW (APPLE CARPLAY NAVIGATION LOGIC & DESIGN) -->
+        <div class="view-panel" id="view-maps">
+          <div class="maps-stage-layout">
+            
+            <!-- Left: Simulated Automotive Road Navigation Canvas -->
+            <div class="map-canvas-container">
+              
+              <!-- Stylized Dark Vector Road Map SVG -->
+              <svg class="map-road-grid" width="100%" height="100%" viewBox="0 0 600 400" preserveAspectRatio="none">
+                <!-- Background ground tone -->
+                <rect width="600" height="400" fill="#0d1016"/>
+                <!-- Secondary Roads -->
+                <path d="M-50,220 C100,210 250,260 400,240 S650,280 650,280" stroke="#1c212d" stroke-width="14" fill="none"/>
+                <path d="M120,-30 C130,120 110,250 140,430" stroke="#1c212d" stroke-width="12" fill="none"/>
+                <path d="M420,-30 C410,140 450,280 440,430" stroke="#1c212d" stroke-width="10" fill="none"/>
+                <path d="M-20,90 C180,80 320,130 620,100" stroke="#1c212d" stroke-width="10" fill="none"/>
+                
+                <!-- Main Highway (Route Corridor) -->
+                <path d="M-20,330 C150,300 280,240 330,170 S350,-20 350,-20" stroke="#252d3d" stroke-width="22" stroke-linecap="round" fill="none"/>
+                <!-- Active Navigation Route Line (Apple Cyan/Blue) -->
+                <path d="M220,265 C265,230 330,170 350,50" stroke="#0a84ff" stroke-width="8" stroke-linecap="round" fill="none"/>
+                <path d="M220,265 C265,230 330,170 350,50" stroke="rgba(10, 132, 255, 0.4)" stroke-width="18" stroke-linecap="round" fill="none"/>
+                
+                <!-- GPS Vehicle Position Indicator (Pulse Cone) -->
+                <g transform="translate(220, 265) rotate(-35)">
+                  <polygon points="0,-16 10,12 0,6 -10,12" fill="#ffffff" stroke="#0a84ff" stroke-width="2"/>
+                </g>
+              </svg>
+
+              <!-- Apple Turn-By-Turn HUD Card (Top) -->
+              <div class="map-turn-hud">
+                <div class="turn-icon-box">
+                  <!-- Right Turn Arrow -->
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 19V11a4 4 0 0 1 4-4h10"></path>
+                    <polyline points="15 3 19 7 15 11"></polyline>
+                  </svg>
+                </div>
+                <div class="turn-text-group">
+                  <div class="turn-distance">In 400 m</div>
+                  <div class="turn-instruction">Turn Right onto Highway 2 (North Exit)</div>
+                </div>
+              </div>
+
+              <!-- Apple Route Status Footer -->
+              <div class="map-route-footer">
+                <div>
+                  <span class="route-eta-text">12:58 PM</span>
+                  <span class="route-sub-meta">14 min · 11.2 km</span>
+                </div>
+                <button class="btn-end-route" onclick="alert('Route cleared')">End Route</button>
+              </div>
+
+            </div>
+
+            <!-- Right: Apple-Styled Destinations Stack -->
+            <div class="maps-dest-stack">
+              
+              <!-- Destination 1: Home -->
+              <div class="dest-card" onclick="alert('Starting route to Home via Google Maps / Waze')">
+                <div class="dest-icon-squircle" style="background: linear-gradient(135deg, #0a84ff, #0056b3);">
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+                </div>
+                <div class="dest-info">
+                  <div class="dest-name">Home</div>
+                  <div class="dest-sub">14.2 km · 18 min via Highway 2</div>
+                </div>
+                <span style="color: var(--text-tertiary); font-size: 14px;">›</span>
+              </div>
+
+              <!-- Destination 2: Work -->
+              <div class="dest-card" onclick="alert('Starting route to Work / Office')">
+                <div class="dest-icon-squircle" style="background: linear-gradient(135deg, #ff9f0a, #c77700);">
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                </div>
+                <div class="dest-info">
+                  <div class="dest-name">Work / Office</div>
+                  <div class="dest-sub">22.8 km · 28 min via Ring Road</div>
+                </div>
+                <span style="color: var(--text-tertiary); font-size: 14px;">›</span>
+              </div>
+
+              <!-- Destination 3: Gas Station -->
+              <div class="dest-card" onclick="alert('Searching nearest gas station')">
+                <div class="dest-icon-squircle" style="background: linear-gradient(135deg, #bf5af2, #8e2fc2);">
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M3 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"></path><line x1="3" y1="10" x2="15" y2="10"></line><path d="M15 13l3.5-3.5a1.5 1.5 0 0 1 2.5 1V19"></path></svg>
+                </div>
+                <div class="dest-info">
+                  <div class="dest-name">Fuel Station</div>
+                  <div class="dest-sub">1.1 km · 3 min away</div>
+                </div>
+                <span style="color: var(--text-tertiary); font-size: 14px;">›</span>
+              </div>
+
+              <!-- Launch in Navigation App Buttons -->
+              <div class="map-apps-launcher-row">
+                <button class="btn-map-app" onclick="alert('Launching Google Maps')">
+                  <span>🗺️ Google Maps</span>
+                </button>
+                <button class="btn-map-app" onclick="alert('Launching Waze')">
+                  <span>🚗 Waze</span>
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 4. AUDIO VIEW -->
+        <div class="view-panel" id="view-audio">
+          <div class="audio-view">
+            <div class="source-selector">
+              <button class="source-btn active" onclick="selectAudioSource(this, 'FM Radio')">
+                <span>📻</span> FM / AM Radio
+              </button>
+              <button class="source-btn" onclick="selectAudioSource(this, 'Spotify')">
+                <span>🎵</span> Spotify
+              </button>
+              <button class="source-btn" onclick="selectAudioSource(this, 'Bluetooth Audio')">
+                <span>📶</span> Bluetooth Audio
+              </button>
+              <button class="source-btn" onclick="selectAudioSource(this, 'USB Storage')">
+                <span>💾</span> USB Drive
+              </button>
+            </div>
+
+            <div class="radio-tuner-panel">
+              <div class="card-header" style="height: auto; padding: 0; border: none;">
+                <span id="activeSourceHeader">FM RADIO (SI473X IC)</span>
+                <span style="color: var(--accent); font-weight: 600;">PRESET 1</span>
+              </div>
+              
+              <div>
+                <div class="freq-display" id="freqNumber">98.5</div>
+                <div style="text-align: center; font-size: 13px; color: var(--accent); font-weight: 700; letter-spacing: 0.1em;">MHZ · STEREO</div>
+              </div>
+
+              <div style="display: flex; justify-content: center; gap: 14px;">
+                <button class="btn-action-primary" style="background: var(--surface-elevated); color: var(--text-primary); border: 1px solid var(--surface-border);" onclick="tuneFreq(-0.1)">◀ Scan Down</button>
+                <button class="btn-action-primary" style="background: var(--surface-elevated); color: var(--text-primary); border: 1px solid var(--surface-border);" onclick="tuneFreq(0.1)">Scan Up ▶</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. ALL APPS VIEW (AUTHENTIC APPLE SQUIRCLE ICONS) -->
+        <div class="view-panel" id="view-apps">
+          <div class="apps-view">
+            <div class="apps-header-row">
+              <span style="font-size: 14px; font-weight: 700; letter-spacing: -0.01em;">INSTALLED VEHICLE APPS</span>
+              <input type="text" class="apps-search-bar" placeholder="Search apps..." oninput="filterApps(this.value)">
+            </div>
+
+            <!-- 5x2 Apple Squircle App Grid -->
+            <div class="apps-grid" id="appsGrid">
+              
+              <!-- 1. CarPlay / Projection -->
+              <div class="app-tile" onclick="launchCarPlay()">
+                <div class="app-squircle-icon" style="background: linear-gradient(180deg, #1f222a, #12141a);">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                </div>
+                <span class="app-label" id="tileCarPlayLabel">CarPlay</span>
+              </div>
+
+              <!-- 2. Maps -->
+              <div class="app-tile" onclick="alert('Launching Google Maps')">
+                <div class="app-squircle-icon" style="background: linear-gradient(180deg, #0a84ff, #0056b3);">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+                </div>
+                <span class="app-label">Maps</span>
+              </div>
+
+              <!-- 3. Music (Spotify) -->
+              <div class="app-tile" onclick="alert('Launching Spotify')">
+                <div class="app-squircle-icon" style="background: linear-gradient(180deg, #1db954, #128c3d);">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><path d="M8 11.5c3-1 5.5-1 8 .5"></path><path d="M9 14.5c2.5-.8 4.5-.8 6.5.4"></path></svg>
+                </div>
+                <span class="app-label">Spotify</span>
+              </div>
+
+              <!-- 4. Phone -->
+              <div class="app-tile" onclick="alert('Launching Bluetooth Phone')">
+                <div class="app-squircle-icon" style="background: linear-gradient(180deg, #30d158, #1e9e3e);">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                </div>
+                <span class="app-label">Phone</span>
+              </div>
+
+              <!-- 5. Radio -->
+              <div class="app-tile" onclick="switchView('view-audio', document.querySelectorAll('.rail-btn')[3])">
+                <div class="app-squircle-icon" style="background: linear-gradient(180deg, #ff9f0a, #c77700);">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line></svg>
+                </div>
+                <span class="app-label">Radio</span>
+              </div>
+
+              <!-- 6. DSP Equalizer -->
+              <div class="app-tile" onclick="alert('Launching DSP Equalizer')">
+                <div class="app-squircle-icon" style="background: linear-gradient(180deg, #bf5af2, #8e2fc2);">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line></svg>
+                </div>
+                <span class="app-label">Equalizer</span>
+              </div>
+
+              <!-- 7. YouTube -->
+              <div class="app-tile" onclick="alert('Launching YouTube')">
+                <div class="app-squircle-icon" style="background: linear-gradient(180deg, #ff453a, #cc2920);">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="#ffffff"/></svg>
+                </div>
+                <span class="app-label">YouTube</span>
+              </div>
+
+              <!-- 8. Files -->
+              <div class="app-tile" onclick="alert('Launching File Explorer')">
+                <div class="app-squircle-icon" style="background: linear-gradient(180deg, #64d2ff, #2997c7);">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <span class="app-label">Files</span>
+              </div>
+
+              <!-- 9. Chrome / Browser -->
+              <div class="app-tile" onclick="alert('Launching Web Browser')">
+                <div class="app-squircle-icon" style="background: linear-gradient(180deg, #ff375f, #c71b3e);">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                </div>
+                <span class="app-label">Browser</span>
+              </div>
+
+              <!-- 10. Settings -->
+              <div class="app-tile" onclick="switchView('view-setup', document.querySelectorAll('.rail-btn')[5])">
+                <div class="app-squircle-icon" style="background: linear-gradient(180deg, #8e8e93, #57575b);">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                </div>
+                <span class="app-label">Settings</span>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. SETUP / SETTINGS VIEW -->
+        <div class="view-panel" id="view-setup">
+          <div class="setup-view">
+            
+            <div class="setup-card">
+              <h2>COCKPIT APPEARANCE & APP INTEGRATION</h2>
+              <div class="setting-row">
+                <span>Select Accent Color</span>
+              </div>
+              
+              <div class="color-swatches">
+                <div class="color-dot active" style="background: #e5a93c;" onclick="setThemeAccent('#e5a93c', this)" title="Warm Amber (Porsche/BMW)"></div>
+                <div class="color-dot" style="background: #3b82f6;" onclick="setThemeAccent('#3b82f6', this)" title="Cobalt Racing Blue (Hyundai N-Line)"></div>
+                <div class="color-dot" style="background: #ef4444;" onclick="setThemeAccent('#ef4444', this)" title="Sport Crimson (AMG / Sport)"></div>
+                <div class="color-dot" style="background: #10b981;" onclick="setThemeAccent('#10b981', this)" title="Emerald Green"></div>
+                <div class="color-dot" style="background: #e2e8f0;" onclick="setThemeAccent('#e2e8f0', this)" title="Minimal Platinum White"></div>
+              </div>
+
+              <div class="setting-row" style="margin-top: 10px;">
+                <span>CarPlay / Phone App</span>
+                <button class="btn-toggle" onclick="cycleCarPlayApp()" id="settingCarPlayBtn" style="color: var(--accent);">Zlink 5.3</button>
+              </div>
+
+              <div class="setting-row">
+                <span>Display Lighting</span>
+                <button class="btn-toggle" onclick="switchLighting()" id="settingLightToggle">Night OLED Mode</button>
+              </div>
+
+              <div class="setting-row">
+                <span>Speedometer Unit</span>
+                <button class="btn-toggle" onclick="toggleSpeedUnit()" id="unitToggleBtn">KM / H</button>
+              </div>
+            </div>
+
+            <div class="setup-card">
+              <h2>SANTA FE IX45 HARDWARE TELEMETRY</h2>
+              <div class="setting-row">
+                <span>Platform SoC</span>
+                <strong style="color: var(--text-primary);">Allwinner T3L (ARMv7-a 4-Core)</strong>
+              </div>
+              <div class="setting-row">
+                <span>System Memory</span>
+                <strong style="color: var(--text-primary);">2.0 GB RAM (776 MB Active)</strong>
+              </div>
+              <div class="setting-row">
+                <span>Firmware Build</span>
+                <strong style="color: var(--text-primary);">V8.1.1 (2023-11-16)</strong>
+              </div>
+              <div class="setting-row">
+                <span>CAN-Bus Decoder</span>
+                <strong style="color: var(--apple-green);">03: Simple Soft (XP)</strong>
+              </div>
+              <div class="setting-row">
+                <span>Vehicle Profile</span>
+                <strong style="color: var(--apple-green);">61: Hyundai Kia / Santa Fe</strong>
+              </div>
+              <div class="setting-row">
+                <span>Factory Settings Codes</span>
+                <strong style="color: var(--accent);">123456 / 7890</strong>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Physical Simulation Controls -->
+  <aside class="simulation-bar">
+    <div class="sim-group">
+      <span>Speedometer:</span>
+      <input type="range" min="0" max="160" value="62" oninput="changeSpeed(this.value)">
+      <span id="speedSliderLabel" style="font-weight: 600; color: var(--text-primary); min-width: 50px;">62 km/h</span>
+    </div>
+
+    <div class="sim-group">
+      <span>CarPlay App:</span>
+      <button class="sim-btn" onclick="cycleCarPlayApp()">Switch App</button>
+    </div>
+
+    <div class="sim-group">
+      <span>Phone Link:</span>
+      <button class="sim-btn" onclick="toggleLinkState()" id="linkToggleBtn">Simulate Disconnect</button>
+    </div>
+  </aside>
+
+  <script>
+    // Cockpit Clock
+    function updateCockpitTime() {
+      const d = new Date();
+      let h = d.getHours();
+      let m = String(d.getMinutes()).padStart(2, '0');
+      h = h % 12 || 12;
+      document.getElementById('clockText').textContent = `${h}:${m}`;
+    }
+    setInterval(updateCockpitTime, 1000);
+    updateCockpitTime();
+
+    // Menu View Switcher
+    function switchView(viewId, buttonEl) {
+      document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active-view'));
+      document.querySelectorAll('.rail-btn').forEach(b => b.classList.remove('active'));
+      
+      const target = document.getElementById(viewId);
+      if (target) target.classList.add('active-view');
+      if (buttonEl) buttonEl.classList.add('active');
+    }
+
+    // Accent Color Customizer
+    function setThemeAccent(hex, dotEl) {
+      document.documentElement.style.setProperty('--accent', hex);
+      if (dotEl) {
+        document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+        dotEl.classList.add('active');
+      }
+    }
+
+    // CarPlay App Switcher
+    const carplayApps = [
+      { name: "Zlink 5.3", pkg: "com.zjinnova.zlink", desc: "5GHz Wi-Fi bridge ready for projection via Zlink 5.3." },
+      { name: "AutoKit (Carlinkit)", pkg: "cn.manstep.phonemirrorBox", desc: "Carlinkit / AutoKit USB hardware bridge ready." },
+      { name: "TLink", pkg: "com.syu.tlink", desc: "TLink hardware projection bridge ready." },
+      { name: "SpeedPlay", pkg: "com.suding.speedplay", desc: "SpeedPlay projection service ready." },
+      { name: "MyCustomCarPlay", pkg: "com.custom.carplay", desc: "Custom sideloaded projection application ready." }
+    ];
+    let currentCarPlayIdx = 0;
+
+    function cycleCarPlayApp() {
+      currentCarPlayIdx = (currentCarPlayIdx + 1) % carplayApps.length;
+      const app = carplayApps[currentCarPlayIdx];
+      
+      document.getElementById('settingCarPlayBtn').textContent = app.name;
+      document.getElementById('dashCarPlayProtocol').textContent = app.name.toUpperCase();
+      document.getElementById('cpSubDesc').textContent = app.desc;
+      document.getElementById('carplayFullSub').textContent = `Active Projection Engine: ${app.name} (${app.pkg})`;
+      document.getElementById('tileCarPlayLabel').textContent = app.name;
+    }
+
+    function launchCarPlay() {
+      const app = carplayApps[currentCarPlayIdx];
+      alert(`Launching CarPlay projection package: ${app.pkg} (${app.name}) via Android Intent`);
+    }
+
+    // Speed Slider & Unit
+    let speedUnit = 'KM/H';
+    function changeSpeed(val) {
+      document.getElementById('speedNumber').textContent = val;
+      document.getElementById('speedSliderLabel').textContent = val + ' ' + speedUnit.toLowerCase();
+    }
+
+    function toggleSpeedUnit() {
+      speedUnit = speedUnit === 'KM/H' ? 'MPH' : 'KM/H';
+      document.querySelector('.gauge-unit').textContent = speedUnit;
+      document.getElementById('unitToggleBtn').textContent = speedUnit;
+      changeSpeed(document.getElementById('speedNumber').textContent);
+    }
+
+    // Day/Night Lighting
+    let isDay = false;
+    function switchLighting() {
+      isDay = !isDay;
+      const b = document.getElementById('settingLightToggle');
+      if (isDay) {
+        document.documentElement.setAttribute('data-theme', 'day');
+        if (b) b.textContent = 'Day Light Mode';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        if (b) b.textContent = 'Night OLED Mode';
+      }
+    }
+
+    // Phone / Bluetooth Link State
+    let connected = true;
+    function toggleLinkState() {
+      connected = !connected;
+      const cpDot = document.getElementById('cpStatusDot');
+      const cpLabel = document.getElementById('cpStatusLabel');
+      const btDev = document.getElementById('btDeviceName');
+      const btProf = document.getElementById('btProfileText');
+      const btInd = document.getElementById('btStatusIndicator');
+      const btState = document.getElementById('btStatusState');
+      const btn = document.getElementById('linkToggleBtn');
+
+      if (connected) {
+        cpDot.className = 'status-dot';
+        cpLabel.textContent = 'iPhone Ready (Wireless)';
+        btInd.className = 'status-dot';
+        btState.textContent = 'Active';
+        btDev.textContent = 'SantafemR';
+        btProf.textContent = 'Handsfree + A2DP Audio Connected';
+        btn.textContent = 'Simulate Disconnect';
+      } else {
+        cpDot.className = 'status-dot offline';
+        cpLabel.textContent = 'No Device Connected';
+        btInd.className = 'status-dot offline';
+        btState.textContent = 'Offline';
+        btDev.textContent = 'No Device';
+        btProf.textContent = 'Ready to pair...';
+        btn.textContent = 'Simulate Reconnect';
+      }
+    }
+
+    // Audio & Radio Tuning
+    let currentFreq = 98.5;
+    function tuneFreq(delta) {
+      currentFreq = Math.round((currentFreq + delta) * 10) / 10;
+      document.getElementById('freqNumber').textContent = currentFreq.toFixed(1);
+    }
+
+    function selectAudioSource(btn, name) {
+      document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('activeSourceHeader').textContent = name.toUpperCase() + ' (ROHM/SI IC)';
+    }
+
+    // Filter Installed Apps
+    function filterApps(query) {
+      const q = query.toLowerCase();
+      document.querySelectorAll('.app-tile').forEach(tile => {
+        const title = tile.querySelector('.app-label').textContent.toLowerCase();
+        tile.style.display = title.includes(q) ? 'flex' : 'none';
+      });
+    }
+
+    // Media
+    const songList = [
+      { title: "Blinding Lights", artist: "The Weeknd" },
+      { title: "Midnight City", artist: "M83" },
+      { title: "Nightcall", artist: "Kavinsky" },
+      { title: "Drive", artist: "The Cars" }
+    ];
+    let songIdx = 0;
+    let playing = true;
+
+    function nextSong() {
+      songIdx = (songIdx + 1) % songList.length;
+      renderSong();
+    }
+    function prevSong() {
+      songIdx = (songIdx - 1 + songList.length) % songList.length;
+      renderSong();
+    }
+    function renderSong() {
+      document.getElementById('trackName').textContent = songList[songIdx].title;
+      document.getElementById('artistName').textContent = songList[songIdx].artist;
+      document.getElementById('trackBar').style.width = '30%';
+    }
+    function togglePlayback() {
+      playing = !playing;
+      const svg = document.getElementById('playIconSvg');
+      if (playing) {
+        svg.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+      } else {
+        svg.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+      }
+    }
+    function scrubTrack(e) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+      document.getElementById('trackBar').style.width = pct + '%';
+    }
+  </script>
+</body>
+</html>
