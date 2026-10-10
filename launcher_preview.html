@@ -3,44 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>ApexDrive — Swiss Design Automotive Cockpit Preview</title>
+  <title>ApexDrive — Swiss Automotive Cockpit Preview</title>
   <style>
     /* -------------------------------------------------------------
-       SWISS AUTOMOTIVE DESIGN TOKENS & FROSTED GLASS
+       SWISS AUTOMOTIVE DESIGN TOKENS & FROSTED ACRYLIC
        ------------------------------------------------------------- */
     :root {
-      --surface-base: #090a0d;
-      --surface-panel: rgba(18, 20, 26, 0.88);
-      --surface-card-inner: rgba(24, 27, 34, 0.65);
+      --surface-base: #08090c;
+      --surface-panel: rgba(18, 21, 28, 0.90);
+      --surface-card-inner: rgba(26, 30, 40, 0.70);
       --surface-elevated: rgba(255, 255, 255, 0.08);
-      --surface-elevated-hover: rgba(255, 255, 255, 0.14);
+      --surface-elevated-hover: rgba(255, 255, 255, 0.15);
       --surface-border: rgba(255, 255, 255, 0.12);
       --surface-border-subtle: rgba(255, 255, 255, 0.06);
       
       --text-primary: #f8f9fa;
-      --text-secondary: #8e95a5;
-      --text-tertiary: #545b6b;
+      --text-secondary: #949ba8;
+      --text-tertiary: #586072;
       
       --accent: #e5a93c; /* Default: Warm Amber */
-      --accent-dim: rgba(229, 169, 60, 0.18);
+      --accent-dim: rgba(229, 169, 60, 0.20);
       
       --status-active: #22c55e;
       --status-inactive: #6b7280;
       
-      --dock-width: 80px;
+      --dock-width: 86px; /* Big-finger friendly driver rail */
       --radius-sm: 8px;
       --radius-md: 14px;
-      --radius-squircle: 16px;
+      --radius-lg: 18px;
       
       --spring-fast: 140ms cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     [data-theme="day"] {
-      --surface-base: #e6e8ec;
-      --surface-panel: rgba(244, 245, 248, 0.92);
-      --surface-card-inner: rgba(255, 255, 255, 0.85);
+      --surface-base: #e2e5eb;
+      --surface-panel: rgba(244, 246, 250, 0.94);
+      --surface-card-inner: rgba(255, 255, 255, 0.90);
       --surface-elevated: rgba(0, 0, 0, 0.06);
-      --surface-elevated-hover: rgba(0, 0, 0, 0.1);
+      --surface-elevated-hover: rgba(0, 0, 0, 0.12);
       --surface-border: rgba(0, 0, 0, 0.12);
       --surface-border-subtle: rgba(0, 0, 0, 0.06);
       --text-primary: #0f172a;
@@ -85,19 +85,19 @@
       height: 600px;
       background: var(--surface-base);
       border: 1px solid #1a1e26;
-      border-radius: 12px;
+      border-radius: 14px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
       position: relative;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.06);
     }
 
     /* -------------------------------------------------------------
-       SWISS COCKPIT HEADER BAR
+       SWISS COCKPIT HEADER BAR (48PX HEIGHT)
        ------------------------------------------------------------- */
     .cockpit-header {
-      height: 44px;
+      height: 48px;
       padding: 0 16px;
       background: var(--surface-panel);
       backdrop-filter: blur(12px);
@@ -116,99 +116,103 @@
     }
 
     .header-clock {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 800;
+      font-variant-numeric: tabular-nums;
       letter-spacing: -0.02em;
       color: var(--text-primary);
-      font-variant-numeric: tabular-nums;
     }
 
     .header-vehicle-badge {
       font-size: 11px;
       font-weight: 700;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.1em;
       color: var(--text-secondary);
-      text-transform: uppercase;
+      background: var(--surface-elevated);
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--surface-border-subtle);
     }
 
+    /* Big Finger Friendly Header Pills (36px height) */
     .header-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      background: var(--surface-card-inner);
-      border: 1px solid var(--surface-border-subtle);
-      padding: 4px 10px;
+      height: 36px;
+      padding: 0 14px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--surface-border);
       border-radius: 8px;
-      font-size: 11px;
-      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-primary);
       cursor: pointer;
-      transition: background var(--spring-fast);
+      transition: all var(--spring-fast);
     }
 
     .header-pill:hover {
-      background: var(--surface-elevated);
+      background: var(--surface-elevated-hover);
+      border-color: var(--accent);
     }
 
-    .status-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--status-active);
-    }
-
-    .status-dot.inactive {
-      background: var(--status-inactive);
+    .header-pill:active {
+      transform: scale(0.96);
     }
 
     /* -------------------------------------------------------------
-       COCKPIT BODY (DRIVER RAIL + STAGE)
+       COCKPIT BODY & DRIVER NAVIGATION RAIL (86PX WIDE)
        ------------------------------------------------------------- */
     .cockpit-body {
       flex: 1;
       display: flex;
       overflow: hidden;
+      position: relative;
     }
 
-    /* Driver Left Navigation Rail (Swiss Grid with Vector Icons) */
     .driver-rail {
       width: var(--dock-width);
       background: var(--surface-panel);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border-right: 1px solid var(--surface-border-subtle);
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 8px 0;
+      padding: 10px 0;
       gap: 6px;
       flex-shrink: 0;
+      z-index: 10;
     }
 
+    /* Big Finger Friendly Rail Buttons (74x58px) */
     .rail-btn {
-      width: 66px;
-      height: 52px;
-      border-radius: var(--radius-sm);
-      background: var(--surface-elevated);
-      border: 1px solid var(--surface-border-subtle);
-      color: var(--text-secondary);
+      width: 74px;
+      height: 58px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 12px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 3px;
+      gap: 4px;
+      color: var(--text-secondary);
       transition: all var(--spring-fast);
     }
 
     .rail-btn svg {
-      width: 20px;
-      height: 20px;
-      stroke-width: 2;
+      width: 22px;
+      height: 22px;
+      stroke-width: 2.2;
       stroke: currentColor;
       fill: none;
     }
 
     .rail-btn span {
-      font-size: 9px;
+      font-size: 10px;
       font-weight: 700;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
     }
 
@@ -218,14 +222,14 @@
     }
 
     .rail-btn:active {
-      transform: scale(0.95);
+      transform: scale(0.94);
     }
 
     .rail-btn.active {
       background: var(--surface-card-inner);
       border-color: var(--surface-border);
       color: var(--accent);
-      box-shadow: 0 0 12px var(--accent-dim);
+      box-shadow: 0 0 14px var(--accent-dim);
     }
 
     .rail-btn.active svg {
@@ -275,7 +279,7 @@
     }
 
     .card-header {
-      height: 36px;
+      height: 38px;
       padding: 0 14px;
       border-bottom: 1px solid var(--surface-border-subtle);
       display: flex;
@@ -322,7 +326,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 14px;
+      padding: 16px;
       text-align: center;
       gap: 6px;
     }
@@ -332,12 +336,12 @@
       align-items: center;
       gap: 6px;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--status-active);
     }
 
     .carplay-title {
-      font-size: 18px;
+      font-size: 19px;
       font-weight: 800;
       letter-spacing: -0.01em;
       color: var(--text-primary);
@@ -346,23 +350,24 @@
     .carplay-desc {
       font-size: 11px;
       color: var(--text-secondary);
-      max-width: 260px;
+      max-width: 270px;
     }
 
+    /* Big Finger Friendly CarPlay Button (52px height) */
     .btn-action-primary {
-      margin-top: 8px;
+      height: 52px;
+      padding: 0 32px;
       background: var(--surface-elevated);
       border: 1px solid var(--surface-border);
       color: var(--text-primary);
-      padding: 9px 20px;
       border-radius: var(--radius-sm);
-      font-size: 11px;
-      font-weight: 700;
+      font-size: 13px;
+      font-weight: 800;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       transition: all var(--spring-fast);
     }
 
@@ -376,10 +381,10 @@
       transform: scale(0.96);
     }
 
-    /* Compact Bluetooth Strip */
+    /* Big Finger Friendly Bluetooth Card (64px height) */
     .bluetooth-compact-card {
-      height: 56px;
-      padding: 0 14px;
+      height: 64px;
+      padding: 0 16px;
       background: var(--surface-panel);
       border: 1px solid var(--surface-border);
       border-radius: var(--radius-md);
@@ -394,37 +399,39 @@
       border-color: var(--accent);
     }
 
+    .bluetooth-compact-card:active {
+      transform: scale(0.98);
+    }
+
     .bt-compact-left {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
 
     .bt-compact-icon {
       color: var(--accent);
       display: flex;
       align-items: center;
-      justify-content: center;
     }
 
     .bt-device-name {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 800;
       color: var(--text-primary);
     }
 
     .bt-profile-detail {
-      font-size: 10px;
+      font-size: 11px;
       color: var(--text-secondary);
     }
 
     .bt-status-pill {
-      background: var(--surface-elevated);
-      border: 1px solid var(--surface-border-subtle);
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
+      background: var(--surface-elevated);
+      padding: 5px 12px;
+      border-radius: 6px;
       color: var(--status-active);
       display: flex;
       align-items: center;
@@ -443,37 +450,65 @@
     .speed-number-row {
       display: flex;
       align-items: baseline;
-      gap: 10px;
-      margin: 4px 0;
+      gap: 12px;
+      margin: auto 0;
     }
 
     .speed-number {
-      font-size: 74px;
+      font-size: 78px;
       font-weight: 900;
-      letter-spacing: -0.04em;
-      line-height: 1;
-      color: var(--text-primary);
       font-variant-numeric: tabular-nums;
+      line-height: 0.9;
+      color: var(--text-primary);
+      letter-spacing: -0.04em;
     }
 
+    /* Big Finger Friendly Speed Unit Button (44px height) */
     .speed-unit {
-      font-size: 15px;
+      height: 44px;
+      padding: 0 14px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      font-size: 14px;
       font-weight: 800;
       color: var(--accent);
-      letter-spacing: 0.05em;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all var(--spring-fast);
     }
 
+    .speed-unit:hover {
+      border-color: var(--accent);
+      background: var(--surface-elevated-hover);
+    }
+
+    .speed-unit:active {
+      transform: scale(0.95);
+    }
+
+    /* Touchable Trip Container */
     .trip-meta-row {
+      height: 36px;
       display: flex;
+      align-items: center;
       justify-content: space-between;
+      border-top: 1px solid var(--surface-border-subtle);
+      padding-top: 8px;
       font-size: 11px;
       font-weight: 600;
       color: var(--text-secondary);
-      border-top: 1px solid var(--surface-border-subtle);
-      padding-top: 6px;
+      cursor: pointer;
+      border-radius: 6px;
     }
 
-    /* Universal Media Controller */
+    .trip-meta-row:hover {
+      color: var(--text-primary);
+    }
+
+    /* Universal Media Player Card */
     .media-card {
       flex: 1.1;
       padding: 12px 14px;
@@ -483,11 +518,11 @@
     }
 
     .media-info {
-      overflow: hidden;
+      margin: auto 0;
     }
 
     .media-title {
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 800;
       color: var(--text-primary);
       white-space: nowrap;
@@ -496,7 +531,7 @@
     }
 
     .media-artist {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--text-secondary);
       white-space: nowrap;
       overflow: hidden;
@@ -504,6 +539,7 @@
       margin-top: 2px;
     }
 
+    /* Big Finger Friendly Media Transport Buttons (54px height) */
     .media-transport {
       display: flex;
       align-items: center;
@@ -512,7 +548,7 @@
 
     .transport-btn {
       flex: 1;
-      height: 42px;
+      height: 54px;
       background: var(--surface-elevated);
       border: 1px solid var(--surface-border);
       border-radius: var(--radius-sm);
@@ -520,17 +556,22 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 14px;
+      font-size: 18px;
       font-weight: 700;
       transition: all var(--spring-fast);
     }
 
     .transport-btn.play-pause {
-      flex: 1.3;
+      flex: 1.4;
       color: var(--accent);
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 800;
       letter-spacing: 0.05em;
+    }
+
+    .transport-btn:hover {
+      background: var(--surface-elevated-hover);
+      border-color: var(--accent);
     }
 
     .transport-btn:active {
@@ -557,12 +598,12 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 14px;
+      padding: 16px;
       gap: 8px;
     }
 
     .compass-heading-big {
-      font-size: 32px;
+      font-size: 34px;
       font-weight: 900;
       letter-spacing: 0.04em;
       color: var(--accent);
@@ -586,13 +627,14 @@
       margin-top: 10px;
     }
 
+    /* Big Finger Friendly POI & Navigation Buttons (52px / 50px) */
     .poi-btn {
-      height: 44px;
+      height: 52px;
       background: var(--surface-elevated);
       border: 1px solid var(--surface-border);
       border-radius: var(--radius-sm);
       color: var(--text-primary);
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 700;
       display: flex;
       align-items: center;
@@ -611,8 +653,34 @@
       transform: scale(0.96);
     }
 
+    .nav-engine-btn {
+      height: 50px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 8px;
+      transition: all var(--spring-fast);
+    }
+
+    .nav-engine-btn:hover {
+      background: var(--surface-elevated-hover);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .nav-engine-btn:active {
+      transform: scale(0.97);
+    }
+
     /* -------------------------------------------------------------
-       3. APPS VIEW (INTERACTIVE LAUNCH PROOFS)
+       3. APPS VIEW (INTERACTIVE APPS GRID)
        ------------------------------------------------------------- */
     .apps-view {
       flex: 1;
@@ -633,10 +701,10 @@
       background: var(--surface-elevated);
       border: 1px solid var(--surface-border);
       border-radius: 8px;
-      padding: 7px 14px;
+      padding: 9px 16px;
       color: var(--text-primary);
-      font-size: 12px;
-      width: 220px;
+      font-size: 13px;
+      width: 240px;
       outline: none;
     }
 
@@ -649,49 +717,47 @@
     }
 
     .app-tile {
+      height: 90px;
+      background: var(--surface-panel);
+      border: 1px solid var(--surface-border);
+      border-radius: 14px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 8px;
       cursor: pointer;
-      padding: 6px;
-      border-radius: 12px;
-      transition: transform var(--spring-fast);
+      transition: all var(--spring-fast);
     }
 
     .app-tile:hover {
-      background: var(--surface-elevated);
+      border-color: var(--accent);
+      background: var(--surface-card-inner);
+      transform: translateY(-2px);
     }
 
     .app-tile:active {
-      transform: scale(0.92);
+      transform: scale(0.95);
     }
 
     .app-squircle-icon {
-      width: 56px;
-      height: 56px;
-      border-radius: var(--radius-squircle);
-      border: 1px solid var(--surface-border);
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     }
 
     .app-label {
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--text-primary);
-      margin-top: 6px;
-      max-width: 80px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      text-align: center;
+      letter-spacing: 0.02em;
     }
 
     /* -------------------------------------------------------------
-       4. SETUP VIEW (POPULATED SHORTCUTS)
+       4. SETUP VIEW (SHORTCUTS & ACCENT THEMER)
        ------------------------------------------------------------- */
     .setup-layout {
       flex: 1;
@@ -704,43 +770,43 @@
 
     .setup-card {
       padding: 14px;
-      display: flex;
-      flex-direction: column;
       gap: 10px;
     }
 
     .color-swatches {
       display: flex;
       gap: 10px;
-      margin: 4px 0;
+      margin-top: 4px;
     }
 
+    /* Big Finger Friendly Color Swatches (50x46px) */
     .color-dot {
-      width: 44px;
-      height: 38px;
-      border-radius: 8px;
-      cursor: pointer;
+      width: 50px;
+      height: 46px;
+      border-radius: 10px;
       border: 2px solid transparent;
+      cursor: pointer;
       transition: all var(--spring-fast);
     }
 
-    .color-dot:active {
-      transform: scale(0.92);
+    .color-dot:hover {
+      transform: scale(1.05);
     }
 
     .color-dot.active {
-      border-color: #ffffff;
-      transform: scale(1.06);
+      border-color: #fff;
+      box-shadow: 0 0 14px rgba(255, 255, 255, 0.4);
     }
 
+    /* Big Finger Friendly Setup Shortcuts (50px height) */
     .shortcut-btn {
       width: 100%;
-      height: 40px;
+      height: 50px;
       background: var(--surface-elevated);
       border: 1px solid var(--surface-border);
       border-radius: var(--radius-sm);
       color: var(--text-primary);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
       display: flex;
       align-items: center;
@@ -756,56 +822,218 @@
     }
 
     .shortcut-btn:active {
-      transform: scale(0.96);
+      transform: scale(0.97);
     }
 
-    /* Toast Notification */
+    /* -------------------------------------------------------------
+       STARTUP DRIVER PHONE SELECTOR GATEWAY (MODAL)
+       ------------------------------------------------------------- */
+    .gateway-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(4, 5, 8, 0.82);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      animation: modalFadeIn 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .gateway-overlay.show {
+      display: flex;
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.97); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .gateway-dialog {
+      width: 520px;
+      max-width: 90%;
+      background: var(--surface-panel);
+      border: 1px solid var(--surface-border);
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .gateway-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .gateway-title {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      color: var(--text-primary);
+    }
+
+    .gateway-countdown {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--accent);
+      background: var(--surface-elevated);
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--surface-border-subtle);
+    }
+
+    .gateway-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    /* Big Finger Friendly Device Row Cards (64px height) */
+    .device-card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 4px 0;
+    }
+
+    .device-card {
+      height: 64px;
+      background: var(--surface-card-inner);
+      border: 1px solid var(--surface-border-subtle);
+      border-radius: 12px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all var(--spring-fast);
+    }
+
+    .device-card:hover {
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .device-card:active {
+      transform: scale(0.98);
+    }
+
+    .device-card.preferred {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .device-card-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .device-name {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .device-card.preferred .device-name {
+      color: var(--accent);
+    }
+
+    .device-status {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .device-connect-pill {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 6px 14px;
+      border-radius: 6px;
+      background: var(--surface-elevated);
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+
+    .device-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .btn-dialog-secondary {
+      flex: 1;
+      height: 52px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--surface-border);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .btn-dialog-primary {
+      flex: 1.3;
+      height: 52px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    /* -------------------------------------------------------------
+       TOAST POPUP
+       ------------------------------------------------------------- */
     .toast-pill {
       position: absolute;
-      top: 56px;
+      bottom: 20px;
       left: 50%;
-      transform: translateX(-50%) translateY(-20px);
+      transform: translateX(-50%) translateY(30px);
       background: rgba(18, 20, 26, 0.95);
       border: 1px solid var(--accent);
       color: var(--text-primary);
-      padding: 8px 18px;
+      padding: 8px 20px;
       border-radius: 20px;
       font-size: 12px;
       font-weight: 700;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+      z-index: 120;
       opacity: 0;
       pointer-events: none;
-      transition: all 220ms ease;
-      z-index: 999;
+      transition: all var(--spring-fast);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
     }
 
     .toast-pill.show {
-      opacity: 1;
       transform: translateX(-50%) translateY(0);
+      opacity: 1;
     }
 
-    /* Interactive Simulation Bar */
+    /* Simulation Control Bar */
     .sim-bar {
       margin-top: 14px;
-      width: 1024px;
-      max-width: 96vw;
-      background: #111318;
-      border: 1px solid #1f242e;
-      border-radius: 8px;
-      padding: 10px 16px;
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
-      justify-content: space-between;
-      gap: 12px;
+      gap: 14px;
       font-size: 12px;
       color: var(--text-secondary);
+      flex-wrap: wrap;
+      justify-content: center;
     }
 
     .sim-group {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
 
     .sim-btn {
@@ -815,7 +1043,7 @@
       padding: 6px 12px;
       border-radius: 6px;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
     }
 
@@ -834,8 +1062,62 @@
   <!-- Head Unit 16:9 Viewport -->
   <div class="head-unit-viewport">
     
-    <!-- Toast Popup Notification -->
+    <!-- Toast Notification -->
     <div id="toastNotification" class="toast-pill">Launched Application</div>
+
+    <!-- Startup Driver Phone Selection Gateway Modal -->
+    <div class="gateway-overlay show" id="deviceGatewayModal">
+      <div class="gateway-dialog">
+        <div class="gateway-header">
+          <span class="gateway-title">SELECT DRIVER PHONE</span>
+          <span class="gateway-countdown" id="gatewayCountdown">Auto in 8s</span>
+        </div>
+        <p class="gateway-desc">Tap your phone to connect Bluetooth &amp; CarPlay. Prevents accidentally connecting other paired phones in the car.</p>
+        
+        <div class="device-card-list">
+          <!-- 1. Yassin's iPhone (Preferred) -->
+          <div class="device-card preferred" onclick="selectDriverPhone('Yassin\'s iPhone', '98:B6:E9:12:44:A1')">
+            <div class="device-card-left">
+              <span style="font-size: 24px;">📱</span>
+              <div>
+                <div class="device-name" id="cardName1">Yassin's iPhone</div>
+                <div class="device-status">⭐ Primary Driver Device · Ready</div>
+              </div>
+            </div>
+            <div class="device-connect-pill" id="cardPill1">ACTIVE</div>
+          </div>
+
+          <!-- 2. Family iPhone -->
+          <div class="device-card" onclick="selectDriverPhone('Sarah\'s iPhone', '40:4E:36:99:11:BC')">
+            <div class="device-card-left">
+              <span style="font-size: 24px;">📱</span>
+              <div>
+                <div class="device-name">Sarah's iPhone</div>
+                <div class="device-status">Paired · Tap to connect CarPlay &amp; Audio</div>
+              </div>
+            </div>
+            <div class="device-connect-pill">CONNECT</div>
+          </div>
+
+          <!-- 3. Google Pixel -->
+          <div class="device-card" onclick="selectDriverPhone('Pixel 8 Pro', '00:1A:7D:DA:71:13')">
+            <div class="device-card-left">
+              <span style="font-size: 24px;">📱</span>
+              <div>
+                <div class="device-name">Pixel 8 Pro</div>
+                <div class="device-status">Paired · Tap to connect Android Auto</div>
+              </div>
+            </div>
+            <div class="device-connect-pill">CONNECT</div>
+          </div>
+        </div>
+
+        <div class="device-actions">
+          <button class="btn-dialog-secondary" onclick="simulatePairNewDevice()">📱 Pair New Phone</button>
+          <button class="btn-dialog-primary" onclick="closeDeviceGateway()">CONTINUE TO DASHBOARD</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Swiss Cockpit Top Header -->
     <header class="cockpit-header">
@@ -845,18 +1127,18 @@
       </div>
 
       <div class="header-right">
-        <!-- Weather Header Pill (Clickable) -->
-        <div class="header-pill" onclick="cycleWeather()" title="Click to cycle weather conditions">
-          <span id="weatherIcon">☀️</span>
-          <span id="weatherText">28°C · Sunny</span>
+        <!-- Live Car Exterior Thermometer Pill (Direct CAN-bus Reading) -->
+        <div class="header-pill" onclick="refreshCarThermometer()" title="Live Exterior Thermometer (Santa Fe CAN-bus)">
+          <span id="weatherIcon">🌡️</span>
+          <span id="weatherText">26°C · Outside</span>
         </div>
 
-        <!-- Bluetooth Connected Device Header Pill (Clickable) -->
-        <div class="header-pill" onclick="simulateBluetoothAction()" title="Click to view Bluetooth details">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" id="headerBtSvg">
+        <!-- Bluetooth Connected Device Header Pill (Opens Driver Phone Gateway) -->
+        <div class="header-pill" onclick="openDeviceGateway(false)" title="Tap to select Driver Phone (CarPlay Gateway)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" id="headerBtSvg">
             <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline>
           </svg>
-          <span id="headerBtName" style="color: var(--accent);">iPhone 15 Pro</span>
+          <span id="headerBtName" style="color: var(--accent);">Yassin's iPhone</span>
         </div>
       </div>
     </header>
@@ -864,7 +1146,7 @@
     <!-- Cockpit Body -->
     <div class="cockpit-body">
       
-      <!-- Driver Left Navigation Rail with Vector Icons -->
+      <!-- Driver Left Navigation Rail with Vector Icons (86px Wide, Big Finger Friendly) -->
       <nav class="driver-rail">
         <!-- 1. DASH -->
         <button class="rail-btn active" onclick="switchView('view-dash', this)" title="Dashboard">
@@ -933,16 +1215,16 @@
                 </div>
               </section>
 
-              <!-- Compact Bluetooth Strip (Clickable) -->
-              <section class="bluetooth-compact-card" onclick="simulateBluetoothAction()">
+              <!-- Compact Bluetooth Strip (Clickable, Opens Gateway) -->
+              <section class="bluetooth-compact-card" onclick="openDeviceGateway(false)">
                 <div class="bt-compact-left">
                   <div class="bt-compact-icon">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                       <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline>
                     </svg>
                   </div>
                   <div>
-                    <div class="bt-device-name" id="btDeviceName">SantafemR</div>
+                    <div class="bt-device-name" id="btDeviceName">Yassin's iPhone</div>
                     <div class="bt-profile-detail" id="btProfileText">A2DP Audio &amp; Calls Active</div>
                   </div>
                 </div>
@@ -962,17 +1244,17 @@
               <section class="panel-card speedometer-card">
                 <div class="card-header" style="padding: 0; border: none; height: auto;">
                   <span>GPS VELOCITY</span>
-                  <span class="inner-card" id="dashHeading" style="padding: 2px 8px; color: var(--text-primary); font-weight: 800;">NW 315°</span>
+                  <span class="inner-card" id="dashHeading" style="padding: 4px 10px; color: var(--text-primary); font-weight: 800;">NW 315°</span>
                 </div>
 
                 <div class="speed-number-row">
                   <div class="speed-number" id="speedValue">64</div>
-                  <div class="speed-unit" id="speedUnitText">KM/H</div>
+                  <div class="speed-unit" id="speedUnitText" onclick="toggleSpeedUnit()" title="Tap to toggle KM/H / MPH">KM/H</div>
                 </div>
 
-                <div class="trip-meta-row">
+                <div class="trip-meta-row" onclick="resetTrip()" title="Tap to reset trip distance &amp; timer">
                   <span id="tripDistText">Trip: 14.8 km</span>
-                  <span id="tripTimeText">Time: 18 min</span>
+                  <span id="tripTimeText">Time: 18 min (Tap to reset)</span>
                 </div>
               </section>
 
@@ -980,12 +1262,12 @@
               <section class="panel-card media-card">
                 <div class="card-header" style="padding: 0; border: none; height: auto;">
                   <span>NOW PLAYING</span>
-                  <span style="color: var(--accent); font-weight: 800;">UNIVERSAL AUDIO</span>
+                  <span id="dashAudioBadge" style="color: var(--accent); font-weight: 800;">UNIVERSAL AUDIO</span>
                 </div>
 
                 <div class="media-info">
                   <div class="media-title" id="trackTitle">Blinding Lights</div>
-                  <div class="media-artist" id="trackArtist">The Weeknd — After Hours (CarPlay / Spotify)</div>
+                  <div class="media-artist" id="trackArtist">The Weeknd (CarPlay / Spotify)</div>
                 </div>
 
                 <div class="media-transport">
@@ -1001,117 +1283,87 @@
         </div>
 
         <!-- ========================================================
-             2. PHONE / CARPLAY FULL VIEW
+             2. CARPLAY VIEW (STANDALONE PROJECTION HUD)
              ======================================================== -->
         <div class="view-panel" id="view-carplay">
-          <div style="flex: 1; padding: 10px; display: flex; flex-direction: column; gap: 10px;">
-            <div class="panel-card" style="padding: 16px; flex-direction: row; align-items: center; justify-content: space-between;">
-              <div>
-                <h2 style="font-size: 18px; font-weight: 800;">Mobile Projection Controller</h2>
-                <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;" id="cpFullSub">Connected Engine: Zlink 5.3 (Santa Fe OEM USB/Wi-Fi)</p>
-              </div>
-              <button class="btn-action-primary" onclick="launchCarPlay()">Launch Fullscreen</button>
-            </div>
-
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex: 1;">
-              <div class="panel-card" style="padding: 14px; gap: 6px;">
-                <h3 style="font-size: 13px; font-weight: 800;">Wireless 5GHz Link</h3>
-                <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">Auto-bridges Bluetooth handshake (SantafemR) into 5GHz Wi-Fi projection stream.</p>
-                <div style="margin-top: auto; font-size: 11px; color: var(--status-active); font-weight: 700;">Status: Ready</div>
-              </div>
-              <div class="panel-card" style="padding: 14px; gap: 6px;">
-                <h3 style="font-size: 13px; font-weight: 800;">OEM USB Port OTG</h3>
-                <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">Direct hardware USB passthrough in lower Santa Fe center console tray.</p>
-                <div style="margin-top: auto; font-size: 11px; color: var(--text-secondary); font-weight: 700;">USB Host Active</div>
-              </div>
-              <div class="panel-card" style="padding: 14px; gap: 6px;">
-                <h3 style="font-size: 13px; font-weight: 800;">Audio Driver Routing</h3>
-                <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">Direct hardware I2S line to Rohm37XXX DSP sound processor.</p>
-                <div style="margin-top: auto; font-size: 11px; color: var(--accent); font-weight: 700;">Hardware EQ Synced</div>
+          <div style="flex: 1; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+            <div class="panel-card" style="flex: 1; align-items: center; justify-content: center; text-align: center; gap: 14px; padding: 24px;">
+              <span style="font-size: 11px; font-weight: 700; color: var(--status-active); letter-spacing: 0.08em;">● PROTOCOL ENGINE LINKED</span>
+              <h1 style="font-size: 32px; font-weight: 900; letter-spacing: -0.02em;">Apple CarPlay &amp; Android Auto</h1>
+              <p style="font-size: 13px; color: var(--text-secondary); max-width: 440px;" id="cpFullSub">Connected Engine: Zlink 5.3 (com.zlink.carplay)</p>
+              
+              <div style="display: flex; gap: 12px; margin-top: 8px;">
+                <button class="btn-action-primary" onclick="launchCarPlay()">▶  OPEN FULLSCREEN CARPLAY</button>
+                <button class="btn-action-primary" style="background: transparent;" onclick="openDeviceGateway(false)">📱 SWITCH DRIVER PHONE</button>
               </div>
             </div>
           </div>
         </div>
 
         <!-- ========================================================
-             3. DYNAMIC LIVE MAPS & TACTICAL NAVIGATION HUD
+             3. MAPS VIEW (TACTICAL GPS HUD)
              ======================================================== -->
         <div class="view-panel" id="view-maps">
           <div class="maps-stage-layout">
-            
-            <!-- Left: Live Tactical GPS HUD -->
-            <div class="panel-card" style="padding: 14px; justify-content: space-between;">
+            <div class="panel-card" style="padding: 14px; display: flex; flex-direction: column;">
               <div class="card-header" style="padding: 0; border: none; height: auto;">
                 <span>LIVE GPS TELEMETRY &amp; NAVIGATION</span>
-                <span class="inner-card" style="padding: 2px 8px; color: var(--status-active); font-weight: 700;">● 3D Fix · ±2.8m</span>
+                <span class="inner-card" style="padding: 3px 8px; font-size: 10px; font-weight: 800; color: var(--status-active);">● 3D Fix · ±3m</span>
               </div>
 
-              <!-- Compass Card -->
               <div class="inner-card compass-hud-stage">
-                <div class="compass-heading-big" id="mapsHeadingBig">NORTH-WEST 315°</div>
-                <div class="compass-coordinates" id="mapsCoords">34.0522° N, 118.2437° W</div>
+                <div class="compass-heading-big" id="mapsHeadingBig">NW 315°</div>
+                <div class="compass-coordinates">37.7749° N, 122.4194° W</div>
                 <div class="compass-telemetry" id="mapsAlt">Altitude: 245 m · Speed: 64 KM/H</div>
-                
-                <button class="btn-action-primary" onclick="launchCarPlay()">
+                <button class="btn-action-primary" style="margin-top: 10px;" onclick="launchCarPlay()">
                   OPEN CARPLAY NAVIGATION
                 </button>
               </div>
 
-              <div class="trip-meta-row" style="border: none;">
-                <span id="mapsTripDist">Trip: 14.8 km</span>
-                <span id="mapsTripDur">Duration: 18 min</span>
+              <div class="inner-card" style="height: 38px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-size: 11px; font-weight: 600; color: var(--text-secondary);">
+                <span>Trip: 14.8 km</span>
+                <span>Duration: 18 min</span>
               </div>
             </div>
 
-            <!-- Right: Dynamic Destination Triggers & Apps -->
-            <div class="panel-card" style="padding: 14px; justify-content: space-between;">
-              <div>
-                <div class="card-header" style="padding: 0; border: none; height: auto;">
-                  <span>QUICK DESTINATIONS &amp; APPS</span>
-                </div>
-                
-                <div class="poi-grid">
-                  <button class="poi-btn" onclick="triggerPoi('Gas Station')">⛽  Fuel Station</button>
-                  <button class="poi-btn" onclick="triggerPoi('Parking')">🅿️  Parking</button>
-                  <button class="poi-btn" onclick="triggerPoi('Rest Stop / Cafe')">☕  Rest / Cafe</button>
-                  <button class="poi-btn" onclick="triggerPoi('Hospital')">🏥  Hospital</button>
-                </div>
+            <!-- Right Stage: Quick POI Triggers & Nav Engines -->
+            <div class="panel-card" style="padding: 14px;">
+              <span class="card-header" style="padding: 0; border: none; height: auto;">QUICK DESTINATIONS &amp; APPS</span>
+              
+              <div class="poi-grid">
+                <button class="poi-btn" onclick="triggerPoi('gas station')">⛽  Fuel Station</button>
+                <button class="poi-btn" onclick="triggerPoi('parking')">🅿️  Parking</button>
+                <button class="poi-btn" onclick="triggerPoi('cafe')">☕  Rest / Cafe</button>
+                <button class="poi-btn" onclick="triggerPoi('hospital')">🏥  Hospital</button>
               </div>
 
-              <div>
-                <div class="card-header" style="padding: 0; border: none; height: auto; margin-top: 10px;">
-                  <span>INSTALLED NAVIGATION ENGINES</span>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
-                  <button class="shortcut-btn" onclick="showToast('Launching Google Maps (com.google.android.apps.maps)')">🗺️  Launch Google Maps</button>
-                  <button class="shortcut-btn" onclick="showToast('Launching Waze (com.waze)')">🚙  Launch Waze Navigation</button>
-                </div>
-              </div>
+              <span class="card-header" style="padding: 0; border: none; height: auto; margin-top: 16px;">NAVIGATION ENGINES</span>
+              <button class="nav-engine-btn" onclick="showToast('Launching Google Maps (com.google.android.apps.maps)')">🗺️  Launch Google Maps</button>
+              <button class="nav-engine-btn" onclick="showToast('Launching Waze Navigation (com.waze)')">🚙  Launch Waze Navigation</button>
             </div>
-
           </div>
         </div>
 
         <!-- ========================================================
-             4. AUDIO & RADIO TUNER VIEW
+             4. AUDIO VIEW (RADIO & SOURCE SELECTOR)
              ======================================================== -->
         <div class="view-panel" id="view-audio">
-          <div style="flex: 1; padding: 10px; display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px;">
-            <div class="panel-card" style="padding: 14px; gap: 8px;">
+          <div style="flex: 1; padding: 10px; display: grid; grid-template-columns: 230px 1fr; gap: 10px;">
+            <div class="panel-card" style="padding: 12px; gap: 8px;">
               <span class="card-header" style="padding: 0; border: none; height: auto;">AUDIO SOURCES</span>
-              <button class="shortcut-btn" style="border-color: var(--accent); color: var(--accent);">📻  FM / AM Radio (SI473X)</button>
+              <button class="shortcut-btn" id="audioBtnRadio" style="border-color: var(--accent); color: var(--accent);">📻  FM / AM Radio</button>
               <button class="shortcut-btn" onclick="showToast('Routing Bluetooth Audio Stream')">📶  Bluetooth Stream</button>
               <button class="shortcut-btn" onclick="showToast('Launching Spotify')">🎵  Spotify App</button>
               <button class="shortcut-btn" onclick="showToast('Mounting USB Storage Audio')">💾  USB Mass Storage</button>
             </div>
 
-            <div class="panel-card" style="padding: 14px; align-items: center; justify-content: center; text-align: center; gap: 12px;">
-              <span style="font-size: 11px; color: var(--text-secondary); font-weight: 700;">FM RADIO TUNER (ROHM37XXX IC)</span>
+            <div class="panel-card" style="padding: 16px; align-items: center; justify-content: center; text-align: center; gap: 14px;">
+              <span style="font-size: 11px; color: var(--text-secondary); font-weight: 700;" id="audioActiveLabel">FM RADIO TUNER (SI473X IC)</span>
               <div>
-                <div style="font-size: 64px; font-weight: 900; color: var(--text-primary); font-variant-numeric: tabular-nums;" id="freqDisplay">98.5</div>
-                <div style="font-size: 13px; color: var(--accent); font-weight: 800; letter-spacing: 0.08em;">MHZ · STEREO</div>
+                <div style="font-size: 68px; font-weight: 900; color: var(--text-primary); font-variant-numeric: tabular-nums;" id="freqDisplay">98.5</div>
+                <div style="font-size: 13px; color: var(--accent); font-weight: 800; letter-spacing: 0.08em;" id="audioFreqUnit">MHZ · STEREO</div>
               </div>
-              <div style="display: flex; gap: 10px;">
+              <div style="display: flex; gap: 12px;">
                 <button class="btn-action-primary" onclick="tuneFreq(-0.1)">◀ Scan Down</button>
                 <button class="btn-action-primary" onclick="tuneFreq(0.1)">Scan Up ▶</button>
               </div>
@@ -1129,9 +1381,7 @@
               <input type="text" class="apps-search-bar" placeholder="Search apps..." oninput="filterApps(this.value)">
             </div>
 
-            <!-- 5x2 Squircle Apps Grid -->
             <div class="apps-grid" id="appsGrid">
-              
               <!-- 1. Zlink -->
               <div class="app-tile" onclick="showToast('Launching Zlink CarPlay (com.zlink.carplay)')">
                 <div class="app-squircle-icon" style="background: linear-gradient(180deg, #10b981, #059669);">
@@ -1196,7 +1446,7 @@
                 <span class="app-label">Files</span>
               </div>
 
-              <!-- 9. Chrome Browser -->
+              <!-- 9. Browser -->
               <div class="app-tile" onclick="showToast('Launching Browser')">
                 <div class="app-squircle-icon" style="background: linear-gradient(180deg, #f43f5e, #be123c);">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
@@ -1211,13 +1461,12 @@
                 </div>
                 <span class="app-label">Settings</span>
               </div>
-
             </div>
           </div>
         </div>
 
         <!-- ========================================================
-             6. SETUP VIEW (POPULATED SHORTCUTS & CUSTOMIZER)
+             6. SETUP VIEW (SHORTCUTS & ACCENT CUSTOMIZER)
              ======================================================== -->
         <div class="view-panel" id="view-setup">
           <div class="setup-layout">
@@ -1235,18 +1484,18 @@
               </div>
 
               <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
-                <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">CarPlay App</span>
-                <button class="shortcut-btn" style="width: auto; padding: 4px 14px; color: var(--accent);" id="btnCarPlaySetting" onclick="cycleCarPlayApp()">Zlink 5.3</button>
+                <span style="font-size: 13px; color: var(--text-secondary); font-weight: 600;">CarPlay App</span>
+                <button class="shortcut-btn" style="width: auto; height: 44px; padding: 0 18px; color: var(--accent);" id="btnCarPlaySetting" onclick="cycleCarPlayApp()">Zlink 5.3</button>
               </div>
 
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Speedometer Unit</span>
-                <button class="shortcut-btn" style="width: auto; padding: 4px 14px;" id="btnUnitToggle" onclick="toggleSpeedUnit()">KM/H</button>
+                <span style="font-size: 13px; color: var(--text-secondary); font-weight: 600;">Speedometer Unit</span>
+                <button class="shortcut-btn" style="width: auto; height: 44px; padding: 0 18px;" id="btnUnitToggle" onclick="toggleSpeedUnit()">KM/H</button>
               </div>
 
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">GPS Refresh Stream</span>
-                <button class="shortcut-btn" style="width: auto; padding: 4px 14px; color: var(--status-active);" onclick="showToast('GPS Stream Re-synced at 20Hz (50ms)')">LIVE 20Hz</button>
+                <span style="font-size: 13px; color: var(--text-secondary); font-weight: 600;">GPS Refresh Stream</span>
+                <button class="shortcut-btn" style="width: auto; height: 44px; padding: 0 18px; color: var(--status-active);" onclick="showToast('GPS Stream Re-synced at 20Hz (50ms)')">LIVE 20Hz</button>
               </div>
             </div>
 
@@ -1254,6 +1503,11 @@
             <div class="panel-card setup-card">
               <span class="card-header" style="padding: 0; border: none; height: auto;">AUTOMOTIVE SHORTCUTS &amp; DIAGNOSTICS</span>
               
+              <!-- 0. Driver Phone Switcher (CarPlay Gateway) -->
+              <button class="shortcut-btn" style="color: var(--accent); border-color: var(--accent); font-weight: 800;" onclick="openDeviceGateway(false)">
+                📱  Select Driver Phone (CarPlay Gateway)
+              </button>
+
               <!-- 1. Factory Settings Shortcut -->
               <button class="shortcut-btn" style="color: var(--accent); border-color: var(--accent);" onclick="showFactorySettingsModal()">
                 🔧  Car Factory Settings (Code: 123456)
@@ -1270,7 +1524,7 @@
               </button>
 
               <!-- 4. Bluetooth Manager -->
-              <button class="shortcut-btn" onclick="simulateBluetoothAction()">
+              <button class="shortcut-btn" onclick="openDeviceGateway(false)">
                 📱  Bluetooth Devices (SantafemR)
               </button>
 
@@ -1289,7 +1543,7 @@
 
   </div>
 
-  <!-- Physical Simulation Bar -->
+  <!-- Physical Simulation Controls -->
   <aside class="sim-bar">
     <div class="sim-group">
       <span>Speed Slider:</span>
@@ -1304,18 +1558,18 @@
     </div>
 
     <div class="sim-group">
-      <span>Bluetooth:</span>
-      <button class="sim-btn" onclick="toggleBluetoothState()" id="simBtToggle">Simulate Disconnect</button>
+      <span>Driver Phone Gateway:</span>
+      <button class="sim-btn" onclick="openDeviceGateway(true)">Trigger Splash (8s Auto)</button>
     </div>
 
     <div class="sim-group">
-      <span>CarPlay:</span>
-      <button class="sim-btn" onclick="cycleCarPlayApp()">Switch App</button>
+      <span>Car Thermometer:</span>
+      <button class="sim-btn" onclick="refreshCarThermometer()">Re-poll CANbus</button>
     </div>
   </aside>
 
   <script>
-    // Live Clock
+    // Live Cockpit Clock
     function updateClock() {
       const d = new Date();
       let h = d.getHours();
@@ -1325,7 +1579,7 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Tab View Switcher with Accent Highlight
+    // Tab View Switcher with Accent Synchronization
     function switchView(viewId, btnEl) {
       document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active-view'));
       document.querySelectorAll('.rail-btn').forEach(b => b.classList.remove('active'));
@@ -1335,7 +1589,7 @@
       if (btnEl) btnEl.classList.add('active');
     }
 
-    // Universal Accent Theming
+    // Universal Accent Theming Across All Views
     function setThemeAccent(hex, dotEl) {
       document.documentElement.style.setProperty('--accent', hex);
       document.documentElement.style.setProperty('--accent-dim', hex + '26');
@@ -1343,7 +1597,21 @@
         document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
         dotEl.classList.add('active');
       }
-      showToast('Accent theme applied across all cockpit widgets');
+
+      // Explicitly sync colors to all active headers and buttons
+      document.getElementById('headerBtName').style.color = hex;
+      document.getElementById('headerBtSvg').style.stroke = hex;
+      document.getElementById('dashCarPlayBadge').style.color = hex;
+      document.getElementById('speedUnitText').style.color = hex;
+      document.getElementById('dashAudioBadge').style.color = hex;
+      document.getElementById('btnMediaPlay').style.color = hex;
+      document.getElementById('mapsHeadingBig').style.color = hex;
+      document.getElementById('audioBtnRadio').style.color = hex;
+      document.getElementById('audioBtnRadio').style.borderColor = hex;
+      document.getElementById('audioFreqUnit').style.color = hex;
+      document.getElementById('cardPill1').style.color = hex;
+
+      showToast('Swiss accent color synchronized across all views');
     }
 
     // Toast Popups
@@ -1353,6 +1621,69 @@
       t.classList.add('show');
       clearTimeout(window._toastTimer);
       window._toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+    }
+
+    // Driver Phone Selection Gateway Modal
+    let gatewayTimer = null;
+    let countdownSec = 8;
+
+    function openDeviceGateway(isAuto = false) {
+      const modal = document.getElementById('deviceGatewayModal');
+      const timerPill = document.getElementById('gatewayCountdown');
+      modal.classList.add('show');
+
+      clearInterval(gatewayTimer);
+      if (isAuto) {
+        countdownSec = 8;
+        timerPill.style.display = 'block';
+        timerPill.textContent = `Auto in ${countdownSec}s`;
+        gatewayTimer = setInterval(() => {
+          countdownSec--;
+          if (countdownSec <= 0) {
+            clearInterval(gatewayTimer);
+            closeDeviceGateway();
+          } else {
+            timerPill.textContent = `Auto in ${countdownSec}s`;
+          }
+        }, 1000);
+      } else {
+        timerPill.style.display = 'none';
+      }
+    }
+
+    function closeDeviceGateway() {
+      clearInterval(gatewayTimer);
+      document.getElementById('deviceGatewayModal').classList.remove('show');
+    }
+
+    function selectDriverPhone(name, mac) {
+      clearInterval(gatewayTimer);
+      document.getElementById('headerBtName').textContent = name;
+      document.getElementById('btDeviceName').textContent = name;
+      document.getElementById('cardName1').textContent = name;
+      closeDeviceGateway();
+      showToast(`Connected ${name} for Bluetooth & CarPlay`);
+      launchCarPlay();
+    }
+
+    function simulatePairNewDevice() {
+      closeDeviceGateway();
+      showToast("Opening Head Unit Bluetooth Pairing Settings");
+    }
+
+    // 8-second auto gateway countdown on page load
+    openDeviceGateway(true);
+
+    // Car Thermometer Live Simulation (Santa Fe CAN-bus)
+    let currentTempC = 26;
+    function refreshCarThermometer() {
+      // Small realistic jitter around ambient temperature
+      currentTempC = Math.round((currentTempC + (Math.random() * 2 - 1)) * 10) / 10;
+      let display = speedUnit === 'MPH' ? 
+        `${Math.round((currentTempC * 9/5) + 32)}°F · Outside` : 
+        `${currentTempC.toFixed(0)}°C · Outside`;
+      document.getElementById('weatherText').textContent = display;
+      showToast(`Live Santa Fe CAN-bus Thermometer: ${display}`);
     }
 
     // CarPlay App Switcher
@@ -1392,7 +1723,14 @@
       document.getElementById('speedUnitText').textContent = speedUnit;
       document.getElementById('btnUnitToggle').textContent = speedUnit;
       changeSpeed(document.getElementById('speedValue').textContent);
+      refreshCarThermometer();
       showToast(`Speedometer unit changed to ${speedUnit}`);
+    }
+
+    function resetTrip() {
+      document.getElementById('tripDistText').textContent = "Trip: 0.0 km";
+      document.getElementById('tripTimeText').textContent = "Time: 0 min (Tap to reset)";
+      showToast("Trip distance & driving timer reset to zero");
     }
 
     // Heading Calculation
@@ -1401,62 +1739,8 @@
       const idx = Math.round((deg % 360) / 22.5);
       const text = `${directions[idx % 16]} ${deg}°`;
       document.getElementById('dashHeading').textContent = text;
-      document.getElementById('mapsHeadingBig').textContent = `${directions[idx % 16]} ${deg}°`;
+      document.getElementById('mapsHeadingBig').textContent = text;
       document.getElementById('headingSliderVal').textContent = text;
-    }
-
-    // Weather Simulation
-    const weatherList = [
-      { icon: "☀️", text: "28°C · Sunny" },
-      { icon: "🌤️", text: "26°C · Partly Cloudy" },
-      { icon: "☁️", text: "22°C · Overcast" },
-      { icon: "🌧️", text: "19°C · Rain" },
-      { icon: "🌙", text: "21°C · Clear Night" }
-    ];
-    let weatherIdx = 0;
-    function cycleWeather() {
-      weatherIdx = (weatherIdx + 1) % weatherList.length;
-      document.getElementById('weatherIcon').textContent = weatherList[weatherIdx].icon;
-      document.getElementById('weatherText').textContent = weatherList[weatherIdx].text;
-      showToast(`Weather updated: ${weatherList[weatherIdx].text}`);
-    }
-
-    // Bluetooth Simulation
-    let btConnected = true;
-    function toggleBluetoothState() {
-      btConnected = !btConnected;
-      const dot = document.getElementById('btIndicatorDot');
-      const label = document.getElementById('btStatusLabel');
-      const headerName = document.getElementById('headerBtName');
-      const headerSvg = document.getElementById('headerBtSvg');
-      const btCardName = document.getElementById('btDeviceName');
-      const btn = document.getElementById('simBtToggle');
-
-      if (btConnected) {
-        dot.classList.remove('inactive');
-        label.textContent = "● CONNECTED";
-        label.style.color = "var(--status-active)";
-        headerName.textContent = "iPhone 15 Pro";
-        headerName.style.color = "var(--accent)";
-        headerSvg.style.stroke = "var(--accent)";
-        btCardName.textContent = "iPhone 15 Pro";
-        btn.textContent = "Simulate Disconnect";
-        showToast("Bluetooth Connected: iPhone 15 Pro (A2DP Audio Active)");
-      } else {
-        dot.classList.add('inactive');
-        label.textContent = "○ READY";
-        label.style.color = "var(--text-secondary)";
-        headerName.textContent = "Not Connected";
-        headerName.style.color = "var(--text-secondary)";
-        headerSvg.style.stroke = "var(--text-secondary)";
-        btCardName.textContent = "No Device Connected";
-        btn.textContent = "Simulate Connect";
-        showToast("Bluetooth Disconnected");
-      }
-    }
-
-    function simulateBluetoothAction() {
-      alert("Bluetooth Status:\n• Connected Device: " + (btConnected ? "iPhone 15 Pro (Yassin's Phone)" : "Not Connected") + "\n• Head Unit Pairing Name: SantafemR\n• Pairing PIN: 0000\n• Profiles: A2DP Audio, HFP Telephony");
     }
 
     // Factory Settings Modal

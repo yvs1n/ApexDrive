@@ -40,6 +40,14 @@ public class GpsTelemetryManager implements LocationListener {
         this.isMph = useMph;
     }
 
+    public void resetTrip() {
+        totalDistanceMeters = 0.0;
+        tripStartTime = System.currentTimeMillis();
+        if (listener != null) {
+            listener.onTripUpdated(0.0, 0);
+        }
+    }
+
     @SuppressLint("MissingPermission")
     public void start() {
         if (locationManager == null) return;

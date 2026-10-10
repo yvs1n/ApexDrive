@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="64dp"
+    android:layout_marginBottom="8dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_card_inner"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- Phone Icon -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📱"
+        android:textSize="22sp" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvDialogDeviceName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Yassin's iPhone"
+            android:textColor="@color/cockpit_text_primary"
+            android:textSize="15sp"
+            android:fontFamily="sans-serif-black" />
+
+        <TextView
+            android:id="@+id/tvDialogDeviceStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Paired · Bluetooth &amp; CarPlay Ready"
+            android:textColor="@color/cockpit_text_secondary"
+            android:textSize="11sp"
+            android:fontFamily="sans-serif" />
+    </LinearLayout>
+
+    <!-- Connect Pill -->
+    <TextView
+        android:id="@+id/btnConnectPill"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:background="@drawable/bg_elevated_btn"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:gravity="center"
+        android:text="CONNECT"
+        android:textColor="@color/accent_amber"
+        android:textSize="11sp"
+        android:fontFamily="sans-serif-black" />
+
+</LinearLayout>

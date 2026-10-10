@@ -39,35 +39,35 @@
 
             <Button
                 android:id="@+id/btnColorAmber"
-                android:layout_width="44dp"
-                android:layout_height="38dp"
+                android:layout_width="50dp"
+                android:layout_height="46dp"
                 android:background="@color/accent_amber" />
 
             <Button
                 android:id="@+id/btnColorBlue"
-                android:layout_width="44dp"
-                android:layout_height="38dp"
+                android:layout_width="50dp"
+                android:layout_height="46dp"
                 android:layout_marginStart="8dp"
                 android:background="@color/accent_hyundai_blue" />
 
             <Button
                 android:id="@+id/btnColorRed"
-                android:layout_width="44dp"
-                android:layout_height="38dp"
+                android:layout_width="50dp"
+                android:layout_height="46dp"
                 android:layout_marginStart="8dp"
                 android:background="@color/accent_sport_red" />
 
             <Button
                 android:id="@+id/btnColorGreen"
-                android:layout_width="44dp"
-                android:layout_height="38dp"
+                android:layout_width="50dp"
+                android:layout_height="46dp"
                 android:layout_marginStart="8dp"
                 android:background="@color/accent_emerald" />
 
             <Button
                 android:id="@+id/btnColorWhite"
-                android:layout_width="44dp"
-                android:layout_height="38dp"
+                android:layout_width="50dp"
+                android:layout_height="46dp"
                 android:layout_marginStart="8dp"
                 android:background="@color/accent_platinum" />
         </LinearLayout>
@@ -92,26 +92,26 @@
                 android:layout_weight="1"
                 android:text="CarPlay App"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:fontFamily="sans-serif-medium" />
 
             <Button
                 android:id="@+id/btnSelectCarPlayApp"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="46dp"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="Zlink 5.3"
                 android:textColor="@color/accent_amber"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:fontFamily="sans-serif-black"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp" />
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp" />
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -121,26 +121,26 @@
                 android:layout_weight="1"
                 android:text="Speedometer Unit"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:fontFamily="sans-serif-medium" />
 
             <Button
                 android:id="@+id/btnToggleUnit"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="46dp"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="KM/H"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:fontFamily="sans-serif-black"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp" />
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp" />
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -150,20 +150,20 @@
                 android:layout_weight="1"
                 android:text="GPS Refresh Rate"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:fontFamily="sans-serif-medium" />
 
             <Button
                 android:id="@+id/btnGpsRefreshRate"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="46dp"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="LIVE 20Hz"
                 android:textColor="@color/status_active"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:fontFamily="sans-serif-black"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp" />
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp" />
         </LinearLayout>
 
     </LinearLayout>
@@ -198,15 +198,28 @@
             android:layout_marginBottom="10dp"
             android:background="@color/cockpit_surface_border_subtle" />
 
+        <!-- 0. Driver Phone Switcher (CarPlay & Bluetooth Gateway) -->
+        <Button
+            android:id="@+id/btnSelectDriverPhone"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:background="@drawable/bg_elevated_btn"
+            android:text="📱  Select Driver Phone (CarPlay Gateway)"
+            android:textColor="@color/accent_amber"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-black"
+            android:gravity="center" />
+
         <!-- 1. Factory Settings (Pin 123456 / 7890 reminder) -->
         <Button
             android:id="@+id/btnShortcutFactorySettings"
             android:layout_width="match_parent"
-            android:layout_height="40dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="6dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="🔧  Car Factory Settings (Code: 123456)"
             android:textColor="@color/accent_amber"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:fontFamily="sans-serif-bold"
             android:gravity="center" />
 
@@ -214,12 +227,12 @@
         <Button
             android:id="@+id/btnShortcutAndroidSettings"
             android:layout_width="match_parent"
-            android:layout_height="40dp"
+            android:layout_height="50dp"
             android:layout_marginTop="6dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="⚙️  Android System Settings"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:fontFamily="sans-serif-bold"
             android:gravity="center" />
 
@@ -227,12 +240,12 @@
         <Button
             android:id="@+id/btnShortcutAudioEq"
             android:layout_width="match_parent"
-            android:layout_height="40dp"
+            android:layout_height="50dp"
             android:layout_marginTop="6dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="🔊  Car DSP / Equalizer (Rohm37XXX)"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:fontFamily="sans-serif-bold"
             android:gravity="center" />
 
@@ -240,12 +253,12 @@
         <Button
             android:id="@+id/btnShortcutBluetooth"
             android:layout_width="match_parent"
-            android:layout_height="40dp"
+            android:layout_height="50dp"
             android:layout_marginTop="6dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="📱  Bluetooth Devices (SantafemR)"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:fontFamily="sans-serif-bold"
             android:gravity="center" />
 
@@ -253,12 +266,12 @@
         <Button
             android:id="@+id/btnRestartLauncher"
             android:layout_width="match_parent"
-            android:layout_height="38dp"
+            android:layout_height="48dp"
             android:layout_marginTop="6dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="🔄  Fast Restart ApexDrive"
             android:textColor="@color/cockpit_text_secondary"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:fontFamily="sans-serif-medium"
             android:gravity="center" />
 

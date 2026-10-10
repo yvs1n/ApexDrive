@@ -16,50 +16,50 @@
         <Button
             android:id="@+id/btnSrcRadio"
             android:layout_width="match_parent"
-            android:layout_height="44dp"
+            android:layout_height="52dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="📻  FM / AM Radio"
             android:textColor="@color/accent_amber"
-            android:textSize="13sp"
+            android:textSize="14sp"
             android:textStyle="bold"
             android:gravity="start|center_vertical"
-            android:paddingStart="12dp" />
+            android:paddingStart="16dp" />
 
         <Button
             android:id="@+id/btnSrcSpotify"
             android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:layout_marginTop="6dp"
+            android:layout_height="52dp"
+            android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="🎵  Spotify"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="13sp"
+            android:textSize="14sp"
             android:gravity="start|center_vertical"
-            android:paddingStart="12dp" />
+            android:paddingStart="16dp" />
 
         <Button
             android:id="@+id/btnSrcBluetooth"
             android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:layout_marginTop="6dp"
+            android:layout_height="52dp"
+            android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="📶  Bluetooth Audio"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="13sp"
+            android:textSize="14sp"
             android:gravity="start|center_vertical"
-            android:paddingStart="12dp" />
+            android:paddingStart="16dp" />
 
         <Button
             android:id="@+id/btnSrcUsb"
             android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:layout_marginTop="6dp"
+            android:layout_height="52dp"
+            android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="💾  USB Drive"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="13sp"
+            android:textSize="14sp"
             android:gravity="start|center_vertical"
-            android:paddingStart="12dp" />
+            android:paddingStart="16dp" />
 
     </LinearLayout>
 
@@ -96,6 +96,7 @@
                 android:layout_weight="1" />
 
             <TextView
+                android:id="@+id/tvAudioPresetBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="PRESET 1"
@@ -121,6 +122,7 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/tvRadioFreqUnit"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
@@ -139,27 +141,27 @@
             <Button
                 android:id="@+id/btnRadioScanDown"
                 android:layout_width="wrap_content"
-                android:layout_height="44dp"
+                android:layout_height="52dp"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="◀  Scan Down"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:textStyle="bold"
-                android:paddingStart="20dp"
-                android:paddingEnd="20dp" />
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp" />
 
             <Button
                 android:id="@+id/btnRadioScanUp"
                 android:layout_width="wrap_content"
-                android:layout_height="44dp"
+                android:layout_height="52dp"
                 android:layout_marginStart="16dp"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="Scan Up  ▶"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:textStyle="bold"
-                android:paddingStart="20dp"
-                android:paddingEnd="20dp" />
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp" />
         </LinearLayout>
 
     </LinearLayout>

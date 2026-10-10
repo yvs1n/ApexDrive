@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_panel"
+    android:padding="20dp"
+    android:minWidth="480dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="SELECT DRIVER PHONE"
+            android:textColor="@color/cockpit_text_primary"
+            android:textSize="18sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.04" />
+
+        <TextView
+            android:id="@+id/tvCountdownTimer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Auto in 8s"
+            android:textColor="@color/accent_amber"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-bold" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Tap your phone to lock Bluetooth &amp; CarPlay. Prevents hijacking other phones in the car."
+        android:textColor="@color/cockpit_text_secondary"
+        android:textSize="12sp"
+        android:fontFamily="sans-serif" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="12dp"
+        android:background="@color/cockpit_surface_border_subtle" />
+
+    <!-- Container for Paired Phone Cards (Big Fingers Friendly) -->
+    <LinearLayout
+        android:id="@+id/deviceListContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="12dp"
+        android:background="@color/cockpit_surface_border_subtle" />
+
+    <!-- Action Buttons (Large Touch Targets >= 54dp) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <Button
+            android:id="@+id/btnPairNewDevice"
+            android:layout_width="0dp"
+            android:layout_height="54dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_elevated_btn"
+            android:text="📱  Pair New Phone"
+            android:textColor="@color/cockpit_text_primary"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-bold" />
+
+        <Button
+            android:id="@+id/btnSkipSelector"
+            android:layout_width="0dp"
+            android:layout_height="54dp"
+            android:layout_weight="1.2"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_elevated_btn"
+            android:text="CONTINUE TO DASHBOARD"
+            android:textColor="@color/accent_amber"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-black" />
+    </LinearLayout>
+
+</LinearLayout>

@@ -68,4 +68,14 @@ public class PreferenceHelper {
     public void setCarPlayName(String name) {
         prefs.edit().putString(KEY_CARPLAY_NAME, name).apply();
     }
+
+    private static final String KEY_SELECTED_DRIVER_DEVICE = "selected_driver_device";
+
+    public String getSelectedDriverDevice() {
+        return prefs.getString(KEY_SELECTED_DRIVER_DEVICE, "");
+    }
+
+    public void setSelectedDriverDevice(String deviceAddress) {
+        prefs.edit().putString(KEY_SELECTED_DRIVER_DEVICE, deviceAddress).apply();
+    }
 }

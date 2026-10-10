@@ -115,10 +115,10 @@
         android:layout_weight="1"
         android:orientation="horizontal">
 
-        <!-- Left Driver Navigation Rail (Swiss Grid & Clear Icons) -->
+        <!-- Left Driver Navigation Rail (Swiss Grid & Big Fingers Friendly) -->
         <LinearLayout
             android:id="@+id/driverRail"
-            android:layout_width="78dp"
+            android:layout_width="86dp"
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:gravity="center_horizontal"
@@ -129,8 +129,8 @@
             <!-- 1. DASHBOARD -->
             <LinearLayout
                 android:id="@+id/railBtnDash"
-                android:layout_width="66dp"
-                android:layout_height="52dp"
+                android:layout_width="74dp"
+                android:layout_height="58dp"
                 android:orientation="vertical"
                 android:gravity="center"
                 android:background="@drawable/bg_elevated_btn"
@@ -139,8 +139,8 @@
 
                 <ImageView
                     android:id="@+id/ivDashIcon"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
                     android:src="@drawable/ic_nav_dash"
                     android:contentDescription="Dash" />
 
@@ -151,17 +151,17 @@
                     android:layout_marginTop="3dp"
                     android:text="DASH"
                     android:textColor="@color/accent_amber"
-                    android:textSize="9sp"
-                    android:fontFamily="sans-serif-medium"
+                    android:textSize="10sp"
+                    android:fontFamily="sans-serif-bold"
                     android:letterSpacing="0.05" />
             </LinearLayout>
 
             <!-- 2. CARPLAY -->
             <LinearLayout
                 android:id="@+id/railBtnCarPlay"
-                android:layout_width="66dp"
-                android:layout_height="52dp"
-                android:layout_marginTop="4dp"
+                android:layout_width="74dp"
+                android:layout_height="58dp"
+                android:layout_marginTop="5dp"
                 android:orientation="vertical"
                 android:gravity="center"
                 android:background="@drawable/bg_elevated_btn"
@@ -170,8 +170,8 @@
 
                 <ImageView
                     android:id="@+id/ivCarPlayIcon"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
                     android:src="@drawable/ic_nav_carplay"
                     android:contentDescription="CarPlay" />
 
@@ -182,17 +182,17 @@
                     android:layout_marginTop="3dp"
                     android:text="PHONE"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="9sp"
-                    android:fontFamily="sans-serif-medium"
+                    android:textSize="10sp"
+                    android:fontFamily="sans-serif-bold"
                     android:letterSpacing="0.05" />
             </LinearLayout>
 
             <!-- 3. MAPS -->
             <LinearLayout
                 android:id="@+id/railBtnMaps"
-                android:layout_width="66dp"
-                android:layout_height="52dp"
-                android:layout_marginTop="4dp"
+                android:layout_width="74dp"
+                android:layout_height="58dp"
+                android:layout_marginTop="5dp"
                 android:orientation="vertical"
                 android:gravity="center"
                 android:background="@drawable/bg_elevated_btn"
@@ -201,8 +201,8 @@
 
                 <ImageView
                     android:id="@+id/ivMapsIcon"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
                     android:src="@drawable/ic_nav_maps"
                     android:contentDescription="Maps" />
 
@@ -213,17 +213,17 @@
                     android:layout_marginTop="3dp"
                     android:text="MAPS"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="9sp"
-                    android:fontFamily="sans-serif-medium"
+                    android:textSize="10sp"
+                    android:fontFamily="sans-serif-bold"
                     android:letterSpacing="0.05" />
             </LinearLayout>
 
             <!-- 4. AUDIO -->
             <LinearLayout
                 android:id="@+id/railBtnAudio"
-                android:layout_width="66dp"
-                android:layout_height="52dp"
-                android:layout_marginTop="4dp"
+                android:layout_width="74dp"
+                android:layout_height="58dp"
+                android:layout_marginTop="5dp"
                 android:orientation="vertical"
                 android:gravity="center"
                 android:background="@drawable/bg_elevated_btn"
@@ -232,8 +232,8 @@
 
                 <ImageView
                     android:id="@+id/ivAudioIcon"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
                     android:src="@drawable/ic_nav_audio"
                     android:contentDescription="Audio" />
 
@@ -244,17 +244,17 @@
                     android:layout_marginTop="3dp"
                     android:text="AUDIO"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="9sp"
-                    android:fontFamily="sans-serif-medium"
+                    android:textSize="10sp"
+                    android:fontFamily="sans-serif-bold"
                     android:letterSpacing="0.05" />
             </LinearLayout>
 
             <!-- 5. APPS -->
             <LinearLayout
                 android:id="@+id/railBtnApps"
-                android:layout_width="66dp"
-                android:layout_height="52dp"
-                android:layout_marginTop="4dp"
+                android:layout_width="74dp"
+                android:layout_height="58dp"
+                android:layout_marginTop="5dp"
                 android:orientation="vertical"
                 android:gravity="center"
                 android:background="@drawable/bg_elevated_btn"
@@ -263,8 +263,8 @@
 
                 <ImageView
                     android:id="@+id/ivAppsIcon"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
                     android:src="@drawable/ic_nav_apps"
                     android:contentDescription="Apps" />
 
@@ -275,8 +275,8 @@
                     android:layout_marginTop="3dp"
                     android:text="APPS"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="9sp"
-                    android:fontFamily="sans-serif-medium"
+                    android:textSize="10sp"
+                    android:fontFamily="sans-serif-bold"
                     android:letterSpacing="0.05" />
             </LinearLayout>
 
@@ -289,8 +289,8 @@
             <!-- 6. SETUP -->
             <LinearLayout
                 android:id="@+id/railBtnSetup"
-                android:layout_width="66dp"
-                android:layout_height="52dp"
+                android:layout_width="74dp"
+                android:layout_height="58dp"
                 android:orientation="vertical"
                 android:gravity="center"
                 android:background="@drawable/bg_elevated_btn"
@@ -299,8 +299,8 @@
 
                 <ImageView
                     android:id="@+id/ivSetupIcon"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
                     android:src="@drawable/ic_nav_setup"
                     android:contentDescription="Setup" />
 
@@ -311,8 +311,8 @@
                     android:layout_marginTop="3dp"
                     android:text="SETUP"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="9sp"
-                    android:fontFamily="sans-serif-medium"
+                    android:textSize="10sp"
+                    android:fontFamily="sans-serif-bold"
                     android:letterSpacing="0.05" />
             </LinearLayout>
 
