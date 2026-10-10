@@ -23,18 +23,21 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Apple CarPlay Controller"
+                android:text="APPLE CARPLAY CONTROLLER"
                 android:textColor="@color/cockpit_text_primary"
                 android:textSize="18sp"
-                android:textStyle="bold" />
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.04" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Zlink 5.3 Hardware Projection System for Hyundai Santa Fe"
+                android:text="ZLINK 5.3 HARDWARE PROJECTION · HYUNDAI SANTA FE"
                 android:textColor="@color/cockpit_text_secondary"
-                android:textSize="13sp" />
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-bold"
+                android:letterSpacing="0.04" />
         </LinearLayout>
 
         <Button
@@ -46,9 +49,9 @@
             android:textColor="@color/cockpit_text_primary"
             android:textSize="13sp"
             android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.05"
-            android:paddingStart="24dp"
-            android:paddingEnd="24dp" />
+            android:letterSpacing="0.06"
+            android:paddingStart="26dp"
+            android:paddingEnd="26dp" />
 
     </LinearLayout>
 
@@ -70,10 +73,11 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Wireless Link"
+                android:text="01 · WIRELESS PROJECTION"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textSize="13sp"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.04" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -92,10 +96,11 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Protocol: Zlink 5.3 (Ready)"
+                android:text="PROTOCOL: ZLINK 5.3 ACTIVE"
                 android:textColor="@color/status_active"
-                android:textSize="11sp"
-                android:textStyle="bold" />
+                android:textSize="10sp"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.06" />
         </LinearLayout>
 
         <View
@@ -113,10 +118,11 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Wired USB Link"
+                android:text="02 · WIRED USB LINK"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textSize="13sp"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.04" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -135,9 +141,11 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Port Status: USB 2.0 Ready"
+                android:text="PORT STATUS: USB 2.0 READY"
                 android:textColor="@color/cockpit_text_secondary"
-                android:textSize="11sp" />
+                android:textSize="10sp"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.06" />
         </LinearLayout>
 
         <View
@@ -155,10 +163,11 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="DSP Audio Sync"
+                android:text="03 · DSP AUDIO TUNNEL"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textSize="13sp"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.04" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -177,10 +186,11 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Audio Stream: I2S Digital Sync"
+                android:text="AUDIO STREAM: I2S HARDWARE SYNC"
                 android:textColor="@color/status_active"
-                android:textSize="11sp"
-                android:textStyle="bold" />
+                android:textSize="10sp"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.06" />
         </LinearLayout>
 
     </LinearLayout>

@@ -198,81 +198,87 @@
             android:layout_marginBottom="10dp"
             android:background="@color/cockpit_surface_border_subtle" />
 
-        <!-- 0. Driver Phone Switcher (CarPlay & Bluetooth Gateway) -->
+        <!-- 01. Driver Phone Switcher (CarPlay & Bluetooth Gateway) -->
         <Button
             android:id="@+id/btnSelectDriverPhone"
             android:layout_width="match_parent"
             android:layout_height="50dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="📱  Select Driver Phone (CarPlay Gateway)"
+            android:text="01 · SELECT DRIVER PHONE"
             android:textColor="@color/accent_amber"
             android:textSize="12sp"
             android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.06"
             android:gravity="center" />
 
-        <!-- 1. Factory Settings (Pin 123456 / 7890 reminder) -->
+        <!-- 02. Factory Settings (Pin 123456 / 7890 reminder) -->
         <Button
             android:id="@+id/btnShortcutFactorySettings"
             android:layout_width="match_parent"
             android:layout_height="50dp"
             android:layout_marginTop="6dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="🔧  Car Factory Settings (Code: 123456)"
-            android:textColor="@color/accent_amber"
+            android:text="02 · FACTORY SETTINGS (PIN 123456)"
+            android:textColor="@color/cockpit_text_primary"
             android:textSize="12sp"
-            android:fontFamily="sans-serif-bold"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.06"
             android:gravity="center" />
 
-        <!-- 2. Android System Settings (Wi-Fi, Brightness, Sound) -->
+        <!-- 03. Android System Settings (Wi-Fi, Brightness, Sound) -->
         <Button
             android:id="@+id/btnShortcutAndroidSettings"
             android:layout_width="match_parent"
             android:layout_height="50dp"
             android:layout_marginTop="6dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="⚙️  Android System Settings"
+            android:text="03 · SYSTEM SETTINGS (WIFI &amp; SOUND)"
             android:textColor="@color/cockpit_text_primary"
             android:textSize="12sp"
-            android:fontFamily="sans-serif-bold"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.06"
             android:gravity="center" />
 
-        <!-- 3. DSP Equalizer / Car Audio IC -->
+        <!-- 04. DSP Equalizer / Car Audio IC -->
         <Button
             android:id="@+id/btnShortcutAudioEq"
             android:layout_width="match_parent"
             android:layout_height="50dp"
             android:layout_marginTop="6dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="🔊  Car DSP / Equalizer (Rohm37XXX)"
+            android:text="04 · DSP EQUALIZER TUNER"
             android:textColor="@color/cockpit_text_primary"
             android:textSize="12sp"
-            android:fontFamily="sans-serif-bold"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.06"
             android:gravity="center" />
 
-        <!-- 4. Bluetooth Connection Manager -->
+        <!-- 05. Bluetooth Connection Manager -->
         <Button
             android:id="@+id/btnShortcutBluetooth"
             android:layout_width="match_parent"
             android:layout_height="50dp"
             android:layout_marginTop="6dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="📱  Bluetooth Devices (SantafemR)"
+            android:text="05 · BLUETOOTH MANAGER"
             android:textColor="@color/cockpit_text_primary"
             android:textSize="12sp"
-            android:fontFamily="sans-serif-bold"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.06"
             android:gravity="center" />
 
-        <!-- 5. Soft Reload Launcher -->
+        <!-- 06. Soft Reload Launcher -->
         <Button
             android:id="@+id/btnRestartLauncher"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="50dp"
             android:layout_marginTop="6dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="🔄  Fast Restart ApexDrive"
+            android:text="06 · RESTART APEXDRIVE"
             android:textColor="@color/cockpit_text_secondary"
             android:textSize="12sp"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.06"
             android:gravity="center" />
 
     </LinearLayout>

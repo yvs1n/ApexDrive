@@ -47,12 +47,12 @@
         <LinearLayout
             android:id="@+id/pillHeaderWeather"
             android:layout_width="wrap_content"
-            android:layout_height="28dp"
+            android:layout_height="32dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:background="@drawable/bg_card_inner"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
             android:clickable="true"
             android:focusable="true">
 
@@ -60,31 +60,35 @@
                 android:id="@+id/tvWeatherIcon"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="☀️"
-                android:textSize="12sp" />
+                android:text="TEMP"
+                android:textColor="@color/accent_amber"
+                android:textSize="9sp"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.08" />
 
             <TextView
                 android:id="@+id/tvWeatherText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:text="28°C · Sunny"
+                android:layout_marginStart="8dp"
+                android:text="26°C · OUTSIDE"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-medium" />
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-bold"
+                android:letterSpacing="0.04" />
         </LinearLayout>
 
         <!-- Bluetooth Connected Device Header Pill (Clickable) -->
         <LinearLayout
             android:id="@+id/pillHeaderBluetooth"
             android:layout_width="wrap_content"
-            android:layout_height="28dp"
+            android:layout_height="32dp"
             android:layout_marginStart="10dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:background="@drawable/bg_card_inner"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
             android:clickable="true"
             android:focusable="true">
 
@@ -99,11 +103,12 @@
                 android:id="@+id/tvHeaderBluetooth"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:text="Not Connected"
+                android:layout_marginStart="8dp"
+                android:text="NOT CONNECTED"
                 android:textColor="@color/cockpit_text_secondary"
                 android:textSize="11sp"
-                android:fontFamily="sans-serif-medium" />
+                android:fontFamily="sans-serif-bold"
+                android:letterSpacing="0.04" />
         </LinearLayout>
 
     </LinearLayout>
@@ -139,8 +144,8 @@
 
                 <ImageView
                     android:id="@+id/ivDashIcon"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
                     android:src="@drawable/ic_nav_dash"
                     android:contentDescription="Dash" />
 
@@ -148,12 +153,12 @@
                     android:id="@+id/tvDashLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
+                    android:layout_marginTop="4dp"
                     android:text="DASH"
                     android:textColor="@color/accent_amber"
-                    android:textSize="10sp"
-                    android:fontFamily="sans-serif-bold"
-                    android:letterSpacing="0.05" />
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-black"
+                    android:letterSpacing="0.08" />
             </LinearLayout>
 
             <!-- 2. CARPLAY -->
@@ -170,8 +175,8 @@
 
                 <ImageView
                     android:id="@+id/ivCarPlayIcon"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
                     android:src="@drawable/ic_nav_carplay"
                     android:contentDescription="CarPlay" />
 
@@ -179,12 +184,12 @@
                     android:id="@+id/tvCarPlayLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
+                    android:layout_marginTop="4dp"
                     android:text="PHONE"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="10sp"
-                    android:fontFamily="sans-serif-bold"
-                    android:letterSpacing="0.05" />
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-black"
+                    android:letterSpacing="0.08" />
             </LinearLayout>
 
             <!-- 3. MAPS -->
@@ -201,8 +206,8 @@
 
                 <ImageView
                     android:id="@+id/ivMapsIcon"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
                     android:src="@drawable/ic_nav_maps"
                     android:contentDescription="Maps" />
 
@@ -210,12 +215,12 @@
                     android:id="@+id/tvMapsLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
+                    android:layout_marginTop="4dp"
                     android:text="MAPS"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="10sp"
-                    android:fontFamily="sans-serif-bold"
-                    android:letterSpacing="0.05" />
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-black"
+                    android:letterSpacing="0.08" />
             </LinearLayout>
 
             <!-- 4. AUDIO -->
@@ -232,8 +237,8 @@
 
                 <ImageView
                     android:id="@+id/ivAudioIcon"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
                     android:src="@drawable/ic_nav_audio"
                     android:contentDescription="Audio" />
 
@@ -241,12 +246,12 @@
                     android:id="@+id/tvAudioLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
+                    android:layout_marginTop="4dp"
                     android:text="AUDIO"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="10sp"
-                    android:fontFamily="sans-serif-bold"
-                    android:letterSpacing="0.05" />
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-black"
+                    android:letterSpacing="0.08" />
             </LinearLayout>
 
             <!-- 5. APPS -->
@@ -263,8 +268,8 @@
 
                 <ImageView
                     android:id="@+id/ivAppsIcon"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
                     android:src="@drawable/ic_nav_apps"
                     android:contentDescription="Apps" />
 
@@ -272,12 +277,12 @@
                     android:id="@+id/tvAppsLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
+                    android:layout_marginTop="4dp"
                     android:text="APPS"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="10sp"
-                    android:fontFamily="sans-serif-bold"
-                    android:letterSpacing="0.05" />
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-black"
+                    android:letterSpacing="0.08" />
             </LinearLayout>
 
             <!-- Flexible Spacer -->
@@ -299,8 +304,8 @@
 
                 <ImageView
                     android:id="@+id/ivSetupIcon"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
                     android:src="@drawable/ic_nav_setup"
                     android:contentDescription="Setup" />
 
@@ -308,12 +313,12 @@
                     android:id="@+id/tvSetupLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
+                    android:layout_marginTop="4dp"
                     android:text="SETUP"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="10sp"
-                    android:fontFamily="sans-serif-bold"
-                    android:letterSpacing="0.05" />
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-black"
+                    android:letterSpacing="0.08" />
             </LinearLayout>
 
         </LinearLayout>

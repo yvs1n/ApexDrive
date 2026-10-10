@@ -77,10 +77,11 @@
             android:layout_height="54dp"
             android:layout_weight="1"
             android:background="@drawable/bg_elevated_btn"
-            android:text="📱  Pair New Phone"
+            android:text="PAIR NEW PHONE"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="13sp"
-            android:fontFamily="sans-serif-bold" />
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.08" />
 
         <Button
             android:id="@+id/btnSkipSelector"

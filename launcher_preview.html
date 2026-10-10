@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>ApexDrive — Swiss Automotive Cockpit Preview</title>
+  <title>ApexDrive · Swiss Automotive Cockpit Preview</title>
   <style>
     /* -------------------------------------------------------------
        SWISS AUTOMOTIVE DESIGN TOKENS & FROSTED ACRYLIC
@@ -455,7 +455,7 @@
     }
 
     .speed-number {
-      font-size: 78px;
+      font-size: 86px;
       font-weight: 900;
       font-variant-numeric: tabular-nums;
       line-height: 0.9;
@@ -465,14 +465,15 @@
 
     /* Big Finger Friendly Speed Unit Button (44px height) */
     .speed-unit {
-      height: 44px;
-      padding: 0 14px;
+      height: 48px;
+      padding: 0 16px;
       background: var(--surface-elevated);
       border: 1px solid var(--surface-border);
       border-radius: 8px;
       font-size: 14px;
       font-weight: 800;
       color: var(--accent);
+      letter-spacing: 0.08em;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -491,14 +492,16 @@
 
     /* Touchable Trip Container */
     .trip-meta-row {
-      height: 36px;
+      height: 38px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       border-top: 1px solid var(--surface-border-subtle);
       padding-top: 8px;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
       color: var(--text-secondary);
       cursor: pointer;
       border-radius: 6px;
@@ -528,15 +531,17 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      letter-spacing: 0.02em;
     }
 
     .media-artist {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-secondary);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       margin-top: 2px;
+      letter-spacing: 0.04em;
     }
 
     /* Big Finger Friendly Media Transport Buttons (54px height) */
@@ -556,17 +561,19 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
-      font-weight: 700;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
       transition: all var(--spring-fast);
     }
 
     .transport-btn.play-pause {
       flex: 1.4;
       color: var(--accent);
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 800;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.08em;
     }
 
     .transport-btn:hover {
@@ -1076,36 +1083,42 @@
         
         <div class="device-card-list">
           <!-- 1. Yassin's iPhone (Preferred) -->
-          <div class="device-card preferred" onclick="selectDriverPhone('Yassin\'s iPhone', '98:B6:E9:12:44:A1')">
+          <div class="device-card preferred" onclick="selectDriverPhone('YASSIN\'S IPHONE', '98:B6:E9:12:44:A1')">
             <div class="device-card-left">
-              <span style="font-size: 24px;">📱</span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2">
+                <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline>
+              </svg>
               <div>
-                <div class="device-name" id="cardName1">Yassin's iPhone</div>
-                <div class="device-status">⭐ Primary Driver Device · Ready</div>
+                <div class="device-name" id="cardName1">YASSIN'S IPHONE</div>
+                <div class="device-status">PRIMARY DRIVER DEVICE · ACTIVE</div>
               </div>
             </div>
             <div class="device-connect-pill" id="cardPill1">ACTIVE</div>
           </div>
 
           <!-- 2. Family iPhone -->
-          <div class="device-card" onclick="selectDriverPhone('Sarah\'s iPhone', '40:4E:36:99:11:BC')">
+          <div class="device-card" onclick="selectDriverPhone('SARAH\'S IPHONE', '40:4E:36:99:11:BC')">
             <div class="device-card-left">
-              <span style="font-size: 24px;">📱</span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline>
+              </svg>
               <div>
-                <div class="device-name">Sarah's iPhone</div>
-                <div class="device-status">Paired · Tap to connect CarPlay &amp; Audio</div>
+                <div class="device-name">SARAH'S IPHONE</div>
+                <div class="device-status">PAIRED · READY FOR CARPLAY &amp; AUDIO</div>
               </div>
             </div>
             <div class="device-connect-pill">CONNECT</div>
           </div>
 
           <!-- 3. Google Pixel -->
-          <div class="device-card" onclick="selectDriverPhone('Pixel 8 Pro', '00:1A:7D:DA:71:13')">
+          <div class="device-card" onclick="selectDriverPhone('PIXEL 8 PRO', '00:1A:7D:DA:71:13')">
             <div class="device-card-left">
-              <span style="font-size: 24px;">📱</span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline>
+              </svg>
               <div>
-                <div class="device-name">Pixel 8 Pro</div>
-                <div class="device-status">Paired · Tap to connect Android Auto</div>
+                <div class="device-name">PIXEL 8 PRO</div>
+                <div class="device-status">PAIRED · READY FOR ANDROID AUTO</div>
               </div>
             </div>
             <div class="device-connect-pill">CONNECT</div>
@@ -1113,7 +1126,7 @@
         </div>
 
         <div class="device-actions">
-          <button class="btn-dialog-secondary" onclick="simulatePairNewDevice()">📱 Pair New Phone</button>
+          <button class="btn-dialog-secondary" onclick="simulatePairNewDevice()">PAIR NEW PHONE</button>
           <button class="btn-dialog-primary" onclick="closeDeviceGateway()">CONTINUE TO DASHBOARD</button>
         </div>
       </div>
@@ -1129,8 +1142,8 @@
       <div class="header-right">
         <!-- Live Car Exterior Thermometer Pill (Direct CAN-bus Reading) -->
         <div class="header-pill" onclick="refreshCarThermometer()" title="Live Exterior Thermometer (Santa Fe CAN-bus)">
-          <span id="weatherIcon">🌡️</span>
-          <span id="weatherText">26°C · Outside</span>
+          <span id="weatherIcon" style="font-size: 10px; font-weight: 900; letter-spacing: 0.08em; color: var(--accent);">TEMP</span>
+          <span id="weatherText">26°C · OUTSIDE</span>
         </div>
 
         <!-- Bluetooth Connected Device Header Pill (Opens Driver Phone Gateway) -->
@@ -1138,7 +1151,7 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" id="headerBtSvg">
             <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline>
           </svg>
-          <span id="headerBtName" style="color: var(--accent);">Yassin's iPhone</span>
+          <span id="headerBtName" style="color: var(--accent);">YASSIN'S IPHONE</span>
         </div>
       </div>
     </header>
@@ -1203,14 +1216,14 @@
               <section class="panel-card" style="flex: 1;">
                 <div class="card-header">
                   <span>MOBILE PROJECTION</span>
-                  <span id="dashCarPlayBadge" style="color: var(--accent);">ZLINK 5.3</span>
+                  <span id="dashCarPlayBadge" style="color: var(--accent); font-weight: 800;">ZLINK 5.3</span>
                 </div>
                 <div class="inner-card carplay-surface">
-                  <div class="carplay-badge">● Phone Link Active</div>
-                  <h1 class="carplay-title">CarPlay · Android Auto</h1>
-                  <p class="carplay-desc" id="cpSubDesc">Seamless navigation, Spotify &amp; Siri interface via Zlink bridge.</p>
+                  <div class="carplay-badge" style="font-weight: 800; letter-spacing: 0.06em;">●  PHONE LINK ACTIVE</div>
+                  <h1 class="carplay-title" style="letter-spacing: 0.05em;">APPLE CARPLAY</h1>
+                  <p class="carplay-desc" id="cpSubDesc" style="font-weight: 700; letter-spacing: 0.04em;">WIRELESS &amp; USB PROJECTION INTERFACE</p>
                   <button class="btn-action-primary" onclick="launchCarPlay()">
-                    <span>▶</span> LAUNCH CARPLAY
+                    LAUNCH PROJECTION
                   </button>
                 </div>
               </section>
@@ -1224,14 +1237,14 @@
                     </svg>
                   </div>
                   <div>
-                    <div class="bt-device-name" id="btDeviceName">Yassin's iPhone</div>
-                    <div class="bt-profile-detail" id="btProfileText">A2DP Audio &amp; Calls Active</div>
+                    <div class="bt-device-name" id="btDeviceName" style="letter-spacing: 0.04em;">SANTAFEMR</div>
+                    <div class="bt-profile-detail" id="btProfileText" style="letter-spacing: 0.04em; font-weight: 700;">A2DP AUDIO · TELEPHONY LINK</div>
                   </div>
                 </div>
                 
-                <div class="bt-status-pill">
+                <div class="bt-status-pill" style="font-weight: 800; letter-spacing: 0.06em;">
                   <span class="status-dot" id="btIndicatorDot"></span>
-                  <span id="btStatusLabel">● CONNECTED</span>
+                  <span id="btStatusLabel">CONNECTED</span>
                 </div>
               </section>
 
@@ -1244,7 +1257,7 @@
               <section class="panel-card speedometer-card">
                 <div class="card-header" style="padding: 0; border: none; height: auto;">
                   <span>GPS VELOCITY</span>
-                  <span class="inner-card" id="dashHeading" style="padding: 4px 10px; color: var(--text-primary); font-weight: 800;">NW 315°</span>
+                  <span class="inner-card" id="dashHeading" style="padding: 4px 10px; color: var(--text-primary); font-weight: 800; letter-spacing: 0.06em;">NORTH · 315° NW</span>
                 </div>
 
                 <div class="speed-number-row">
@@ -1253,8 +1266,8 @@
                 </div>
 
                 <div class="trip-meta-row" onclick="resetTrip()" title="Tap to reset trip distance &amp; timer">
-                  <span id="tripDistText">Trip: 14.8 km</span>
-                  <span id="tripTimeText">Time: 18 min (Tap to reset)</span>
+                  <span id="tripDistText">TRIP A: 14.8 KM</span>
+                  <span id="tripTimeText">TIME: 18 MIN · RESET</span>
                 </div>
               </section>
 
@@ -1262,7 +1275,7 @@
               <section class="panel-card media-card">
                 <div class="card-header" style="padding: 0; border: none; height: auto;">
                   <span>NOW PLAYING</span>
-                  <span id="dashAudioBadge" style="color: var(--accent); font-weight: 800;">UNIVERSAL AUDIO</span>
+                  <span id="dashAudioBadge" style="color: var(--accent); font-weight: 800; letter-spacing: 0.06em;">UNIVERSAL AUDIO</span>
                 </div>
 
                 <div class="media-info">
@@ -1271,9 +1284,9 @@
                 </div>
 
                 <div class="media-transport">
-                  <button class="transport-btn" onclick="prevSong()" title="Previous Track">⏮</button>
-                  <button class="transport-btn play-pause" id="btnMediaPlay" onclick="togglePlayPause()" title="Pause/Play Audio">⏸  PAUSE</button>
-                  <button class="transport-btn" onclick="nextSong()" title="Next Track">⏭</button>
+                  <button class="transport-btn" onclick="prevSong()" title="Previous Track">PREV</button>
+                  <button class="transport-btn play-pause" id="btnMediaPlay" onclick="togglePlayPause()" title="Pause/Play Audio">PAUSE / PLAY</button>
+                  <button class="transport-btn" onclick="nextSong()" title="Next Track">NEXT</button>
                 </div>
               </section>
 
@@ -1288,13 +1301,13 @@
         <div class="view-panel" id="view-carplay">
           <div style="flex: 1; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
             <div class="panel-card" style="flex: 1; align-items: center; justify-content: center; text-align: center; gap: 14px; padding: 24px;">
-              <span style="font-size: 11px; font-weight: 700; color: var(--status-active); letter-spacing: 0.08em;">● PROTOCOL ENGINE LINKED</span>
-              <h1 style="font-size: 32px; font-weight: 900; letter-spacing: -0.02em;">Apple CarPlay &amp; Android Auto</h1>
-              <p style="font-size: 13px; color: var(--text-secondary); max-width: 440px;" id="cpFullSub">Connected Engine: Zlink 5.3 (com.zlink.carplay)</p>
+              <span style="font-size: 11px; font-weight: 800; color: var(--status-active); letter-spacing: 0.08em;">● PROTOCOL ENGINE ACTIVE</span>
+              <h1 style="font-size: 28px; font-weight: 900; letter-spacing: 0.04em;">APPLE CARPLAY CONTROLLER</h1>
+              <p style="font-size: 12px; font-weight: 700; color: var(--text-secondary); max-width: 460px; letter-spacing: 0.04em;" id="cpFullSub">ZLINK 5.3 HARDWARE PROJECTION · HYUNDAI SANTA FE</p>
               
               <div style="display: flex; gap: 12px; margin-top: 8px;">
-                <button class="btn-action-primary" onclick="launchCarPlay()">▶  OPEN FULLSCREEN CARPLAY</button>
-                <button class="btn-action-primary" style="background: transparent;" onclick="openDeviceGateway(false)">📱 SWITCH DRIVER PHONE</button>
+                <button class="btn-action-primary" onclick="launchCarPlay()">LAUNCH FULLSCREEN PROJECTION</button>
+                <button class="btn-action-primary" style="background: transparent;" onclick="openDeviceGateway(false)">SELECT DRIVER PHONE</button>
               </div>
             </div>
           </div>
@@ -1308,21 +1321,21 @@
             <div class="panel-card" style="padding: 14px; display: flex; flex-direction: column;">
               <div class="card-header" style="padding: 0; border: none; height: auto;">
                 <span>LIVE GPS TELEMETRY &amp; NAVIGATION</span>
-                <span class="inner-card" style="padding: 3px 8px; font-size: 10px; font-weight: 800; color: var(--status-active);">● 3D Fix · ±3m</span>
+                <span class="inner-card" style="padding: 3px 8px; font-size: 10px; font-weight: 800; color: var(--status-active); letter-spacing: 0.06em;">● 3D FIX · ±3M</span>
               </div>
 
               <div class="inner-card compass-hud-stage">
-                <div class="compass-heading-big" id="mapsHeadingBig">NW 315°</div>
-                <div class="compass-coordinates">37.7749° N, 122.4194° W</div>
-                <div class="compass-telemetry" id="mapsAlt">Altitude: 245 m · Speed: 64 KM/H</div>
+                <div class="compass-heading-big" id="mapsHeadingBig" style="font-weight: 900; letter-spacing: 0.04em;">NORTH · 315° NW</div>
+                <div class="compass-coordinates" style="font-weight: 700;">37.7749° N, 122.4194° W</div>
+                <div class="compass-telemetry" id="mapsAlt" style="font-weight: 600;">Altitude: 245 m · Speed: 64 KM/H</div>
                 <button class="btn-action-primary" style="margin-top: 10px;" onclick="launchCarPlay()">
                   OPEN CARPLAY NAVIGATION
                 </button>
               </div>
 
-              <div class="inner-card" style="height: 38px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-size: 11px; font-weight: 600; color: var(--text-secondary);">
-                <span>Trip: 14.8 km</span>
-                <span>Duration: 18 min</span>
+              <div class="inner-card" style="height: 38px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-size: 11px; font-weight: 800; letter-spacing: 0.05em; color: var(--text-secondary);">
+                <span>TRIP: 14.8 KM</span>
+                <span>DURATION: 18 MIN</span>
               </div>
             </div>
 
@@ -1331,15 +1344,15 @@
               <span class="card-header" style="padding: 0; border: none; height: auto;">QUICK DESTINATIONS &amp; APPS</span>
               
               <div class="poi-grid">
-                <button class="poi-btn" onclick="triggerPoi('gas station')">⛽  Fuel Station</button>
-                <button class="poi-btn" onclick="triggerPoi('parking')">🅿️  Parking</button>
-                <button class="poi-btn" onclick="triggerPoi('cafe')">☕  Rest / Cafe</button>
-                <button class="poi-btn" onclick="triggerPoi('hospital')">🏥  Hospital</button>
+                <button class="poi-btn" style="font-weight: 900; letter-spacing: 0.08em; font-size: 12px;" onclick="triggerPoi('gas station')">FUEL STATION</button>
+                <button class="poi-btn" style="font-weight: 900; letter-spacing: 0.08em; font-size: 12px;" onclick="triggerPoi('parking')">PARKING</button>
+                <button class="poi-btn" style="font-weight: 900; letter-spacing: 0.08em; font-size: 12px;" onclick="triggerPoi('cafe')">REST AREA</button>
+                <button class="poi-btn" style="font-weight: 900; letter-spacing: 0.08em; font-size: 12px;" onclick="triggerPoi('hospital')">HOSPITAL</button>
               </div>
 
               <span class="card-header" style="padding: 0; border: none; height: auto; margin-top: 16px;">NAVIGATION ENGINES</span>
-              <button class="nav-engine-btn" onclick="showToast('Launching Google Maps (com.google.android.apps.maps)')">🗺️  Launch Google Maps</button>
-              <button class="nav-engine-btn" onclick="showToast('Launching Waze Navigation (com.waze)')">🚙  Launch Waze Navigation</button>
+              <button class="nav-engine-btn" style="font-weight: 900; letter-spacing: 0.08em;" onclick="showToast('Launching Google Maps (com.google.android.apps.maps)')">GOOGLE MAPS</button>
+              <button class="nav-engine-btn" style="font-weight: 900; letter-spacing: 0.08em;" onclick="showToast('Launching Waze Navigation (com.waze)')">WAZE NAVIGATION</button>
             </div>
           </div>
         </div>
@@ -1351,21 +1364,21 @@
           <div style="flex: 1; padding: 10px; display: grid; grid-template-columns: 230px 1fr; gap: 10px;">
             <div class="panel-card" style="padding: 12px; gap: 8px;">
               <span class="card-header" style="padding: 0; border: none; height: auto;">AUDIO SOURCES</span>
-              <button class="shortcut-btn" id="audioBtnRadio" style="border-color: var(--accent); color: var(--accent);">📻  FM / AM Radio</button>
-              <button class="shortcut-btn" onclick="showToast('Routing Bluetooth Audio Stream')">📶  Bluetooth Stream</button>
-              <button class="shortcut-btn" onclick="showToast('Launching Spotify')">🎵  Spotify App</button>
-              <button class="shortcut-btn" onclick="showToast('Mounting USB Storage Audio')">💾  USB Mass Storage</button>
+              <button class="shortcut-btn" id="audioBtnRadio" style="border-color: var(--accent); color: var(--accent); font-weight: 900; letter-spacing: 0.06em;">01  FM RADIO TUNER</button>
+              <button class="shortcut-btn" style="font-weight: 900; letter-spacing: 0.06em;" onclick="showToast('Routing Bluetooth Audio Stream')">02  SPOTIFY AUDIO</button>
+              <button class="shortcut-btn" style="font-weight: 900; letter-spacing: 0.06em;" onclick="showToast('Routing Bluetooth Audio Stream')">03  BLUETOOTH STREAM</button>
+              <button class="shortcut-btn" style="font-weight: 900; letter-spacing: 0.06em;" onclick="showToast('Mounting USB Storage Audio')">04  USB MEDIA</button>
             </div>
 
             <div class="panel-card" style="padding: 16px; align-items: center; justify-content: center; text-align: center; gap: 14px;">
-              <span style="font-size: 11px; color: var(--text-secondary); font-weight: 700;" id="audioActiveLabel">FM RADIO TUNER (SI473X IC)</span>
+              <span style="font-size: 11px; color: var(--text-secondary); font-weight: 900; letter-spacing: 0.06em;" id="audioActiveLabel">FM RADIO TUNER (SI473X IC)</span>
               <div>
-                <div style="font-size: 68px; font-weight: 900; color: var(--text-primary); font-variant-numeric: tabular-nums;" id="freqDisplay">98.5</div>
-                <div style="font-size: 13px; color: var(--accent); font-weight: 800; letter-spacing: 0.08em;" id="audioFreqUnit">MHZ · STEREO</div>
+                <div style="font-size: 88px; font-weight: 900; color: var(--text-primary); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; line-height: 0.9;" id="freqDisplay">98.5</div>
+                <div style="font-size: 12px; color: var(--accent); font-weight: 900; letter-spacing: 0.08em; margin-top: 6px;" id="audioFreqUnit">MHZ · STEREO BROADCAST</div>
               </div>
               <div style="display: flex; gap: 12px;">
-                <button class="btn-action-primary" onclick="tuneFreq(-0.1)">◀ Scan Down</button>
-                <button class="btn-action-primary" onclick="tuneFreq(0.1)">Scan Up ▶</button>
+                <button class="btn-action-primary" style="font-weight: 900; letter-spacing: 0.08em;" onclick="tuneFreq(-0.1)">SEEK DOWN</button>
+                <button class="btn-action-primary" style="font-weight: 900; letter-spacing: 0.08em;" onclick="tuneFreq(0.1)">SEEK UP</button>
               </div>
             </div>
           </div>
@@ -1503,34 +1516,34 @@
             <div class="panel-card setup-card">
               <span class="card-header" style="padding: 0; border: none; height: auto;">AUTOMOTIVE SHORTCUTS &amp; DIAGNOSTICS</span>
               
-              <!-- 0. Driver Phone Switcher (CarPlay Gateway) -->
-              <button class="shortcut-btn" style="color: var(--accent); border-color: var(--accent); font-weight: 800;" onclick="openDeviceGateway(false)">
-                📱  Select Driver Phone (CarPlay Gateway)
+              <!-- 01. Driver Phone Switcher (CarPlay Gateway) -->
+              <button class="shortcut-btn" style="color: var(--accent); border-color: var(--accent); font-weight: 900; letter-spacing: 0.06em;" onclick="openDeviceGateway(false)">
+                01 · SELECT DRIVER PHONE
               </button>
 
-              <!-- 1. Factory Settings Shortcut -->
-              <button class="shortcut-btn" style="color: var(--accent); border-color: var(--accent);" onclick="showFactorySettingsModal()">
-                🔧  Car Factory Settings (Code: 123456)
+              <!-- 02. Factory Settings Shortcut -->
+              <button class="shortcut-btn" style="color: var(--accent); border-color: var(--accent); font-weight: 900; letter-spacing: 0.06em;" onclick="showFactorySettingsModal()">
+                02 · FACTORY SETTINGS (PIN 123456)
               </button>
 
-              <!-- 2. Android Settings -->
-              <button class="shortcut-btn" onclick="showToast('Opening Android System Settings')">
-                ⚙️  Android System Settings (Wi-Fi/Brightness)
+              <!-- 03. Android Settings -->
+              <button class="shortcut-btn" style="font-weight: 900; letter-spacing: 0.06em;" onclick="showToast('Opening Android System Settings')">
+                03 · SYSTEM SETTINGS (WIFI &amp; SOUND)
               </button>
 
-              <!-- 3. DSP Equalizer -->
-              <button class="shortcut-btn" onclick="simulateEqualizer()">
-                🔊  Car DSP / Equalizer (Rohm37XXX IC)
+              <!-- 04. DSP Equalizer -->
+              <button class="shortcut-btn" style="font-weight: 900; letter-spacing: 0.06em;" onclick="simulateEqualizer()">
+                04 · DSP EQUALIZER TUNER
               </button>
 
-              <!-- 4. Bluetooth Manager -->
-              <button class="shortcut-btn" onclick="openDeviceGateway(false)">
-                📱  Bluetooth Devices (SantafemR)
+              <!-- 05. Bluetooth Manager -->
+              <button class="shortcut-btn" style="font-weight: 900; letter-spacing: 0.06em;" onclick="openDeviceGateway(false)">
+                05 · BLUETOOTH MANAGER
               </button>
 
-              <!-- 5. Soft Reload -->
-              <button class="shortcut-btn" onclick="showToast('ApexDrive Launcher Soft Reloaded')">
-                🔄  Fast Restart ApexDrive
+              <!-- 06. Soft Reload -->
+              <button class="shortcut-btn" style="font-weight: 900; letter-spacing: 0.06em;" onclick="showToast('ApexDrive Launcher Soft Reloaded')">
+                06 · RESTART APEXDRIVE
               </button>
             </div>
 
@@ -1724,13 +1737,13 @@
       document.getElementById('btnUnitToggle').textContent = speedUnit;
       changeSpeed(document.getElementById('speedValue').textContent);
       refreshCarThermometer();
-      document.getElementById('tripDistText').textContent = speedUnit === 'MPH' ? "Trip: 0.0 mi" : "Trip: 0.0 km";
+      document.getElementById('tripDistText').textContent = speedUnit === 'MPH' ? "TRIP A: 0.0 MI" : "TRIP A: 0.0 KM";
       showToast(`Speedometer unit changed to ${speedUnit}`);
     }
 
     function resetTrip() {
-      document.getElementById('tripDistText').textContent = speedUnit === 'MPH' ? "Trip: 0.0 mi" : "Trip: 0.0 km";
-      document.getElementById('tripTimeText').textContent = "Time: 0 min (Tap to reset)";
+      document.getElementById('tripDistText').textContent = speedUnit === 'MPH' ? "TRIP A: 0.0 MI" : "TRIP A: 0.0 KM";
+      document.getElementById('tripTimeText').textContent = "TIME: 0 MIN · RESET";
       showToast("Trip distance & driving timer reset to zero");
     }
 
@@ -1738,7 +1751,7 @@
     function changeHeading(deg) {
       const directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "N"];
       const idx = Math.round((deg % 360) / 22.5);
-      const text = `${directions[idx % 16]} ${deg}°`;
+      const text = `NORTH · ${deg}° ${directions[idx % 16]}`;
       document.getElementById('dashHeading').textContent = text;
       document.getElementById('mapsHeadingBig').textContent = text;
       document.getElementById('headingSliderVal').textContent = text;
@@ -1758,7 +1771,7 @@
     function togglePlayPause() {
       isPlaying = !isPlaying;
       const b = document.getElementById('btnMediaPlay');
-      b.textContent = isPlaying ? "⏸  PAUSE" : "▶  PLAY";
+      b.textContent = isPlaying ? "PAUSE" : "PLAY";
       showToast(isPlaying ? "Media Resumed (Universal Bus)" : "Paused all audio (CarPlay & Device)");
     }
 

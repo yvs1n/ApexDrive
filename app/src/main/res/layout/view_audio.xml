@@ -18,10 +18,11 @@
             android:layout_width="match_parent"
             android:layout_height="52dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="📻  FM / AM Radio"
+            android:text="01  FM RADIO TUNER"
             android:textColor="@color/accent_amber"
-            android:textSize="14sp"
-            android:textStyle="bold"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.06"
             android:gravity="start|center_vertical"
             android:paddingStart="16dp" />
 
@@ -31,9 +32,11 @@
             android:layout_height="52dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="🎵  Spotify"
+            android:text="02  SPOTIFY AUDIO"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="14sp"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.06"
             android:gravity="start|center_vertical"
             android:paddingStart="16dp" />
 
@@ -43,9 +46,11 @@
             android:layout_height="52dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="📶  Bluetooth Audio"
+            android:text="03  BLUETOOTH STREAM"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="14sp"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.06"
             android:gravity="start|center_vertical"
             android:paddingStart="16dp" />
 
@@ -55,9 +60,11 @@
             android:layout_height="52dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="💾  USB Drive"
+            android:text="04  USB MEDIA"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="14sp"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.06"
             android:gravity="start|center_vertical"
             android:paddingStart="16dp" />
 
@@ -87,8 +94,9 @@
                 android:layout_height="wrap_content"
                 android:text="FM RADIO TUNER (SI473X IC)"
                 android:textColor="@color/cockpit_text_secondary"
-                android:textSize="12sp"
-                android:textStyle="bold" />
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.06" />
 
             <View
                 android:layout_width="0dp"
@@ -99,10 +107,11 @@
                 android:id="@+id/tvAudioPresetBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="PRESET 1"
+                android:text="PRESET 01"
                 android:textColor="@color/accent_amber"
-                android:textSize="12sp"
-                android:textStyle="bold" />
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.06" />
         </LinearLayout>
 
         <LinearLayout
@@ -118,18 +127,21 @@
                 android:layout_height="wrap_content"
                 android:text="98.5"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="64sp"
-                android:textStyle="bold" />
+                android:textSize="88sp"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="-0.03"
+                android:includeFontPadding="false" />
 
             <TextView
                 android:id="@+id/tvRadioFreqUnit"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="MHZ · STEREO"
+                android:text="MHZ · STEREO BROADCAST"
                 android:textColor="@color/accent_amber"
-                android:textSize="13sp"
-                android:textStyle="bold" />
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.08" />
         </LinearLayout>
 
         <LinearLayout
@@ -143,12 +155,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="52dp"
                 android:background="@drawable/bg_elevated_btn"
-                android:text="◀  Scan Down"
+                android:text="SEEK DOWN"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:paddingStart="24dp"
-                android:paddingEnd="24dp" />
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.08"
+                android:paddingStart="28dp"
+                android:paddingEnd="28dp" />
 
             <Button
                 android:id="@+id/btnRadioScanUp"
@@ -156,12 +169,13 @@
                 android:layout_height="52dp"
                 android:layout_marginStart="16dp"
                 android:background="@drawable/bg_elevated_btn"
-                android:text="Scan Up  ▶"
+                android:text="SEEK UP"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:paddingStart="24dp"
-                android:paddingEnd="24dp" />
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.08"
+                android:paddingStart="28dp"
+                android:paddingEnd="28dp" />
         </LinearLayout>
 
     </LinearLayout>

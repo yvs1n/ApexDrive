@@ -11,12 +11,12 @@
     android:clickable="true"
     android:focusable="true">
 
-    <!-- Phone Icon -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="📱"
-        android:textSize="22sp" />
+    <!-- Bluetooth Vector Icon -->
+    <ImageView
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:src="@drawable/ic_nav_bluetooth"
+        android:contentDescription="Bluetooth" />
 
     <LinearLayout
         android:layout_width="0dp"

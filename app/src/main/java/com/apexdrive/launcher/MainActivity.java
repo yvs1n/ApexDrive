@@ -427,11 +427,11 @@ public class MainActivity extends AppCompatActivity {
         if (gpsManager != null) {
             gpsManager.resetTrip();
             boolean isMph = prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH);
-            String distText = isMph ? "Trip: 0.0 mi" : "Trip: 0.0 km";
+            String distText = isMph ? "TRIP A: 0.0 MI" : "TRIP A: 0.0 KM";
             if (tvTripDistance != null) tvTripDistance.setText(distText);
-            if (tvTripTime != null) tvTripTime.setText("Time: 0 min (Tap to reset)");
+            if (tvTripTime != null) tvTripTime.setText("TIME: 0 MIN · RESET");
             if (tvNavTripDist != null) tvNavTripDist.setText(distText);
-            if (tvNavTripDuration != null) tvNavTripDuration.setText("Duration: 0 min");
+            if (tvNavTripDuration != null) tvNavTripDuration.setText("DURATION: 0 MIN");
             Toast.makeText(this, "Trip distance & time reset", Toast.LENGTH_SHORT).show();
         }
     }
@@ -705,17 +705,17 @@ public class MainActivity extends AppCompatActivity {
                     boolean isMph = prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH);
                     String distText;
                     if (isMph) {
-                        distText = String.format(Locale.US, "Trip: %.1f mi", distanceKm * 0.621371);
+                        distText = String.format(Locale.US, "TRIP A: %.1f MI", distanceKm * 0.621371);
                     } else {
-                        distText = String.format(Locale.US, "Trip: %.1f km", distanceKm);
+                        distText = String.format(Locale.US, "TRIP A: %.1f KM", distanceKm);
                     }
                     tvTripDistance.setText(distText);
-                    tvTripTime.setText(String.format(Locale.US, "Time: %d min", elapsedMinutes));
+                    tvTripTime.setText(String.format(Locale.US, "TIME: %d MIN · RESET", elapsedMinutes));
                     if (tvNavTripDist != null) {
                         tvNavTripDist.setText(distText);
                     }
                     if (tvNavTripDuration != null) {
-                        tvNavTripDuration.setText(String.format(Locale.US, "Duration: %d min", elapsedMinutes));
+                        tvNavTripDuration.setText(String.format(Locale.US, "DURATION: %d MIN", elapsedMinutes));
                     }
                 });
             }
@@ -730,7 +730,7 @@ public class MainActivity extends AppCompatActivity {
         btWatcher = new BluetoothWatcher(this);
         btWatcher.setListener((isConnected, deviceName, details) -> runOnUiThread(() -> {
             if (tvHeaderBluetooth != null) {
-                tvHeaderBluetooth.setText(isConnected ? deviceName : "Not Connected");
+                tvHeaderBluetooth.setText(isConnected ? deviceName.toUpperCase() : "NOT CONNECTED");
                 tvHeaderBluetooth.setTextColor(isConnected ? prefHelper.getAccentColor() : ContextCompat.getColor(MainActivity.this, R.color.cockpit_text_secondary));
             }
             if (ivHeaderBtIcon != null) {
@@ -741,17 +741,17 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (tvBtDeviceName != null) {
-                tvBtDeviceName.setText(isConnected ? deviceName : "No Device Connected");
+                tvBtDeviceName.setText(isConnected ? deviceName.toUpperCase() : "NO DEVICE CONNECTED");
             }
             if (tvBtProfileDetail != null) {
-                tvBtProfileDetail.setText(details);
+                tvBtProfileDetail.setText(details != null ? details.toUpperCase() : "A2DP AUDIO · TELEPHONY LINK");
             }
             if (tvBtStatusBadge != null) {
                 if (isConnected) {
-                    tvBtStatusBadge.setText("● CONNECTED");
+                    tvBtStatusBadge.setText("CONNECTED");
                     tvBtStatusBadge.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
                 } else {
-                    tvBtStatusBadge.setText("○ READY");
+                    tvBtStatusBadge.setText("READY");
                     tvBtStatusBadge.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.cockpit_text_secondary));
                 }
             }
@@ -762,10 +762,10 @@ public class MainActivity extends AppCompatActivity {
     private void initCarThermometer() {
         thermometerWatcher = new CarThermometerWatcher(this, (tempFormatted, tempCelsius) -> runOnUiThread(() -> {
             if (tvWeatherText != null) {
-                tvWeatherText.setText(tempFormatted);
+                tvWeatherText.setText(tempFormatted != null ? tempFormatted.toUpperCase() : "26°C · OUTSIDE");
             }
             if (tvWeatherIcon != null) {
-                tvWeatherIcon.setText("🌡️");
+                tvWeatherIcon.setText("TEMP");
             }
         }));
         thermometerWatcher.setUseFahrenheit(prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH));
@@ -824,16 +824,17 @@ public class MainActivity extends AppCompatActivity {
 
                 @SuppressLint("MissingPermission")
                 String name = (device.getName() != null && !device.getName().isEmpty()) ? device.getName() : "Phone (" + device.getAddress() + ")";
-                tvName.setText(name);
+                tvName.setText(name.toUpperCase());
 
                 boolean isPreferred = device.getAddress().equalsIgnoreCase(preferredMac);
                 if (isPreferred) {
-                    tvStatus.setText("⭐ Primary Driver Device · Ready");
+                    tvStatus.setText("PRIMARY DRIVER DEVICE · ACTIVE");
                     tvName.setTextColor(accentColor);
                     btnConnect.setText("ACTIVE");
                     btnConnect.setTextColor(accentColor);
                 } else {
-                    tvStatus.setText("Paired · Tap to connect CarPlay & Audio");
+                    tvStatus.setText("PAIRED · READY FOR CARPLAY & AUDIO");
+                    btnConnect.setText("CONNECT");
                     btnConnect.setTextColor(accentColor);
                 }
 
@@ -917,7 +918,7 @@ public class MainActivity extends AppCompatActivity {
                     if (tvTrackTitle != null && title != null) tvTrackTitle.setText(title);
                     if (tvTrackArtist != null && artist != null) tvTrackArtist.setText(artist);
                     if (btnMediaPlayPause != null) {
-                        btnMediaPlayPause.setText(isPlaying ? "⏸  PAUSE" : "▶  PLAY");
+                        btnMediaPlayPause.setText(isPlaying ? "PAUSE" : "PLAY");
                     }
                 }
             }
