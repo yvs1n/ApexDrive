@@ -1083,45 +1083,45 @@
         
         <div class="device-card-list">
           <!-- 1. Yassin's iPhone (Preferred) -->
-          <div class="device-card preferred" onclick="selectDriverPhone('YASSIN\'S IPHONE', '98:B6:E9:12:44:A1')">
+          <div class="device-card preferred" id="cardDev1" onclick="selectDriverPhone('YASSIN\'S IPHONE', '98:B6:E9:12:44:A1', 1)">
             <div class="device-card-left">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" id="cardIcon1">
                 <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline>
               </svg>
               <div>
                 <div class="device-name" id="cardName1">YASSIN'S IPHONE</div>
-                <div class="device-status">PRIMARY DRIVER DEVICE · ACTIVE</div>
+                <div class="device-status" id="cardStatus1">CONNECTED · ACTIVE FOR CARPLAY &amp; AUDIO</div>
               </div>
             </div>
             <div class="device-connect-pill" id="cardPill1">ACTIVE</div>
           </div>
 
           <!-- 2. Family iPhone -->
-          <div class="device-card" onclick="selectDriverPhone('SARAH\'S IPHONE', '40:4E:36:99:11:BC')">
+          <div class="device-card" id="cardDev2" onclick="selectDriverPhone('SARAH\'S IPHONE', '40:4E:36:99:11:BC', 2)">
             <div class="device-card-left">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" id="cardIcon2">
                 <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline>
               </svg>
               <div>
-                <div class="device-name">SARAH'S IPHONE</div>
-                <div class="device-status">PAIRED · READY FOR CARPLAY &amp; AUDIO</div>
+                <div class="device-name" id="cardName2">SARAH'S IPHONE</div>
+                <div class="device-status" id="cardStatus2">PAIRED · READY TO CONNECT</div>
               </div>
             </div>
-            <div class="device-connect-pill">CONNECT</div>
+            <div class="device-connect-pill" id="cardPill2">CONNECT</div>
           </div>
 
           <!-- 3. Google Pixel -->
-          <div class="device-card" onclick="selectDriverPhone('PIXEL 8 PRO', '00:1A:7D:DA:71:13')">
+          <div class="device-card" id="cardDev3" onclick="selectDriverPhone('PIXEL 8 PRO', '00:1A:7D:DA:71:13', 3)">
             <div class="device-card-left">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" id="cardIcon3">
                 <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline>
               </svg>
               <div>
-                <div class="device-name">PIXEL 8 PRO</div>
-                <div class="device-status">PAIRED · READY FOR ANDROID AUTO</div>
+                <div class="device-name" id="cardName3">PIXEL 8 PRO</div>
+                <div class="device-status" id="cardStatus3">PAIRED · READY TO CONNECT</div>
               </div>
             </div>
-            <div class="device-connect-pill">CONNECT</div>
+            <div class="device-connect-pill" id="cardPill3">CONNECT</div>
           </div>
         </div>
 
@@ -1669,14 +1669,85 @@
       document.getElementById('deviceGatewayModal').classList.remove('show');
     }
 
-    function selectDriverPhone(name, mac) {
+    let activeDevIndex = 1;
+    let isConnectingDev = false;
+    let failedAttempts = {};
+
+    function selectDriverPhone(name, mac, index) {
+      if (isConnectingDev) return;
+
       clearInterval(gatewayTimer);
-      document.getElementById('headerBtName').textContent = name;
-      document.getElementById('btDeviceName').textContent = name;
-      document.getElementById('cardName1').textContent = name;
-      closeDeviceGateway();
-      showToast(`Connected ${name} for Bluetooth & CarPlay`);
-      launchCarPlay();
+      const timerPill = document.getElementById('gatewayCountdown');
+      if (timerPill) timerPill.style.display = 'none';
+
+      // If already connected
+      if (activeDevIndex === index) {
+        showToast(`${name} is already connected`);
+        closeDeviceGateway();
+        launchCarPlay();
+        return;
+      }
+
+      isConnectingDev = true;
+      const statusEl = document.getElementById(`cardStatus${index}`);
+      const pillEl = document.getElementById(`cardPill${index}`);
+      const cardEl = document.getElementById(`cardDev${index}`);
+
+      statusEl.textContent = `CONNECTING TO ${name}...`;
+      statusEl.style.color = "var(--text-secondary)";
+      pillEl.textContent = "CONNECTING...";
+      pillEl.style.color = "var(--text-secondary)";
+      showToast(`Initiating Bluetooth link to ${name}...`);
+
+      // Simulate live connection attempt (2.2s delay)
+      setTimeout(() => {
+        // Demonstrate failure fallback on first attempt for Sarah's iPhone to show the exact scenario user reported!
+        if (index === 2 && !failedAttempts[index]) {
+          failedAttempts[index] = true;
+          isConnectingDev = false;
+          statusEl.textContent = "CONNECTION FAILED · TAP TO RETRY";
+          statusEl.style.color = "#ef4444";
+          pillEl.textContent = "RETRY";
+          pillEl.style.color = "#ef4444";
+          showToast(`Connection failed to ${name}. Please verify phone Bluetooth is ON and try again.`);
+          // Device is NOT selected, header is NOT changed!
+          return;
+        }
+
+        // Connection Success
+        isConnectingDev = false;
+        // Unmark previous active
+        if (activeDevIndex) {
+          const prevStatus = document.getElementById(`cardStatus${activeDevIndex}`);
+          const prevPill = document.getElementById(`cardPill${activeDevIndex}`);
+          const prevCard = document.getElementById(`cardDev${activeDevIndex}`);
+          if (prevStatus) {
+            prevStatus.textContent = "PAIRED · READY TO CONNECT";
+            prevStatus.style.color = "var(--text-secondary)";
+          }
+          if (prevPill) {
+            prevPill.textContent = "CONNECT";
+            prevPill.style.color = "var(--accent)";
+          }
+          if (prevCard) prevCard.classList.remove('preferred');
+        }
+
+        activeDevIndex = index;
+        cardEl.classList.add('preferred');
+        statusEl.textContent = "CONNECTED · ACTIVE FOR CARPLAY & AUDIO";
+        statusEl.style.color = "var(--status-active, #22c55e)";
+        pillEl.textContent = "ACTIVE";
+        pillEl.style.color = "var(--accent)";
+
+        document.getElementById('headerBtName').textContent = name;
+        document.getElementById('btDeviceName').textContent = name;
+        showToast(`Connected to ${name} · Launching CarPlay`);
+
+        setTimeout(() => {
+          closeDeviceGateway();
+          launchCarPlay();
+        }, 700);
+      }, 2200);
     }
 
     function simulatePairNewDevice() {
