@@ -40,14 +40,15 @@
         <Button
             android:id="@+id/btnLaunchCarPlayFull"
             android:layout_width="wrap_content"
-            android:layout_height="44dp"
+            android:layout_height="52dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="Launch Fullscreen Projection"
+            android:text="LAUNCH FULLSCREEN PROJECTION"
             android:textColor="@color/cockpit_text_primary"
             android:textSize="13sp"
-            android:textStyle="bold"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp" />
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.05"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp" />
 
     </LinearLayout>
 

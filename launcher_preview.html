@@ -1724,11 +1724,12 @@
       document.getElementById('btnUnitToggle').textContent = speedUnit;
       changeSpeed(document.getElementById('speedValue').textContent);
       refreshCarThermometer();
+      document.getElementById('tripDistText').textContent = speedUnit === 'MPH' ? "Trip: 0.0 mi" : "Trip: 0.0 km";
       showToast(`Speedometer unit changed to ${speedUnit}`);
     }
 
     function resetTrip() {
-      document.getElementById('tripDistText').textContent = "Trip: 0.0 km";
+      document.getElementById('tripDistText').textContent = speedUnit === 'MPH' ? "Trip: 0.0 mi" : "Trip: 0.0 km";
       document.getElementById('tripTimeText').textContent = "Time: 0 min (Tap to reset)";
       showToast("Trip distance & driving timer reset to zero");
     }

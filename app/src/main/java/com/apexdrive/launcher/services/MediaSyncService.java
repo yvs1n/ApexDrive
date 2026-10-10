@@ -39,17 +39,12 @@ public class MediaSyncService extends NotificationListenerService {
         try {
             ComponentName componentName = new ComponentName(this, MediaSyncService.class);
             mediaSessionManager.addOnActiveSessionsChangedListener(
-                    new MediaSessionManager.OnActiveSessionsChangedListener() {
-                        @Override
-                        public void onActiveSessionsChanged(List<MediaController> controllers) {
-                            updateActiveController(controllers);
-                        }
-                    }, componentName);
+                    controllers -> updateActiveController(controllers), componentName);
 
             List<MediaController> initialControllers = mediaSessionManager.getActiveSessions(componentName);
             updateActiveController(initialControllers);
         } catch (SecurityException ignored) {
-            // Notification listener permissions not yet accepted by user
+            // Notification listener permission not granted
         }
     }
 
@@ -96,21 +91,15 @@ public class MediaSyncService extends NotificationListenerService {
         sendBroadcast(intent);
     }
 
-    /**
-     * Pauses whatever is currently playing, whether from CarPlay (Zlink), Spotify,
-     * local USB audio, or head unit Radio.
-     */
     public static void pauseAllMedia(Context context) {
         sIsPlaying = false;
 
-        // 1. If active media session exists, dispatch pause directly
         if (sActiveController != null) {
             try {
                 sActiveController.getTransportControls().pause();
             } catch (Exception ignored) {}
         }
 
-        // 2. Dispatch hardware KEYCODE_MEDIA_PAUSE to AudioManager
         AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         if (audioManager != null) {
             long now = System.currentTimeMillis();
@@ -118,7 +107,6 @@ public class MediaSyncService extends NotificationListenerService {
             audioManager.dispatchMediaKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PAUSE, 0));
         }
 
-        // 3. Send explicit automotive broadcasts (Zlink, Android Music, MCU Audio)
         try {
             Intent musicIntent = new Intent("com.android.music.musicservicecommand");
             musicIntent.putExtra("command", "pause");
@@ -131,16 +119,16 @@ public class MediaSyncService extends NotificationListenerService {
             context.sendBroadcast(zlinkIntent);
         } catch (Exception ignored) {}
 
-        // 4. Audio focus trick: transient focus forces any background CarPlay or stream to halt
         if (audioManager != null) {
             audioManager.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
             audioManager.abandonAudioFocus(null);
         }
+
+        Intent intent = new Intent(ACTION_MEDIA_UPDATED);
+        intent.putExtra(EXTRA_IS_PLAYING, false);
+        context.sendBroadcast(intent);
     }
 
-    /**
-     * Toggles playback: pauses if currently playing, or resumes if paused.
-     */
     public static void togglePlayPause(Context context) {
         if (sIsPlaying) {
             pauseAllMedia(context);
@@ -152,6 +140,9 @@ public class MediaSyncService extends NotificationListenerService {
         if (sActiveController != null) {
             try {
                 sActiveController.getTransportControls().play();
+                Intent intent = new Intent(ACTION_MEDIA_UPDATED);
+                intent.putExtra(EXTRA_IS_PLAYING, true);
+                context.sendBroadcast(intent);
                 return;
             } catch (Exception ignored) {}
         }
@@ -163,22 +154,29 @@ public class MediaSyncService extends NotificationListenerService {
             musicIntent.putExtra("command", "togglepause");
             context.sendBroadcast(musicIntent);
         } catch (Exception ignored) {}
+
+        Intent intent = new Intent(ACTION_MEDIA_UPDATED);
+        intent.putExtra(EXTRA_IS_PLAYING, true);
+        context.sendBroadcast(intent);
     }
 
     public static void sendMediaKey(Context context, int keyCode) {
         AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         if (audioManager != null) {
             long eventTime = System.currentTimeMillis();
-            KeyEvent downEvent = new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, keyCode, 0);
-            KeyEvent upEvent = new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_UP, keyCode, 0);
-            audioManager.dispatchMediaKeyEvent(downEvent);
-            audioManager.dispatchMediaKeyEvent(upEvent);
+            audioManager.dispatchMediaKeyEvent(new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, keyCode, 0));
+            audioManager.dispatchMediaKeyEvent(new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_UP, keyCode, 0));
         }
 
         try {
-            Intent btnIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
-            btnIntent.putExtra(Intent.EXTRA_KEY_EVENT, new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
-            context.sendBroadcast(btnIntent);
+            long eventTime = System.currentTimeMillis();
+            Intent down = new Intent(Intent.ACTION_MEDIA_BUTTON);
+            down.putExtra(Intent.EXTRA_KEY_EVENT, new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, keyCode, 0));
+            context.sendBroadcast(down);
+
+            Intent up = new Intent(Intent.ACTION_MEDIA_BUTTON);
+            up.putExtra(Intent.EXTRA_KEY_EVENT, new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_UP, keyCode, 0));
+            context.sendBroadcast(up);
         } catch (Exception ignored) {}
     }
 }

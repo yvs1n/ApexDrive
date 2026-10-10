@@ -11,6 +11,7 @@ import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Looper;
 
+import java.util.List;
 import java.util.Set;
 
 public class BluetoothWatcher {
@@ -25,8 +26,6 @@ public class BluetoothWatcher {
     private BroadcastReceiver receiver;
     private final Handler pollHandler = new Handler(Looper.getMainLooper());
     private boolean isRunning = false;
-
-    private static final String DEFAULT_CAR_NAME = "SantafemR";
 
     public BluetoothWatcher(Context context) {
         this.context = context;
@@ -52,18 +51,13 @@ public class BluetoothWatcher {
                         "android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED".equals(action) ||
                         "com.goc.bluetooth.connected".equals(action) ||
                         "com.android.ecar.bluetooth.connected".equals(action)) {
-                    
                     BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                     String name = getDeviceDisplayName(device);
                     notifyConnected(name);
-
                 } else if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action) ||
-                        "com.goc.bluetooth.disconnected".equals(action)) {
-                    
-                    checkCurrentState();
-                } else if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action) ||
+                        "com.goc.bluetooth.disconnected".equals(action) ||
+                        BluetoothAdapter.ACTION_STATE_CHANGED.equals(action) ||
                         BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED.equals(action)) {
-                    
                     checkCurrentState();
                 }
             }
@@ -83,11 +77,8 @@ public class BluetoothWatcher {
 
         try {
             context.registerReceiver(receiver, filter);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception ignored) {}
 
-        // Run initial check and start periodic heartbeat (every 3 seconds)
         checkCurrentState();
         startPeriodicCheck();
     }
@@ -120,17 +111,34 @@ public class BluetoothWatcher {
         }
 
         try {
-            // Check direct A2DP or Headset profile state
             int a2dpState = bluetoothAdapter.getProfileConnectionState(BluetoothProfile.A2DP);
             int headsetState = bluetoothAdapter.getProfileConnectionState(BluetoothProfile.HEADSET);
 
             if (a2dpState == BluetoothAdapter.STATE_CONNECTED || headsetState == BluetoothAdapter.STATE_CONNECTED) {
-                // Find bonded device
+                // Attempt to query profile proxy for the exact connected device
+                bluetoothAdapter.getProfileProxy(context, new BluetoothProfile.ServiceListener() {
+                    @Override
+                    public void onServiceConnected(int profile, BluetoothProfile proxy) {
+                        try {
+                            List<BluetoothDevice> connected = proxy.getConnectedDevices();
+                            if (connected != null && !connected.isEmpty()) {
+                                notifyConnected(getDeviceDisplayName(connected.get(0)));
+                            }
+                        } catch (Exception ignored) {}
+                        try {
+                            bluetoothAdapter.closeProfileProxy(profile, proxy);
+                        } catch (Exception ignored) {}
+                    }
+
+                    @Override
+                    public void onServiceDisconnected(int profile) {}
+                }, BluetoothProfile.A2DP);
+
                 Set<BluetoothDevice> bonded = bluetoothAdapter.getBondedDevices();
                 String connectedName = "Connected Phone";
                 if (bonded != null && !bonded.isEmpty()) {
                     for (BluetoothDevice dev : bonded) {
-                        if (dev != null && dev.getName() != null) {
+                        if (dev != null && dev.getName() != null && !dev.getName().isEmpty()) {
                             connectedName = dev.getName();
                             break;
                         }
@@ -140,11 +148,10 @@ public class BluetoothWatcher {
                 return;
             }
 
-            // Also inspect bonded devices
             Set<BluetoothDevice> bonded = bluetoothAdapter.getBondedDevices();
             if (bonded != null && !bonded.isEmpty()) {
                 BluetoothDevice dev = bonded.iterator().next();
-                String name = dev.getName() != null ? dev.getName() : "Paired Device";
+                String name = (dev.getName() != null && !dev.getName().isEmpty()) ? dev.getName() : "Paired Device";
                 notifyDisconnected("Ready to Connect · " + name);
             } else {
                 notifyDisconnected("Pair via SantafemR (PIN 0000)");

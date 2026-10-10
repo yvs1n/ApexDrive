@@ -14,12 +14,6 @@ import android.provider.Settings;
 
 import java.util.Locale;
 
-/**
- * Listens to the car's exterior thermometer via:
- * 1. Hardware ambient temperature sensor (Sensor.TYPE_AMBIENT_TEMPERATURE)
- * 2. Allwinner / Simple Soft (XP) CANbus broadcast intents (AIR_CONDITION_CHANGED, com.canbus.*, etc.)
- * 3. Head unit system settings keys (can_temperature, out_temperature)
- */
 public class CarThermometerWatcher implements SensorEventListener {
 
     public interface TemperatureListener {
@@ -33,7 +27,7 @@ public class CarThermometerWatcher implements SensorEventListener {
     private BroadcastReceiver canbusReceiver;
     private final Handler pollHandler = new Handler(Looper.getMainLooper());
     private boolean isMph = false;
-    private float currentTempC = 26.0f; // Default baseline temperature
+    private float currentTempC = 26.0f;
 
     public CarThermometerWatcher(Context context, TemperatureListener listener) {
         this.context = context;
@@ -46,7 +40,6 @@ public class CarThermometerWatcher implements SensorEventListener {
     }
 
     public void start() {
-        // 1. Try hardware sensor first (some head units route CANbus temp as an Android sensor)
         try {
             sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
             if (sensorManager != null) {
@@ -57,7 +50,6 @@ public class CarThermometerWatcher implements SensorEventListener {
             }
         } catch (Exception ignored) {}
 
-        // 2. Register for Chinese head unit / Simple Soft CANbus broadcasts
         canbusReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context ctx, Intent intent) {
@@ -79,20 +71,21 @@ public class CarThermometerWatcher implements SensorEventListener {
             context.registerReceiver(canbusReceiver, filter);
         } catch (Exception ignored) {}
 
-        // 3. Periodic check of Settings.System where Allwinner firmware caches CAN data
         pollCanSettings();
         startPeriodicPoll();
     }
 
     private void parseCanbusTempIntent(Intent intent) {
         try {
-            // Check common float/int extras
             String[] keys = {"out_temp", "temperature", "ext_temp", "ambient_temp", "temp", "celsius"};
             for (String key : keys) {
                 if (intent.hasExtra(key)) {
                     float val = intent.getFloatExtra(key, -999f);
                     if (val == -999f) {
                         val = intent.getIntExtra(key, -999);
+                    }
+                    if (val == -999f) {
+                        val = (float) intent.getDoubleExtra(key, -999.0);
                     }
                     if (val != -999f && val > -40f && val < 65f) {
                         currentTempC = val;
@@ -102,7 +95,6 @@ public class CarThermometerWatcher implements SensorEventListener {
                 }
             }
 
-            // Check bundle / string extra
             String strVal = intent.getStringExtra("out_temp");
             if (strVal != null && !strVal.isEmpty()) {
                 parseAndSetTemp(strVal);
@@ -131,13 +123,11 @@ public class CarThermometerWatcher implements SensorEventListener {
 
     private void parseAndSetTemp(String strVal) {
         try {
-            // Extract numbers from strings like "24.5C" or "24°C"
             String cleaned = strVal.replaceAll("[^0-9.-]", "");
             if (!cleaned.isEmpty()) {
                 float val = Float.parseFloat(cleaned);
                 if (val > -40f && val < 130f) {
                     if (val > 55f) {
-                        // Likely reported in Fahrenheit
                         val = (val - 32f) * 5f / 9f;
                     }
                     currentTempC = val;
@@ -152,7 +142,7 @@ public class CarThermometerWatcher implements SensorEventListener {
             @Override
             public void run() {
                 pollCanSettings();
-                pollHandler.postDelayed(this, 10000); // Check every 10s
+                pollHandler.postDelayed(this, 10000);
             }
         }, 10000);
     }

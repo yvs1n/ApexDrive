@@ -362,7 +362,7 @@
                     android:textColor="@color/cockpit_text_primary"
                     android:textSize="15sp"
                     android:fontFamily="sans-serif-black"
-                    android:singleLine="true"
+                    android:maxLines="1"
                     android:ellipsize="end" />
 
                 <TextView
@@ -374,7 +374,7 @@
                     android:textColor="@color/cockpit_text_secondary"
                     android:textSize="11sp"
                     android:fontFamily="sans-serif"
-                    android:singleLine="true"
+                    android:maxLines="1"
                     android:ellipsize="end" />
             </LinearLayout>
 

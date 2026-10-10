@@ -19,14 +19,13 @@ public class AppsGridAdapter extends BaseAdapter {
         void onAppClick(AppInfo app);
     }
 
-    private final Context context;
     private final List<AppInfo> fullList;
     private final List<AppInfo> filteredList;
     private final LayoutInflater inflater;
     private OnAppClickListener clickListener;
+    private String currentQuery = "";
 
     public AppsGridAdapter(Context context, List<AppInfo> apps) {
-        this.context = context;
         this.fullList = new ArrayList<>(apps);
         this.filteredList = new ArrayList<>(apps);
         this.inflater = LayoutInflater.from(context);
@@ -34,6 +33,12 @@ public class AppsGridAdapter extends BaseAdapter {
 
     public void setOnAppClickListener(OnAppClickListener listener) {
         this.clickListener = listener;
+    }
+
+    public void updateData(List<AppInfo> apps) {
+        this.fullList.clear();
+        this.fullList.addAll(apps);
+        filter(currentQuery);
     }
 
     @Override
@@ -68,7 +73,6 @@ public class AppsGridAdapter extends BaseAdapter {
         holder.tvName.setText(app.getLabel());
         holder.ivIcon.setImageDrawable(app.getIcon());
 
-        // Direct click fallback ensuring apps ALWAYS launch when tapped
         convertView.setOnClickListener(v -> {
             if (clickListener != null) {
                 clickListener.onAppClick(app);
@@ -79,11 +83,12 @@ public class AppsGridAdapter extends BaseAdapter {
     }
 
     public void filter(String query) {
+        this.currentQuery = (query != null) ? query : "";
         filteredList.clear();
-        if (query == null || query.trim().isEmpty()) {
+        if (currentQuery.trim().isEmpty()) {
             filteredList.addAll(fullList);
         } else {
-            String lower = query.toLowerCase().trim();
+            String lower = currentQuery.toLowerCase().trim();
             for (AppInfo app : fullList) {
                 if (app.getLabel().toLowerCase().contains(lower)) {
                     filteredList.add(app);

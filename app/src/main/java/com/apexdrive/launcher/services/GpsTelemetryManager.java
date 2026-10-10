@@ -17,7 +17,6 @@ public class GpsTelemetryManager implements LocationListener {
         void onGpsStatusChanged(boolean hasFix, int satelliteCount);
     }
 
-    private final Context context;
     private final LocationManager locationManager;
     private TelemetryListener listener;
 
@@ -28,7 +27,6 @@ public class GpsTelemetryManager implements LocationListener {
     private float lastBearing = 0.0f;
 
     public GpsTelemetryManager(Context context) {
-        this.context = context;
         this.locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
     }
 
@@ -42,6 +40,7 @@ public class GpsTelemetryManager implements LocationListener {
 
     public void resetTrip() {
         totalDistanceMeters = 0.0;
+        lastLocation = null;
         tripStartTime = System.currentTimeMillis();
         if (listener != null) {
             listener.onTripUpdated(0.0, 0);
@@ -51,20 +50,20 @@ public class GpsTelemetryManager implements LocationListener {
     @SuppressLint("MissingPermission")
     public void start() {
         if (locationManager == null) return;
-        tripStartTime = System.currentTimeMillis();
+        if (tripStartTime == 0) {
+            tripStartTime = System.currentTimeMillis();
+        }
 
         try {
-            // Request ultra-responsive, zero-latency GPS updates (0ms delay, 0m distance delta)
             if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                 locationManager.requestLocationUpdates(
                         LocationManager.GPS_PROVIDER,
-                        50L,   // High-frequency 20Hz polling
-                        0.0f,  // Instant updates even on micro movements
+                        50L,
+                        0.0f,
                         this
                 );
             }
 
-            // Also register passive/network provider as immediate secondary fallback
             if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                 locationManager.requestLocationUpdates(
                         LocationManager.NETWORK_PROVIDER,
@@ -74,7 +73,6 @@ public class GpsTelemetryManager implements LocationListener {
                 );
             }
 
-            // Read last known location immediately so screen is never blank on start
             Location lastKnown = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
             if (lastKnown == null) {
                 lastKnown = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
@@ -103,10 +101,7 @@ public class GpsTelemetryManager implements LocationListener {
 
         listener.onGpsStatusChanged(true, 8);
 
-        // Immediate Speed calculation (location.getSpeed() returns meters/second)
         float speedMps = location.hasSpeed() ? location.getSpeed() : 0.0f;
-        
-        // If speed is not reported by GPS chip but we have two successive locations
         if (!location.hasSpeed() && lastLocation != null && location.getTime() > lastLocation.getTime()) {
             float dist = lastLocation.distanceTo(location);
             long timeDeltaSec = (location.getTime() - lastLocation.getTime()) / 1000;
@@ -122,20 +117,17 @@ public class GpsTelemetryManager implements LocationListener {
             displaySpeed = Math.round(speedMps * 3.6f);
         }
 
-        // Standing still filter: speed jitter < 1.5 km/h is treated as stationary
         if (displaySpeed < 2) {
             displaySpeed = 0;
         }
 
         listener.onSpeedUpdated(displaySpeed, isMph ? "MPH" : "KM/H");
 
-        // High-frequency Bearing / Compass calculation
         float bearing = lastBearing;
         if (location.hasBearing() && location.getBearing() != 0.0f) {
             bearing = location.getBearing();
             lastBearing = bearing;
         } else if (lastLocation != null && lastLocation.distanceTo(location) >= 1.5f) {
-            // Dynamically interpolate bearing between successive GPS coordinates
             bearing = lastLocation.bearingTo(location);
             if (bearing < 0) bearing += 360f;
             lastBearing = bearing;
@@ -144,15 +136,13 @@ public class GpsTelemetryManager implements LocationListener {
         String direction = bearingToDirection(bearing);
         listener.onHeadingUpdated(direction + " " + Math.round(bearing) + "°", bearing);
 
-        // Live Coordinates & Altitude for dynamic navigation HUD
         double altitude = location.hasAltitude() ? location.getAltitude() : 0.0;
         float accuracy = location.hasAccuracy() ? location.getAccuracy() : 5.0f;
         listener.onCoordinatesUpdated(location.getLatitude(), location.getLongitude(), altitude, accuracy);
 
-        // Trip distance accumulation
         if (lastLocation != null) {
             float dist = lastLocation.distanceTo(location);
-            if (dist > 0.5f && dist < 300.0f) { // Discard GPS teleport spikes
+            if (dist > 0.5f && dist < 300.0f) {
                 totalDistanceMeters += dist;
             }
         }

@@ -7,9 +7,9 @@ public class PreferenceHelper {
     private static final String PREF_NAME = "apexdrive_settings";
     private static final String KEY_ACCENT_COLOR = "accent_color";
     private static final String KEY_SPEED_UNIT = "speed_unit";
-    private static final String KEY_IS_NIGHT_MODE = "is_night_mode";
     private static final String KEY_CARPLAY_PACKAGE = "carplay_package";
     private static final String KEY_CARPLAY_NAME = "carplay_name";
+    private static final String KEY_SELECTED_DRIVER_DEVICE = "selected_driver_device";
 
     public static final String UNIT_KMH = "KM/H";
     public static final String UNIT_MPH = "MPH";
@@ -45,14 +45,6 @@ public class PreferenceHelper {
         prefs.edit().putString(KEY_SPEED_UNIT, unit).apply();
     }
 
-    public boolean isNightMode() {
-        return prefs.getBoolean(KEY_IS_NIGHT_MODE, true);
-    }
-
-    public void setNightMode(boolean isNight) {
-        prefs.edit().putBoolean(KEY_IS_NIGHT_MODE, isNight).apply();
-    }
-
     public String getCarPlayPackage() {
         return prefs.getString(KEY_CARPLAY_PACKAGE, DEFAULT_CARPLAY_PKG);
     }
@@ -68,8 +60,6 @@ public class PreferenceHelper {
     public void setCarPlayName(String name) {
         prefs.edit().putString(KEY_CARPLAY_NAME, name).apply();
     }
-
-    private static final String KEY_SELECTED_DRIVER_DEVICE = "selected_driver_device";
 
     public String getSelectedDriverDevice() {
         return prefs.getString(KEY_SELECTED_DRIVER_DEVICE, "");
