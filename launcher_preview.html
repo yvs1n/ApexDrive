@@ -845,18 +845,18 @@
       </div>
 
       <div class="header-right">
-        <!-- Bluetooth Header Pill (Clickable) -->
-        <div class="header-pill" onclick="simulateBluetoothAction()" title="Click to view Bluetooth details">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline>
-          </svg>
-          <span id="headerBtName" style="color: var(--accent);">SantafemR</span>
+        <!-- Weather Header Pill (Clickable) -->
+        <div class="header-pill" onclick="cycleWeather()" title="Click to cycle weather conditions">
+          <span id="weatherIcon">☀️</span>
+          <span id="weatherText">28°C · Sunny</span>
         </div>
 
-        <!-- GPS 3D Fix Pill -->
-        <div class="header-pill">
-          <span class="status-dot"></span>
-          <span>GPS 3D Fix</span>
+        <!-- Bluetooth Connected Device Header Pill (Clickable) -->
+        <div class="header-pill" onclick="simulateBluetoothAction()" title="Click to view Bluetooth details">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" id="headerBtSvg">
+            <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"></polyline>
+          </svg>
+          <span id="headerBtName" style="color: var(--accent);">iPhone 15 Pro</span>
         </div>
       </div>
     </header>
@@ -1405,6 +1405,22 @@
       document.getElementById('headingSliderVal').textContent = text;
     }
 
+    // Weather Simulation
+    const weatherList = [
+      { icon: "☀️", text: "28°C · Sunny" },
+      { icon: "🌤️", text: "26°C · Partly Cloudy" },
+      { icon: "☁️", text: "22°C · Overcast" },
+      { icon: "🌧️", text: "19°C · Rain" },
+      { icon: "🌙", text: "21°C · Clear Night" }
+    ];
+    let weatherIdx = 0;
+    function cycleWeather() {
+      weatherIdx = (weatherIdx + 1) % weatherList.length;
+      document.getElementById('weatherIcon').textContent = weatherList[weatherIdx].icon;
+      document.getElementById('weatherText').textContent = weatherList[weatherIdx].text;
+      showToast(`Weather updated: ${weatherList[weatherIdx].text}`);
+    }
+
     // Bluetooth Simulation
     let btConnected = true;
     function toggleBluetoothState() {
@@ -1412,27 +1428,35 @@
       const dot = document.getElementById('btIndicatorDot');
       const label = document.getElementById('btStatusLabel');
       const headerName = document.getElementById('headerBtName');
+      const headerSvg = document.getElementById('headerBtSvg');
+      const btCardName = document.getElementById('btDeviceName');
       const btn = document.getElementById('simBtToggle');
 
       if (btConnected) {
         dot.classList.remove('inactive');
         label.textContent = "● CONNECTED";
         label.style.color = "var(--status-active)";
-        headerName.textContent = "SantafemR";
+        headerName.textContent = "iPhone 15 Pro";
+        headerName.style.color = "var(--accent)";
+        headerSvg.style.stroke = "var(--accent)";
+        btCardName.textContent = "iPhone 15 Pro";
         btn.textContent = "Simulate Disconnect";
-        showToast("Bluetooth Connected: SantafemR (A2DP Audio Active)");
+        showToast("Bluetooth Connected: iPhone 15 Pro (A2DP Audio Active)");
       } else {
         dot.classList.add('inactive');
         label.textContent = "○ READY";
         label.style.color = "var(--text-secondary)";
-        headerName.textContent = "Ready to Pair";
+        headerName.textContent = "Not Connected";
+        headerName.style.color = "var(--text-secondary)";
+        headerSvg.style.stroke = "var(--text-secondary)";
+        btCardName.textContent = "No Device Connected";
         btn.textContent = "Simulate Connect";
         showToast("Bluetooth Disconnected");
       }
     }
 
     function simulateBluetoothAction() {
-      alert("Bluetooth Manager:\nDevice: SantafemR\nStatus: " + (btConnected ? "Connected (A2DP + Calls)" : "Disconnected") + "\nPIN: 0000");
+      alert("Bluetooth Status:\n• Connected Device: " + (btConnected ? "iPhone 15 Pro (Yassin's Phone)" : "Not Connected") + "\n• Head Unit Pairing Name: SantafemR\n• Pairing PIN: 0000\n• Profiles: A2DP Audio, HFP Telephony");
     }
 
     // Factory Settings Modal

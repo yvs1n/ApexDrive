@@ -58,7 +58,8 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothWatcher btWatcher;
 
     private FrameLayout viewContainer;
-    private TextView tvClock, tvHeaderBluetooth, tvGpsStatus;
+    private TextView tvClock, tvHeaderBluetooth, tvWeatherText, tvWeatherIcon;
+    private View pillHeaderWeather;
     private ImageView ivHeaderBtIcon;
     private View pillHeaderBluetooth;
 
@@ -132,7 +133,12 @@ public class MainActivity extends AppCompatActivity {
         tvHeaderBluetooth = findViewById(R.id.tvHeaderBluetooth);
         ivHeaderBtIcon = findViewById(R.id.ivHeaderBtIcon);
         pillHeaderBluetooth = findViewById(R.id.pillHeaderBluetooth);
-        tvGpsStatus = findViewById(R.id.tvGpsStatus);
+        tvWeatherText = findViewById(R.id.tvWeatherText);
+        tvWeatherIcon = findViewById(R.id.tvWeatherIcon);
+        pillHeaderWeather = findViewById(R.id.pillHeaderWeather);
+        if (pillHeaderWeather != null) {
+            pillHeaderWeather.setOnClickListener(v -> cycleWeatherState());
+        }
 
         railBtnDash = findViewById(R.id.railBtnDash);
         railBtnCarPlay = findViewById(R.id.railBtnCarPlay);
@@ -626,15 +632,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onGpsStatusChanged(boolean hasFix, int satelliteCount) {
-                runOnUiThread(() -> {
-                    if (hasFix) {
-                        tvGpsStatus.setText("GPS 3D");
-                        tvGpsStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
-                    } else {
-                        tvGpsStatus.setText("Searching");
-                        tvGpsStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_inactive));
-                    }
-                });
+                // GPS fix status is displayed dynamically in the Maps tab HUD
             }
         });
         gpsManager.start();
@@ -643,9 +641,10 @@ public class MainActivity extends AppCompatActivity {
     private void initBluetooth() {
         btWatcher = new BluetoothWatcher(this);
         btWatcher.setListener((isConnected, deviceName, details) -> runOnUiThread(() -> {
-            // Header status
+            // Header status: Show connected phone name (e.g., iPhone) or "Not Connected"
             if (tvHeaderBluetooth != null) {
-                tvHeaderBluetooth.setText(deviceName);
+                tvHeaderBluetooth.setText(isConnected ? deviceName : "Not Connected");
+                tvHeaderBluetooth.setTextColor(isConnected ? prefHelper.getAccentColor() : ContextCompat.getColor(MainActivity.this, R.color.cockpit_text_secondary));
             }
             if (ivHeaderBtIcon != null) {
                 ivHeaderBtIcon.setColorFilter(
@@ -656,7 +655,7 @@ public class MainActivity extends AppCompatActivity {
 
             // Dashboard card status
             if (tvBtDeviceName != null) {
-                tvBtDeviceName.setText(deviceName);
+                tvBtDeviceName.setText(isConnected ? deviceName : "No Device Connected");
             }
             if (tvBtProfileDetail != null) {
                 tvBtProfileDetail.setText(details);
@@ -672,6 +671,22 @@ public class MainActivity extends AppCompatActivity {
             }
         }));
         btWatcher.start();
+    }
+
+    private int weatherIndex = 0;
+    private final String[][] weatherPresets = {
+            {"☀️", "28°C · Sunny"},
+            {"🌤️", "26°C · Partly Cloudy"},
+            {"☁️", "22°C · Overcast"},
+            {"🌧️", "19°C · Rain"},
+            {"🌙", "21°C · Clear Night"}
+    };
+
+    private void cycleWeatherState() {
+        weatherIndex = (weatherIndex + 1) % weatherPresets.length;
+        if (tvWeatherIcon != null) tvWeatherIcon.setText(weatherPresets[weatherIndex][0]);
+        if (tvWeatherText != null) tvWeatherText.setText(weatherPresets[weatherIndex][1]);
+        Toast.makeText(this, "Weather updated: " + weatherPresets[weatherIndex][1], Toast.LENGTH_SHORT).show();
     }
 
     private void initMediaReceiver() {

@@ -43,11 +43,43 @@
             android:layout_height="1dp"
             android:layout_weight="1" />
 
-        <!-- Bluetooth Device Header Status Pill (Clickable) -->
+        <!-- Weather Status Pill (Top Bar) -->
+        <LinearLayout
+            android:id="@+id/pillHeaderWeather"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_card_inner"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/tvWeatherIcon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="☀️"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tvWeatherText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="28°C · Sunny"
+                android:textColor="@color/cockpit_text_primary"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-medium" />
+        </LinearLayout>
+
+        <!-- Bluetooth Connected Device Header Pill (Clickable) -->
         <LinearLayout
             android:id="@+id/pillHeaderBluetooth"
             android:layout_width="wrap_content"
             android:layout_height="28dp"
+            android:layout_marginStart="10dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:background="@drawable/bg_card_inner"
@@ -68,37 +100,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
-                android:text="SantafemR"
-                android:textColor="@color/accent_amber"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-medium" />
-        </LinearLayout>
-
-        <!-- Live GPS Fix Status Pill -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="28dp"
-            android:layout_marginStart="10dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="@drawable/bg_card_inner"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="●"
-                android:textColor="@color/status_active"
-                android:textSize="10sp" />
-
-            <TextView
-                android:id="@+id/tvGpsStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:text="GPS 3D"
-                android:textColor="@color/cockpit_text_primary"
+                android:text="Not Connected"
+                android:textColor="@color/cockpit_text_secondary"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium" />
         </LinearLayout>

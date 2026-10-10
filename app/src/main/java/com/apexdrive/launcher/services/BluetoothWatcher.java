@@ -127,7 +127,7 @@ public class BluetoothWatcher {
             if (a2dpState == BluetoothAdapter.STATE_CONNECTED || headsetState == BluetoothAdapter.STATE_CONNECTED) {
                 // Find bonded device
                 Set<BluetoothDevice> bonded = bluetoothAdapter.getBondedDevices();
-                String connectedName = DEFAULT_CAR_NAME;
+                String connectedName = "Connected Phone";
                 if (bonded != null && !bonded.isEmpty()) {
                     for (BluetoothDevice dev : bonded) {
                         if (dev != null && dev.getName() != null) {
@@ -143,13 +143,11 @@ public class BluetoothWatcher {
             // Also inspect bonded devices
             Set<BluetoothDevice> bonded = bluetoothAdapter.getBondedDevices();
             if (bonded != null && !bonded.isEmpty()) {
-                // Paired devices exist, waiting for link
                 BluetoothDevice dev = bonded.iterator().next();
-                String name = dev.getName() != null ? dev.getName() : DEFAULT_CAR_NAME;
-                // If adapter connection state says connected
-                notifyDisconnected("Ready · " + name);
+                String name = dev.getName() != null ? dev.getName() : "Paired Device";
+                notifyDisconnected("Ready to Connect · " + name);
             } else {
-                notifyDisconnected("Ready to Pair");
+                notifyDisconnected("Pair via SantafemR (PIN 0000)");
             }
 
         } catch (Exception e) {
@@ -165,7 +163,7 @@ public class BluetoothWatcher {
                 return name;
             }
         }
-        return DEFAULT_CAR_NAME;
+        return "Connected Phone";
     }
 
     private void notifyConnected(String deviceName) {
@@ -176,7 +174,7 @@ public class BluetoothWatcher {
 
     private void notifyDisconnected(String detail) {
         if (listener != null) {
-            listener.onBluetoothStateChanged(false, DEFAULT_CAR_NAME, detail);
+            listener.onBluetoothStateChanged(false, "Not Connected", detail);
         }
     }
 
