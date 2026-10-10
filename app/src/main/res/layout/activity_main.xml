@@ -5,233 +5,323 @@
     android:orientation="vertical"
     android:background="@color/cockpit_surface_base">
 
-    <!-- Top Automotive Cockpit Header -->
+    <!-- Top Swiss Cockpit Header (Translucent Smoked Glass) -->
     <LinearLayout
         android:id="@+id/headerBar"
         android:layout_width="match_parent"
-        android:layout_height="40dp"
+        android:layout_height="44dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="@color/cockpit_surface_panel"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp">
+        android:background="@drawable/bg_panel"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
 
+        <!-- Swiss High-Contrast Clock (Bold Grotesque Numerals) -->
         <TextView
             android:id="@+id/tvClock"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="12:45"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+            android:textSize="20sp"
+            android:fontFamily="sans-serif-black" />
 
+        <!-- Santa Fe Model Pill -->
         <TextView
             android:id="@+id/tvVehicleModel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="20dp"
-            android:text="Santa Fe (IX45)"
+            android:layout_marginStart="18dp"
+            android:text="SANTA FE · IX45"
             android:textColor="@color/cockpit_text_secondary"
-            android:textSize="13sp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="|"
-            android:textColor="@color/cockpit_text_tertiary"
-            android:textSize="13sp" />
-
-        <TextView
-            android:id="@+id/tvTemp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="28°C"
-            android:textColor="@color/cockpit_text_secondary"
-            android:textSize="13sp" />
+            android:textSize="11sp"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.08" />
 
         <View
             android:layout_width="0dp"
             android:layout_height="1dp"
             android:layout_weight="1" />
 
-        <!-- Bluetooth Device Header Status -->
-        <TextView
-            android:id="@+id/tvHeaderBluetooth"
+        <!-- Bluetooth Device Header Status Pill (Clickable) -->
+        <LinearLayout
+            android:id="@+id/pillHeaderBluetooth"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="BT: SantafemR"
-            android:textColor="@color/accent_amber"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+            android:layout_height="28dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_card_inner"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:clickable="true"
+            android:focusable="true">
 
-        <!-- GPS Fix Status -->
-        <TextView
-            android:id="@+id/tvGpsStatus"
+            <ImageView
+                android:id="@+id/ivHeaderBtIcon"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@drawable/ic_nav_bluetooth"
+                android:contentDescription="Bluetooth" />
+
+            <TextView
+                android:id="@+id/tvHeaderBluetooth"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="SantafemR"
+                android:textColor="@color/accent_amber"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-medium" />
+        </LinearLayout>
+
+        <!-- Live GPS Fix Status Pill -->
+        <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="20dp"
-            android:text="GPS 3D"
-            android:textColor="@color/status_active"
-            android:textSize="12sp" />
+            android:layout_height="28dp"
+            android:layout_marginStart="10dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_card_inner"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="●"
+                android:textColor="@color/status_active"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/tvGpsStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="GPS 3D"
+                android:textColor="@color/cockpit_text_primary"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-medium" />
+        </LinearLayout>
 
     </LinearLayout>
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/cockpit_surface_border_subtle" />
-
-    <!-- Cockpit Body: Left Driver Rail + Content Area -->
+    <!-- Cockpit Body: Driver Rail (Left) + Content Stage (Right) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="horizontal">
 
-        <!-- Left Driver Navigation Rail (Ergonomic for Left-Hand Drive) -->
+        <!-- Left Driver Navigation Rail (Swiss Grid & Clear Icons) -->
         <LinearLayout
             android:id="@+id/driverRail"
-            android:layout_width="76dp"
+            android:layout_width="78dp"
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:gravity="center_horizontal"
-            android:background="@color/cockpit_surface_panel"
-            android:paddingTop="10dp"
-            android:paddingBottom="10dp">
+            android:background="@drawable/bg_panel"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp">
 
+            <!-- 1. DASHBOARD -->
             <LinearLayout
                 android:id="@+id/railBtnDash"
-                android:layout_width="56dp"
+                android:layout_width="66dp"
                 android:layout_height="52dp"
                 android:orientation="vertical"
                 android:gravity="center"
                 android:background="@drawable/bg_elevated_btn"
                 android:clickable="true"
                 android:focusable="true">
+
+                <ImageView
+                    android:id="@+id/ivDashIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_nav_dash"
+                    android:contentDescription="Dash" />
+
                 <TextView
                     android:id="@+id/tvDashLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Dash"
+                    android:layout_marginTop="3dp"
+                    android:text="DASH"
                     android:textColor="@color/accent_amber"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textSize="9sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.05" />
             </LinearLayout>
 
+            <!-- 2. CARPLAY -->
             <LinearLayout
                 android:id="@+id/railBtnCarPlay"
-                android:layout_width="56dp"
+                android:layout_width="66dp"
                 android:layout_height="52dp"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="4dp"
                 android:orientation="vertical"
                 android:gravity="center"
                 android:background="@drawable/bg_elevated_btn"
                 android:clickable="true"
                 android:focusable="true">
+
+                <ImageView
+                    android:id="@+id/ivCarPlayIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_nav_carplay"
+                    android:contentDescription="CarPlay" />
+
                 <TextView
                     android:id="@+id/tvCarPlayLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="CarPlay"
+                    android:layout_marginTop="3dp"
+                    android:text="PHONE"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textSize="9sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.05" />
             </LinearLayout>
 
+            <!-- 3. MAPS -->
             <LinearLayout
                 android:id="@+id/railBtnMaps"
-                android:layout_width="56dp"
+                android:layout_width="66dp"
                 android:layout_height="52dp"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="4dp"
                 android:orientation="vertical"
                 android:gravity="center"
                 android:background="@drawable/bg_elevated_btn"
                 android:clickable="true"
                 android:focusable="true">
+
+                <ImageView
+                    android:id="@+id/ivMapsIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_nav_maps"
+                    android:contentDescription="Maps" />
+
                 <TextView
                     android:id="@+id/tvMapsLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Maps"
+                    android:layout_marginTop="3dp"
+                    android:text="MAPS"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textSize="9sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.05" />
             </LinearLayout>
 
+            <!-- 4. AUDIO -->
             <LinearLayout
                 android:id="@+id/railBtnAudio"
-                android:layout_width="56dp"
+                android:layout_width="66dp"
                 android:layout_height="52dp"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="4dp"
                 android:orientation="vertical"
                 android:gravity="center"
                 android:background="@drawable/bg_elevated_btn"
                 android:clickable="true"
                 android:focusable="true">
+
+                <ImageView
+                    android:id="@+id/ivAudioIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_nav_audio"
+                    android:contentDescription="Audio" />
+
                 <TextView
                     android:id="@+id/tvAudioLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Audio"
+                    android:layout_marginTop="3dp"
+                    android:text="AUDIO"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textSize="9sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.05" />
             </LinearLayout>
 
+            <!-- 5. APPS -->
             <LinearLayout
                 android:id="@+id/railBtnApps"
-                android:layout_width="56dp"
+                android:layout_width="66dp"
                 android:layout_height="52dp"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="4dp"
                 android:orientation="vertical"
                 android:gravity="center"
                 android:background="@drawable/bg_elevated_btn"
                 android:clickable="true"
                 android:focusable="true">
+
+                <ImageView
+                    android:id="@+id/ivAppsIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_nav_apps"
+                    android:contentDescription="Apps" />
+
                 <TextView
                     android:id="@+id/tvAppsLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Apps"
+                    android:layout_marginTop="3dp"
+                    android:text="APPS"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textSize="9sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.05" />
             </LinearLayout>
 
+            <!-- Flexible Spacer -->
             <View
                 android:layout_width="1dp"
                 android:layout_height="0dp"
                 android:layout_weight="1" />
 
+            <!-- 6. SETUP -->
             <LinearLayout
                 android:id="@+id/railBtnSetup"
-                android:layout_width="56dp"
+                android:layout_width="66dp"
                 android:layout_height="52dp"
                 android:orientation="vertical"
                 android:gravity="center"
                 android:background="@drawable/bg_elevated_btn"
                 android:clickable="true"
                 android:focusable="true">
+
+                <ImageView
+                    android:id="@+id/ivSetupIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_nav_setup"
+                    android:contentDescription="Setup" />
+
                 <TextView
                     android:id="@+id/tvSetupLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Setup"
+                    android:layout_marginTop="3dp"
+                    android:text="SETUP"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textSize="9sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.05" />
             </LinearLayout>
 
         </LinearLayout>
 
+        <!-- Divider line -->
         <View
             android:layout_width="1dp"
             android:layout_height="match_parent"
             android:background="@color/cockpit_surface_border_subtle" />
 
-        <!-- Dynamic Main View Container -->
+        <!-- Dynamic Main View Stage -->
         <FrameLayout
             android:id="@+id/viewContainer"
             android:layout_width="0dp"

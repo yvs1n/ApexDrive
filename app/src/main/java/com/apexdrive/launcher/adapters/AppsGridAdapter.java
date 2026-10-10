@@ -15,16 +15,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AppsGridAdapter extends BaseAdapter {
+    public interface OnAppClickListener {
+        void onAppClick(AppInfo app);
+    }
+
     private final Context context;
     private final List<AppInfo> fullList;
     private final List<AppInfo> filteredList;
     private final LayoutInflater inflater;
+    private OnAppClickListener clickListener;
 
     public AppsGridAdapter(Context context, List<AppInfo> apps) {
         this.context = context;
         this.fullList = new ArrayList<>(apps);
         this.filteredList = new ArrayList<>(apps);
         this.inflater = LayoutInflater.from(context);
+    }
+
+    public void setOnAppClickListener(OnAppClickListener listener) {
+        this.clickListener = listener;
     }
 
     @Override
@@ -55,9 +64,16 @@ public class AppsGridAdapter extends BaseAdapter {
             holder = (ViewHolder) convertView.getTag();
         }
 
-        AppInfo app = getItem(position);
+        final AppInfo app = getItem(position);
         holder.tvName.setText(app.getLabel());
         holder.ivIcon.setImageDrawable(app.getIcon());
+
+        // Direct click fallback ensuring apps ALWAYS launch when tapped
+        convertView.setOnClickListener(v -> {
+            if (clickListener != null) {
+                clickListener.onAppClick(app);
+            }
+        });
 
         return convertView;
     }

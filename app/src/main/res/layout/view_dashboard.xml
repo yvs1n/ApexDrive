@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="horizontal"
-    android:padding="12dp">
+    android:padding="10dp">
 
     <!-- LEFT COLUMN STACK: CarPlay (Hero) + Bluetooth Compact Card -->
     <LinearLayout
@@ -12,7 +12,7 @@
         android:layout_weight="1.15"
         android:orientation="vertical">
 
-        <!-- Left Top: Apple CarPlay Card -->
+        <!-- Left Top: Apple CarPlay / Mobile Projection Card -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -20,21 +20,23 @@
             android:orientation="vertical"
             android:background="@drawable/bg_panel">
 
+            <!-- Card Header -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="38dp"
+                android:layout_height="36dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp">
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="MOBILE PROJECTION"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textSize="10sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.08" />
 
                 <View
                     android:layout_width="0dp"
@@ -47,8 +49,9 @@
                     android:layout_height="wrap_content"
                     android:text="ZLINK 5.3"
                     android:textColor="@color/accent_amber"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textSize="10sp"
+                    android:fontFamily="sans-serif-black"
+                    android:letterSpacing="0.05" />
             </LinearLayout>
 
             <View
@@ -56,53 +59,56 @@
                 android:layout_height="1dp"
                 android:background="@color/cockpit_surface_border_subtle" />
 
-            <!-- Inner Surface -->
+            <!-- Inner Frosted Stage -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_margin="10dp"
+                android:layout_margin="8dp"
                 android:orientation="vertical"
                 android:gravity="center"
                 android:background="@drawable/bg_card_inner"
-                android:padding="16dp">
+                android:padding="12dp">
 
                 <TextView
                     android:id="@+id/tvCarPlayReadyBadge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="●  iPhone Ready (Wireless)"
+                    android:text="●  Phone Link Active"
                     android:textColor="@color/status_active"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium" />
 
+                <!-- Swiss Bold Headline -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/carplay_headline"
+                    android:layout_marginTop="6dp"
+                    android:text="CarPlay · Android Auto"
                     android:textColor="@color/cockpit_text_primary"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
+                    android:textSize="18sp"
+                    android:fontFamily="sans-serif-black" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="2dp"
                     android:gravity="center"
-                    android:text="@string/carplay_desc"
+                    android:text="Seamless navigation, Spotify &amp; Siri interface"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="12sp" />
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif" />
 
                 <Button
                     android:id="@+id/btnLaunchCarPlay"
                     android:layout_width="wrap_content"
-                    android:layout_height="44dp"
-                    android:layout_marginTop="14dp"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="12dp"
                     android:background="@drawable/bg_elevated_btn"
-                    android:text="@string/btn_open_carplay"
+                    android:text="LAUNCH CARPLAY"
                     android:textColor="@color/cockpit_text_primary"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-black"
+                    android:letterSpacing="0.06"
                     android:paddingStart="24dp"
                     android:paddingEnd="24dp" />
 
@@ -110,30 +116,30 @@
 
         </LinearLayout>
 
-        <!-- Left Bottom: Compact Bluetooth Card (Requested: Small & No PIN) -->
+        <!-- Left Bottom: Compact Bluetooth Card (Clickable) -->
         <LinearLayout
             android:id="@+id/cardBluetooth"
             android:layout_width="match_parent"
-            android:layout_height="58dp"
-            android:layout_marginTop="10dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="8dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:background="@drawable/bg_panel"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp">
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:clickable="true"
+            android:focusable="true">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="BT"
-                android:textColor="@color/accent_amber"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_nav_bluetooth"
+                android:contentDescription="Bluetooth" />
 
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
+                android:layout_marginStart="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -141,18 +147,19 @@
                     android:id="@+id/tvBtDeviceName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/bt_default_device"
+                    android:text="SantafemR"
                     android:textColor="@color/cockpit_text_primary"
                     android:textSize="13sp"
-                    android:textStyle="bold" />
+                    android:fontFamily="sans-serif-black" />
 
                 <TextView
                     android:id="@+id/tvBtProfileDetail"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/bt_connected_profile"
+                    android:text="A2DP Audio &amp; Calls Active"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="11sp" />
+                    android:textSize="10sp"
+                    android:fontFamily="sans-serif" />
             </LinearLayout>
 
             <TextView
@@ -162,12 +169,12 @@
                 android:background="@drawable/bg_elevated_btn"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
-                android:paddingTop="4dp"
-                android:paddingBottom="4dp"
+                android:paddingTop="3dp"
+                android:paddingBottom="3dp"
                 android:text="● CONNECTED"
                 android:textColor="@color/status_active"
                 android:textSize="10sp"
-                android:textStyle="bold" />
+                android:fontFamily="sans-serif-bold" />
 
         </LinearLayout>
 
@@ -175,7 +182,7 @@
 
     <!-- Space between columns -->
     <View
-        android:layout_width="12dp"
+        android:layout_width="10dp"
         android:layout_height="match_parent" />
 
     <!-- RIGHT COLUMN STACK: Speedometer (Top) + Media Player (Bottom) -->
@@ -185,43 +192,52 @@
         android:layout_weight="1"
         android:orientation="vertical">
 
-        <!-- Right Top: Telemetry & Speedometer -->
+        <!-- Right Top: Swiss Telemetry & Speedometer -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1.1"
+            android:layout_weight="1.15"
             android:orientation="vertical"
             android:background="@drawable/bg_panel"
-            android:padding="16dp">
+            android:padding="12dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/telemetry_header"
+                    android:text="GPS VELOCITY"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textSize="10sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.08" />
 
                 <View
                     android:layout_width="0dp"
                     android:layout_height="1dp"
                     android:layout_weight="1" />
 
+                <!-- Dynamic Heading Badge -->
                 <TextView
                     android:id="@+id/tvHeading"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/bg_card_inner"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="2dp"
                     android:text="NW 315°"
                     android:textColor="@color/cockpit_text_primary"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-black" />
             </LinearLayout>
 
+            <!-- Large Swiss Tabular Speedometer Numerals -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
@@ -233,20 +249,21 @@
                     android:id="@+id/tvSpeed"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/default_speed"
+                    android:text="0"
                     android:textColor="@color/cockpit_text_primary"
-                    android:textSize="64sp"
-                    android:textStyle="bold" />
+                    android:textSize="74sp"
+                    android:fontFamily="sans-serif-black"
+                    android:includeFontPadding="false" />
 
                 <TextView
                     android:id="@+id/tvSpeedUnit"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:text="@string/unit_kmh"
+                    android:layout_marginStart="10dp"
+                    android:text="KM/H"
                     android:textColor="@color/accent_amber"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:textSize="15sp"
+                    android:fontFamily="sans-serif-black" />
             </LinearLayout>
 
             <View
@@ -257,7 +274,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="6dp"
                 android:orientation="horizontal">
 
                 <TextView
@@ -265,30 +282,32 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Trip: 18.4 km"
+                    android:text="Trip: 0.0 km"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="12sp" />
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium" />
 
                 <TextView
                     android:id="@+id/tvTripTime"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Time: 22 min"
+                    android:text="Time: 0 min"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="12sp" />
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium" />
             </LinearLayout>
 
         </LinearLayout>
 
-        <!-- Right Bottom: Media Controller -->
+        <!-- Right Bottom: Universal Media Controller -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1.3"
-            android:layout_marginTop="10dp"
+            android:layout_weight="1.1"
+            android:layout_marginTop="8dp"
             android:orientation="vertical"
             android:background="@drawable/bg_panel"
-            android:padding="16dp">
+            android:padding="12dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -298,10 +317,11 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/media_now_playing"
+                    android:text="NOW PLAYING"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textSize="10sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.08" />
 
                 <View
                     android:layout_width="0dp"
@@ -309,101 +329,84 @@
                     android:layout_weight="1" />
 
                 <TextView
-                    android:id="@+id/tvMediaSourceTag"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="SPOTIFY"
+                    android:text="UNIVERSAL AUDIO"
                     android:textColor="@color/accent_amber"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textSize="10sp"
+                    android:fontFamily="sans-serif-bold" />
             </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/albumCoverIcon"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="@drawable/bg_card_inner"
-                    android:gravity="center"
-                    android:text="🎵"
-                    android:textSize="20sp" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/tvTrackTitle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:ellipsize="end"
-                        android:singleLine="true"
-                        android:text="@string/media_placeholder_song"
-                        android:textColor="@color/cockpit_text_primary"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tvTrackArtist"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:ellipsize="end"
-                        android:singleLine="true"
-                        android:text="@string/media_placeholder_artist"
-                        android:textColor="@color/cockpit_text_secondary"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-            </LinearLayout>
-
-            <!-- Transport Controls -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="horizontal">
+                android:gravity="center_vertical"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvTrackTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Track / Radio"
+                    android:textColor="@color/cockpit_text_primary"
+                    android:textSize="15sp"
+                    android:fontFamily="sans-serif-black"
+                    android:singleLine="true"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/tvTrackArtist"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Tap Play to resume Spotify, Radio or CarPlay"
+                    android:textColor="@color/cockpit_text_secondary"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif"
+                    android:singleLine="true"
+                    android:ellipsize="end" />
+            </LinearLayout>
+
+            <!-- Touch Transport Buttons (48dp height for driving ergonomics) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
                 <Button
                     android:id="@+id/btnMediaPrev"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
                     android:background="@drawable/bg_elevated_btn"
                     android:text="⏮"
                     android:textColor="@color/cockpit_text_primary"
-                    android:textSize="14sp" />
+                    android:textSize="16sp" />
 
                 <Button
                     android:id="@+id/btnMediaPlayPause"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginEnd="16dp"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1.3"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
                     android:background="@drawable/bg_elevated_btn"
-                    android:text="⏯"
+                    android:text="⏯  PAUSE / PLAY"
                     android:textColor="@color/accent_amber"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-black" />
 
                 <Button
                     android:id="@+id/btnMediaNext"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
                     android:background="@drawable/bg_elevated_btn"
                     android:text="⏭"
                     android:textColor="@color/cockpit_text_primary"
-                    android:textSize="14sp" />
-
+                    android:textSize="16sp" />
             </LinearLayout>
 
         </LinearLayout>
