@@ -612,6 +612,12 @@ public class MainActivity extends AppCompatActivity {
         List<String> names = new ArrayList<>();
         final List<String> packages = new ArrayList<>();
 
+        names.add("DiPlay (Open-Source)");
+        packages.add("com.shihab.diplay");
+
+        names.add("TLink / Zlink 5.3 (Factory)");
+        packages.add("com.zjinnova.zlink");
+
         names.add("Zlink (Default)");
         packages.add("com.zlink.carplay");
 
@@ -1116,8 +1122,18 @@ public class MainActivity extends AppCompatActivity {
 
     private void launchCarPlay() {
         String pkg = prefHelper.getCarPlayPackage();
+
+        // Release competing Zlink/TLink background services when initiating projection
+        try {
+            Intent pauseZlink = new Intent("com.zlink.command");
+            pauseZlink.putExtra("action", "pause");
+            sendBroadcast(pauseZlink);
+        } catch (Exception ignored) {}
+
         if (!launchAppPackage(pkg)) {
             String[] commonCarPlayPackages = {
+                    "com.shihab.diplay",
+                    "com.zjinnova.zlink",
                     "com.zlink.carplay",
                     "com.speedplay.carplay",
                     "cn.manstep.phonemirrorbox",
@@ -1131,6 +1147,9 @@ public class MainActivity extends AppCompatActivity {
             for (String fallback : commonCarPlayPackages) {
                 if (launchAppPackage(fallback)) {
                     prefHelper.setCarPlayPackage(fallback);
+                    if ("com.shihab.diplay".equals(fallback)) {
+                        prefHelper.setCarPlayName("DiPlay");
+                    }
                     launched = true;
                     break;
                 }
