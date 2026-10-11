@@ -68,4 +68,32 @@ public class PreferenceHelper {
     public void setSelectedDriverDevice(String deviceAddress) {
         prefs.edit().putString(KEY_SELECTED_DRIVER_DEVICE, deviceAddress).apply();
     }
+
+    private static final String KEY_SAVED_TEMP_C = "saved_temp_c";
+    private static final String KEY_SAVED_CONDITION = "saved_condition";
+    private static final String KEY_MANUAL_TEMP_CALIBRATION = "manual_temp_calibration";
+
+    public float getSavedTempCelsius() {
+        return prefs.getFloat(KEY_SAVED_TEMP_C, 32.0f);
+    }
+
+    public void setSavedTempCelsius(float temp) {
+        prefs.edit().putFloat(KEY_SAVED_TEMP_C, temp).apply();
+    }
+
+    public String getSavedCondition() {
+        return prefs.getString(KEY_SAVED_CONDITION, "OUTSIDE");
+    }
+
+    public void setSavedCondition(String condition) {
+        prefs.edit().putString(KEY_SAVED_CONDITION, condition).apply();
+    }
+
+    public boolean isManualTempCalibration() {
+        return prefs.getBoolean(KEY_MANUAL_TEMP_CALIBRATION, false);
+    }
+
+    public void setManualTempCalibration(boolean manual) {
+        prefs.edit().putBoolean(KEY_MANUAL_TEMP_CALIBRATION, manual).apply();
+    }
 }

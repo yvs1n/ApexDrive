@@ -160,6 +160,20 @@
                 android:textSize="12sp"
                 android:fontFamily="sans-serif-black"
                 android:letterSpacing="0.08"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp" />
+
+            <Button
+                android:id="@+id/btnRadioPlay"
+                android:layout_width="wrap_content"
+                android:layout_height="52dp"
+                android:layout_marginStart="14dp"
+                android:background="@drawable/bg_elevated_btn"
+                android:text="PLAY RADIO"
+                android:textColor="@color/accent_amber"
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.08"
                 android:paddingStart="28dp"
                 android:paddingEnd="28dp" />
 
@@ -167,15 +181,15 @@
                 android:id="@+id/btnRadioScanUp"
                 android:layout_width="wrap_content"
                 android:layout_height="52dp"
-                android:layout_marginStart="16dp"
+                android:layout_marginStart="14dp"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="SEEK UP"
                 android:textColor="@color/cockpit_text_primary"
                 android:textSize="12sp"
                 android:fontFamily="sans-serif-black"
                 android:letterSpacing="0.08"
-                android:paddingStart="28dp"
-                android:paddingEnd="28dp" />
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp" />
         </LinearLayout>
 
     </LinearLayout>

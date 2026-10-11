@@ -1378,6 +1378,7 @@
               </div>
               <div style="display: flex; gap: 12px;">
                 <button class="btn-action-primary" style="font-weight: 900; letter-spacing: 0.08em;" onclick="tuneFreq(-0.1)">SEEK DOWN</button>
+                <button class="btn-action-primary" id="btnRadioPlayPreview" style="font-weight: 900; letter-spacing: 0.08em; color: var(--accent); border-color: var(--accent);" onclick="toggleRadioPlay()">PLAY RADIO</button>
                 <button class="btn-action-primary" style="font-weight: 900; letter-spacing: 0.08em;" onclick="tuneFreq(0.1)">SEEK UP</button>
               </div>
             </div>
@@ -1758,16 +1759,18 @@
     // 8-second auto gateway countdown on page load
     openDeviceGateway(true);
 
-    // Car Thermometer Live Simulation (Santa Fe CAN-bus)
-    let currentTempC = 26;
+    // Car Thermometer Live Simulation (Santa Fe CAN-bus & Calibration)
+    let currentTempC = 34;
     function refreshCarThermometer() {
-      // Small realistic jitter around ambient temperature
-      currentTempC = Math.round((currentTempC + (Math.random() * 2 - 1)) * 10) / 10;
-      let display = speedUnit === 'MPH' ? 
-        `${Math.round((currentTempC * 9/5) + 32)}°F · Outside` : 
-        `${currentTempC.toFixed(0)}°C · Outside`;
-      document.getElementById('weatherText').textContent = display;
-      showToast(`Live Santa Fe CAN-bus Thermometer: ${display}`);
+      const input = prompt("Calibrate outside temperature to match your Santa Fe instrument cluster (°C):", currentTempC.toString());
+      if (input !== null && !isNaN(parseFloat(input))) {
+        currentTempC = parseFloat(input);
+        let display = speedUnit === 'MPH' ? 
+          `${Math.round((currentTempC * 9/5) + 32)}°F · Outside` : 
+          `${currentTempC.toFixed(0)}°C · Outside`;
+        document.getElementById('weatherText').textContent = display;
+        showToast(`Thermometer calibrated to: ${display} (Matches car dashboard)`);
+      }
     }
 
     // CarPlay App Switcher
@@ -1856,11 +1859,31 @@
 
     // Radio Tuner Simulation
     let freq = 98.5;
+    let isRadioPlaying = false;
     function tuneFreq(delta) {
       freq = Math.round((freq + delta) * 10) / 10;
       if (freq < 87.5) freq = 108.0;
       if (freq > 108.0) freq = 87.5;
       document.getElementById('freqDisplay').textContent = freq.toFixed(1);
+      if (isRadioPlaying) {
+        document.getElementById('trackTitle').textContent = `FM ${freq.toFixed(1)} MHz`;
+      }
+    }
+
+    function toggleRadioPlay() {
+      isRadioPlaying = !isRadioPlaying;
+      const btn = document.getElementById('btnRadioPlayPreview');
+      if (isRadioPlaying) {
+        btn.textContent = "PAUSE RADIO";
+        showToast(`Tuning FM ${freq.toFixed(1)} MHz · Radio Playing`);
+        document.getElementById('trackTitle').textContent = `FM ${freq.toFixed(1)} MHz`;
+        document.getElementById('trackArtist').textContent = "Radio Tuner Broadcast";
+        document.getElementById('playPauseBtn').textContent = "PAUSE";
+      } else {
+        btn.textContent = "PLAY RADIO";
+        showToast("FM Radio Paused");
+        document.getElementById('playPauseBtn').textContent = "PLAY";
+      }
     }
 
     // Dynamic POI Search

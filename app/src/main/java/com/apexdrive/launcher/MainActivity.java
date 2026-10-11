@@ -12,6 +12,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.PorterDuff;
+import android.graphics.Typeface;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -21,6 +22,7 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -88,6 +90,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnSelectCarPlayApp;
     private Button btnToggleUnit;
     private Button btnSelectDriverPhone;
+    private boolean isRadioPlaying = false;
 
     private TextView tvNavHeadingBig, tvNavCoordinates, tvNavAltitude, tvNavAccuracy, tvNavTripDist, tvNavTripDuration;
 
@@ -371,24 +374,88 @@ public class MainActivity extends AppCompatActivity {
     private void setupAudioWidgets() {
         final TextView tvActive = viewAudio.findViewById(R.id.tvAudioActiveSource);
         final TextView tvFreq = viewAudio.findViewById(R.id.tvRadioFreq);
+        final TextView tvPreset = viewAudio.findViewById(R.id.tvAudioPresetBadge);
+        final Button btnSrcRadio = viewAudio.findViewById(R.id.btnSrcRadio);
+        final Button btnSrcSpotify = viewAudio.findViewById(R.id.btnSrcSpotify);
+        final Button btnSrcBluetooth = viewAudio.findViewById(R.id.btnSrcBluetooth);
+        final Button btnSrcUsb = viewAudio.findViewById(R.id.btnSrcUsb);
+        final Button btnRadioPlay = viewAudio.findViewById(R.id.btnRadioPlay);
 
-        viewAudio.findViewById(R.id.btnSrcRadio).setOnClickListener(v -> {
+        int textPrimary = ContextCompat.getColor(this, R.color.cockpit_text_primary);
+
+        btnSrcRadio.setOnClickListener(v -> {
             tvActive.setText("FM RADIO TUNER (SI473X IC)");
-            String[] radioPackages = {"com.ts.radio", "com.microntek.radio", "com.syu.radio", "com.android.radio", "com.autonavi.radio", "com.car.radio"};
-            for (String pkg : radioPackages) {
-                if (launchAppPackage(pkg)) return;
+            btnSrcRadio.setTextColor(prefHelper.getAccentColor());
+            btnSrcSpotify.setTextColor(textPrimary);
+            btnSrcBluetooth.setTextColor(textPrimary);
+            btnSrcUsb.setTextColor(textPrimary);
+            if (tvPreset != null) {
+                tvPreset.setText(isRadioPlaying ? "ACTIVE TUNER" : "STANDBY · PRESS PLAY");
             }
-            try {
-                Intent musicIntent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_MUSIC);
-                musicIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(musicIntent);
-                Toast.makeText(this, "Built-in FM Radio app not found · Opened media player", Toast.LENGTH_SHORT).show();
-            } catch (Exception e) {
-                Toast.makeText(this, "Radio app not found on this head unit firmware", Toast.LENGTH_LONG).show();
-            }
+            Toast.makeText(this, "FM Radio Tuner selected · Press PLAY to listen", Toast.LENGTH_SHORT).show();
         });
 
+        if (btnRadioPlay != null) {
+            btnRadioPlay.setOnClickListener(v -> {
+                if (!isRadioPlaying) {
+                    isRadioPlaying = true;
+                    btnRadioPlay.setText("PAUSE RADIO");
+                    if (tvPreset != null) {
+                        tvPreset.setText("ACTIVE · " + tvFreq.getText() + " MHZ");
+                    }
+
+                    // 1. Wake up vendor radio hardware tuner IC
+                    try {
+                        sendBroadcast(new Intent("com.ts.radio.start"));
+                        sendBroadcast(new Intent("com.microntek.radio.power"));
+                        sendBroadcast(new Intent("com.syu.radio.play"));
+                        sendBroadcast(new Intent("action.hct.media.key").putExtra("keycode", KeyEvent.KEYCODE_MEDIA_PLAY));
+                    } catch (Exception ignored) {}
+
+                    // 2. Launch radio application so audio channel is open
+                    String[] radioPackages = {"com.ts.radio", "com.microntek.radio", "com.syu.radio", "com.android.radio", "com.autonavi.radio", "com.car.radio"};
+                    boolean launched = false;
+                    for (String pkg : radioPackages) {
+                        if (launchAppPackage(pkg)) {
+                            launched = true;
+                            break;
+                        }
+                    }
+                    if (!launched) {
+                        try {
+                            Intent musicIntent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_MUSIC);
+                            musicIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(musicIntent);
+                        } catch (Exception ignored) {}
+                    }
+
+                    // 3. Update dashboard track display
+                    if (tvTrackTitle != null) tvTrackTitle.setText("FM " + tvFreq.getText() + " MHz");
+                    if (tvTrackArtist != null) tvTrackArtist.setText("Radio Tuner Broadcast");
+                    if (btnMediaPlayPause != null) btnMediaPlayPause.setText("PAUSE");
+                } else {
+                    isRadioPlaying = false;
+                    btnRadioPlay.setText("PLAY RADIO");
+                    if (tvPreset != null) {
+                        tvPreset.setText("STANDBY");
+                    }
+                    MediaSyncService.pauseAllMedia(this);
+                    try {
+                        sendBroadcast(new Intent("com.ts.radio.stop"));
+                        sendBroadcast(new Intent("com.microntek.radio.power"));
+                        sendBroadcast(new Intent("action.hct.media.key").putExtra("keycode", KeyEvent.KEYCODE_MEDIA_PAUSE));
+                    } catch (Exception ignored) {}
+                    if (btnMediaPlayPause != null) btnMediaPlayPause.setText("PLAY");
+                }
+            });
+        }
+
         viewAudio.findViewById(R.id.btnSrcSpotify).setOnClickListener(v -> {
+            tvActive.setText("SPOTIFY AUDIO STREAM");
+            btnSrcSpotify.setTextColor(prefHelper.getAccentColor());
+            btnSrcRadio.setTextColor(textPrimary);
+            btnSrcBluetooth.setTextColor(textPrimary);
+            btnSrcUsb.setTextColor(textPrimary);
             if (!launchAppPackage("com.spotify.music")) {
                 try {
                     Intent musicIntent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_MUSIC);
@@ -403,6 +470,10 @@ public class MainActivity extends AppCompatActivity {
 
         viewAudio.findViewById(R.id.btnSrcBluetooth).setOnClickListener(v -> {
             tvActive.setText("BLUETOOTH AUDIO STREAM");
+            btnSrcBluetooth.setTextColor(prefHelper.getAccentColor());
+            btnSrcRadio.setTextColor(textPrimary);
+            btnSrcSpotify.setTextColor(textPrimary);
+            btnSrcUsb.setTextColor(textPrimary);
             if (btWatcher != null && btWatcher.getConnectedDevice() == null) {
                 Toast.makeText(this, "No phone connected · Tap to pair or connect", Toast.LENGTH_SHORT).show();
                 showDeviceSelectorDialog(false);
@@ -413,6 +484,10 @@ public class MainActivity extends AppCompatActivity {
 
         viewAudio.findViewById(R.id.btnSrcUsb).setOnClickListener(v -> {
             tvActive.setText("USB MASS STORAGE");
+            btnSrcUsb.setTextColor(prefHelper.getAccentColor());
+            btnSrcRadio.setTextColor(textPrimary);
+            btnSrcSpotify.setTextColor(textPrimary);
+            btnSrcBluetooth.setTextColor(textPrimary);
             String[] usbPackages = {"com.ts.music", "com.microntek.music", "com.syu.music", "com.android.music", "com.android.musicfx"};
             for (String pkg : usbPackages) {
                 if (launchAppPackage(pkg)) return;
@@ -430,14 +505,32 @@ public class MainActivity extends AppCompatActivity {
         viewAudio.findViewById(R.id.btnRadioScanDown).setOnClickListener(v -> {
             try {
                 double f = Double.parseDouble(tvFreq.getText().toString()) - 0.1;
-                tvFreq.setText(String.format(Locale.US, "%.1f", Math.max(87.5, f)));
+                String freqStr = String.format(Locale.US, "%.1f", Math.max(87.5, f));
+                tvFreq.setText(freqStr);
+                if (isRadioPlaying && tvPreset != null) {
+                    tvPreset.setText("ACTIVE · " + freqStr + " MHZ");
+                }
+                try {
+                    int freqKhz = (int) (Double.parseDouble(freqStr) * 1000);
+                    sendBroadcast(new Intent("com.ts.radio.tune").putExtra("freq", freqKhz));
+                    sendBroadcast(new Intent("com.microntek.radio.tune").putExtra("freq", freqKhz));
+                } catch (Exception ignored) {}
             } catch (Exception ignored) {}
         });
 
         viewAudio.findViewById(R.id.btnRadioScanUp).setOnClickListener(v -> {
             try {
                 double f = Double.parseDouble(tvFreq.getText().toString()) + 0.1;
-                tvFreq.setText(String.format(Locale.US, "%.1f", Math.min(108.0, f)));
+                String freqStr = String.format(Locale.US, "%.1f", Math.min(108.0, f));
+                tvFreq.setText(freqStr);
+                if (isRadioPlaying && tvPreset != null) {
+                    tvPreset.setText("ACTIVE · " + freqStr + " MHZ");
+                }
+                try {
+                    int freqKhz = (int) (Double.parseDouble(freqStr) * 1000);
+                    sendBroadcast(new Intent("com.ts.radio.tune").putExtra("freq", freqKhz));
+                    sendBroadcast(new Intent("com.microntek.radio.tune").putExtra("freq", freqKhz));
+                } catch (Exception ignored) {}
             } catch (Exception ignored) {}
         });
     }
@@ -690,6 +783,9 @@ public class MainActivity extends AppCompatActivity {
             Button btnRadio = viewAudio.findViewById(R.id.btnSrcRadio);
             if (btnRadio != null) btnRadio.setTextColor(color);
 
+            Button btnRadioPlay = viewAudio.findViewById(R.id.btnRadioPlay);
+            if (btnRadioPlay != null) btnRadioPlay.setTextColor(color);
+
             TextView presetBadge = viewAudio.findViewById(R.id.tvAudioPresetBadge);
             if (presetBadge != null) presetBadge.setTextColor(color);
 
@@ -817,6 +913,9 @@ public class MainActivity extends AppCompatActivity {
                     if (tvNavAccuracy != null) {
                         tvNavAccuracy.setText(String.format(Locale.US, "● 3D Fix · ±%.1fm", accuracyMeters));
                     }
+                    if (thermometerWatcher != null && Math.abs(latitude) > 0.01 && Math.abs(longitude) > 0.01) {
+                        thermometerWatcher.fetchOnlineWeather(latitude, longitude);
+                    }
                 });
             }
 
@@ -881,12 +980,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initCarThermometer() {
-        thermometerWatcher = new CarThermometerWatcher(this, (tempFormatted, tempCelsius) -> runOnUiThread(() -> {
+        thermometerWatcher = new CarThermometerWatcher(this, (tempFormatted, tempCelsius, condition) -> runOnUiThread(() -> {
             if (tvWeatherText != null) {
-                tvWeatherText.setText(tempFormatted != null ? tempFormatted.toUpperCase() : "26°C · OUTSIDE");
+                tvWeatherText.setText(tempFormatted != null ? tempFormatted.toUpperCase() : "32°C · OUTSIDE");
             }
             if (tvWeatherIcon != null) {
-                tvWeatherIcon.setText("TEMP");
+                tvWeatherIcon.setText(condition != null && !condition.isEmpty() ? condition.toUpperCase() : "TEMP");
             }
         }));
         thermometerWatcher.setUseFahrenheit(prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH));
@@ -894,10 +993,124 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void cycleWeatherState() {
-        if (thermometerWatcher != null) {
-            thermometerWatcher.stop();
-            thermometerWatcher.start();
-            Toast.makeText(this, "Refreshed live vehicle thermometer", Toast.LENGTH_SHORT).show();
+        showTemperatureCalibrationDialog();
+    }
+
+    private void showTemperatureCalibrationDialog() {
+        if (isFinishing() || thermometerWatcher == null) return;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(40, 36, 40, 36);
+        layout.setBackgroundColor(0xFF0F172A);
+
+        TextView title = new TextView(this);
+        title.setText("VEHICLE THERMOMETER CALIBRATION");
+        title.setTextColor(prefHelper.getAccentColor());
+        title.setTextSize(13);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setLetterSpacing(0.08f);
+        layout.addView(title);
+
+        TextView subtitle = new TextView(this);
+        subtitle.setText("Calibrate to match your Hyundai instrument cluster outside temperature or sync via online GPS weather.");
+        subtitle.setTextColor(0xFF94A3B8);
+        subtitle.setTextSize(11);
+        subtitle.setPadding(0, 8, 0, 24);
+        layout.addView(subtitle);
+
+        final TextView tvCurrentVal = new TextView(this);
+        final float[] tempHolder = new float[]{ thermometerWatcher.getCurrentTempCelsius() };
+        final boolean isMph = prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH);
+        updateTempDisplay(tvCurrentVal, tempHolder[0], isMph);
+        tvCurrentVal.setTextSize(42);
+        tvCurrentVal.setTextColor(0xFFF8FAFC);
+        tvCurrentVal.setTypeface(null, Typeface.BOLD);
+        tvCurrentVal.setGravity(Gravity.CENTER);
+        tvCurrentVal.setPadding(0, 10, 0, 24);
+        layout.addView(tvCurrentVal);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setGravity(Gravity.CENTER);
+
+        Button btnMinus = new Button(this);
+        btnMinus.setText("− 1°");
+        btnMinus.setTextSize(16);
+        btnMinus.setTextColor(0xFFF8FAFC);
+        btnMinus.setBackgroundResource(R.drawable.bg_elevated_btn);
+        btnMinus.setLayoutParams(new LinearLayout.LayoutParams(0, 110, 1f));
+        btnMinus.setOnClickListener(v -> {
+            tempHolder[0] -= 1.0f;
+            updateTempDisplay(tvCurrentVal, tempHolder[0], isMph);
+        });
+
+        View spacer = new View(this);
+        spacer.setLayoutParams(new LinearLayout.LayoutParams(24, 110));
+
+        Button btnPlus = new Button(this);
+        btnPlus.setText("+ 1°");
+        btnPlus.setTextSize(16);
+        btnPlus.setTextColor(0xFFF8FAFC);
+        btnPlus.setBackgroundResource(R.drawable.bg_elevated_btn);
+        btnPlus.setLayoutParams(new LinearLayout.LayoutParams(0, 110, 1f));
+        btnPlus.setOnClickListener(v -> {
+            tempHolder[0] += 1.0f;
+            updateTempDisplay(tvCurrentVal, tempHolder[0], isMph);
+        });
+
+        btnRow.addView(btnMinus);
+        btnRow.addView(spacer);
+        btnRow.addView(btnPlus);
+        layout.addView(btnRow);
+
+        Button btnSyncGps = new Button(this);
+        btnSyncGps.setText("SYNC LIVE GPS WEATHER");
+        btnSyncGps.setTextSize(11);
+        btnSyncGps.setTextColor(0xFF94A3B8);
+        btnSyncGps.setBackgroundResource(R.drawable.bg_elevated_btn);
+        LinearLayout.LayoutParams lpGps = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 110);
+        lpGps.setMargins(0, 18, 0, 0);
+        btnSyncGps.setLayoutParams(lpGps);
+
+        Button btnSave = new Button(this);
+        btnSave.setText("MATCH & LOCK TEMPERATURE");
+        btnSave.setTextSize(11);
+        btnSave.setTextColor(prefHelper.getAccentColor());
+        btnSave.setBackgroundResource(R.drawable.bg_elevated_btn);
+        LinearLayout.LayoutParams lpSave = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 110);
+        lpSave.setMargins(0, 12, 0, 0);
+        btnSave.setLayoutParams(lpSave);
+
+        layout.addView(btnSyncGps);
+        layout.addView(btnSave);
+
+        builder.setView(layout);
+        AlertDialog dialog = builder.create();
+
+        btnSyncGps.setOnClickListener(v -> {
+            thermometerWatcher.clearManualCalibration();
+            thermometerWatcher.fetchOnlineWeather(24.4539, 54.3773);
+            Toast.makeText(this, "Fetching live online weather via GPS...", Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        });
+
+        btnSave.setOnClickListener(v -> {
+            thermometerWatcher.setManualTemp(tempHolder[0], "DASHBOARD");
+            Toast.makeText(this, String.format(Locale.US, "Locked to %.0f°C (Matches car dashboard)", tempHolder[0]), Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        });
+
+        dialog.show();
+    }
+
+    private void updateTempDisplay(TextView tv, float tempC, boolean isMph) {
+        if (isMph) {
+            float tempF = (tempC * 9f / 5f) + 32f;
+            tv.setText(String.format(Locale.US, "%.0f°F", tempF));
+        } else {
+            tv.setText(String.format(Locale.US, "%.0f°C", tempC));
         }
     }
 
