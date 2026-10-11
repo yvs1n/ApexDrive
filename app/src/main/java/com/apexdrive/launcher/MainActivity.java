@@ -1102,22 +1102,77 @@ public class MainActivity extends AppCompatActivity {
         mediaReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                if (MediaSyncService.ACTION_MEDIA_UPDATED.equals(intent.getAction())) {
-                    String title = intent.getStringExtra(MediaSyncService.EXTRA_TRACK_TITLE);
-                    String artist = intent.getStringExtra(MediaSyncService.EXTRA_TRACK_ARTIST);
-                    boolean isPlaying = intent.getBooleanExtra(MediaSyncService.EXTRA_IS_PLAYING, false);
+                if (intent == null || intent.getAction() == null) return;
 
-                    if (tvTrackTitle != null && title != null) tvTrackTitle.setText(title);
-                    if (tvTrackArtist != null && artist != null) tvTrackArtist.setText(artist);
-                    if (btnMediaPlayPause != null) {
-                        btnMediaPlayPause.setText(isPlaying ? "PAUSE" : "PLAY");
+                String title = null;
+                String artist = null;
+                boolean isPlaying = false;
+                boolean hasPlayState = false;
+
+                if (MediaSyncService.ACTION_MEDIA_UPDATED.equals(intent.getAction())) {
+                    title = intent.getStringExtra(MediaSyncService.EXTRA_TRACK_TITLE);
+                    artist = intent.getStringExtra(MediaSyncService.EXTRA_TRACK_ARTIST);
+                    isPlaying = intent.getBooleanExtra(MediaSyncService.EXTRA_IS_PLAYING, false);
+                    hasPlayState = true;
+                } else {
+                    title = intent.getStringExtra("track");
+                    if (title == null) title = intent.getStringExtra("title");
+                    if (title == null) title = intent.getStringExtra("song");
+                    if (title == null) title = intent.getStringExtra("name");
+
+                    artist = intent.getStringExtra("artist");
+                    if (artist == null) artist = intent.getStringExtra("singer");
+                    if (artist == null) artist = intent.getStringExtra("album");
+
+                    if (intent.hasExtra("playing")) {
+                        isPlaying = intent.getBooleanExtra("playing", false);
+                        hasPlayState = true;
+                    } else if (intent.hasExtra("isPlaying")) {
+                        isPlaying = intent.getBooleanExtra("isPlaying", false);
+                        hasPlayState = true;
+                    } else if (intent.hasExtra("playstate")) {
+                        isPlaying = intent.getBooleanExtra("playstate", false);
+                        hasPlayState = true;
                     }
+                }
+
+                if (tvTrackTitle != null && title != null && !title.trim().isEmpty()) {
+                    tvTrackTitle.setText(title);
+                }
+                if (tvTrackArtist != null && artist != null && !artist.trim().isEmpty()) {
+                    tvTrackArtist.setText(artist);
+                }
+                if (btnMediaPlayPause != null && hasPlayState) {
+                    btnMediaPlayPause.setText(isPlaying ? "PAUSE" : "PLAY");
                 }
             }
         };
 
-        IntentFilter filter = new IntentFilter(MediaSyncService.ACTION_MEDIA_UPDATED);
-        registerReceiver(mediaReceiver, filter);
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(MediaSyncService.ACTION_MEDIA_UPDATED);
+        filter.addAction("com.android.music.metachanged");
+        filter.addAction("com.android.music.playstatechanged");
+        filter.addAction("com.android.music.playbackcomplete");
+        filter.addAction("com.spotify.music.metadatachanged");
+        filter.addAction("com.spotify.music.playbackstatechanged");
+        filter.addAction("com.goc.bluetooth.track");
+        filter.addAction("com.goc.bluetooth.avrcp");
+        filter.addAction("com.microntek.bt.music");
+        filter.addAction("com.ts.bt.track");
+        filter.addAction("action.hct.bt.track");
+        filter.addAction("com.zlink.metadata");
+        filter.addAction("com.zlink.music_info");
+        filter.addAction("com.shihab.diplay.METADATA");
+        filter.addAction("com.shihab.diplay.PLAY_STATE");
+        filter.addAction("android.bluetooth.a2dp.profile.action.TRACK_CHANGED");
+
+        try {
+            registerReceiver(mediaReceiver, filter);
+        } catch (Exception ignored) {}
+
+        try {
+            startService(new Intent(this, MediaSyncService.class));
+        } catch (Exception ignored) {}
     }
 
     private void launchCarPlay() {
