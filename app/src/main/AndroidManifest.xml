@@ -36,8 +36,8 @@
             android:launchMode="singleTask"
             android:clearTaskOnLaunch="true"
             android:stateNotNeeded="true"
-            android:screenOrientation="sensorLandscape"
-            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|keyboardHidden|screenSize|smallestScreenSize|screenLayout|uiMode|density|fontScale|keyboard|navigation|locale|layoutDirection"
             android:windowSoftInputMode="adjustPan">
 
             <!-- Identifies this application as an Android Home Launcher -->

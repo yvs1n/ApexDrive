@@ -1089,6 +1089,67 @@
     input[type=range] {
       accent-color: var(--accent);
     }
+
+    /* Cockpit Boot Loader Overlay */
+    .cockpit-startup-loader {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--surface-base);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 350ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .cockpit-startup-loader.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .loader-brand {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      color: var(--text-primary);
+    }
+    .loader-subtitle {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-top: 4px;
+    }
+    .loader-spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-top: 22px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .loader-status {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      margin-top: 14px;
+    }
+
+    .device-loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 0;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -1096,11 +1157,19 @@
   <!-- Head Unit 16:9 Viewport -->
   <div class="head-unit-viewport">
     
+    <!-- Swiss Cockpit Boot Loader Overlay (Eliminates abrupt loading / dark screen flicker) -->
+    <div class="cockpit-startup-loader" id="cockpitStartupLoader">
+      <div class="loader-brand">APEXDRIVE</div>
+      <div class="loader-subtitle" id="loaderSubtitle">HYUNDAI SANTA FE · IX45 COCKPIT</div>
+      <div class="loader-spinner"></div>
+      <div class="loader-status">INITIALIZING VEHICLE TELEMETRY...</div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toastNotification" class="toast-pill">Launched Application</div>
 
     <!-- Startup Driver Phone Selection Gateway Modal -->
-    <div class="gateway-overlay show" id="deviceGatewayModal">
+    <div class="gateway-overlay" id="deviceGatewayModal">
       <div class="gateway-dialog">
         <div class="gateway-header">
           <span class="gateway-title">SELECT DRIVER PHONE</span>
@@ -1108,7 +1177,18 @@
         </div>
         <p class="gateway-desc">Tap your phone to connect Bluetooth &amp; CarPlay. Prevents accidentally connecting other paired phones in the car.</p>
         
-        <div class="device-card-list">
+        <!-- Loading State While Bluetooth Stack Initializes at Boot -->
+        <div class="device-loading-state" id="deviceLoadingState" style="display: none;">
+          <div class="loader-spinner" style="width: 32px; height: 32px; margin: 0;"></div>
+          <div style="font-weight: 800; font-size: 12px; letter-spacing: 0.06em; color: var(--accent); margin-top: 10px;">
+            INITIALIZING BLUETOOTH &amp; DETECTING PHONES...
+          </div>
+          <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
+            Waking head unit Bluetooth stack · Detecting paired driver phones
+          </div>
+        </div>
+
+        <div class="device-card-list" id="deviceCardList">
           <!-- 1. Yassin's iPhone (Preferred) -->
           <div class="device-card preferred" id="cardDev1" onclick="selectDriverPhone('YASSIN\'S IPHONE', '98:B6:E9:12:44:A1', 1)">
             <div class="device-card-left">
@@ -1681,7 +1761,8 @@
 
     <div class="sim-group">
       <span>Driver Phone Gateway:</span>
-      <button class="sim-btn" onclick="openDeviceGateway(true)">Trigger Splash (8s Auto)</button>
+      <button class="sim-btn" onclick="openDeviceGateway(true, false)">Trigger Splash (8s Auto)</button>
+      <button class="sim-btn" style="color: var(--accent); border-color: var(--accent);" onclick="simulateCockpitReboot()">Simulate Vehicle Cold Boot</button>
     </div>
 
     <div class="sim-group">
@@ -1748,33 +1829,60 @@
     // Driver Phone Selection Gateway Modal
     let gatewayTimer = null;
     let countdownSec = 8;
+    let loadingWarmupTimer = null;
 
-    function openDeviceGateway(isAuto = false) {
+    function openDeviceGateway(isAuto = false, simulateWarmup = false) {
       const modal = document.getElementById('deviceGatewayModal');
       const timerPill = document.getElementById('gatewayCountdown');
+      const loadingState = document.getElementById('deviceLoadingState');
+      const cardList = document.getElementById('deviceCardList');
       modal.classList.add('show');
 
       clearInterval(gatewayTimer);
+      clearTimeout(loadingWarmupTimer);
+
+      if (simulateWarmup) {
+        if (loadingState) loadingState.style.display = 'flex';
+        if (cardList) cardList.style.display = 'none';
+        if (timerPill) timerPill.style.display = 'none';
+
+        loadingWarmupTimer = setTimeout(() => {
+          if (loadingState) loadingState.style.display = 'none';
+          if (cardList) cardList.style.display = 'flex';
+          startGatewayCountdown(isAuto, timerPill);
+        }, 600);
+      } else {
+        if (loadingState) loadingState.style.display = 'none';
+        if (cardList) cardList.style.display = 'flex';
+        startGatewayCountdown(isAuto, timerPill);
+      }
+    }
+
+    function startGatewayCountdown(isAuto, timerPill) {
+      clearInterval(gatewayTimer);
       if (isAuto) {
         countdownSec = 8;
-        timerPill.style.display = 'block';
-        timerPill.textContent = `Auto in ${countdownSec}s`;
+        if (timerPill) {
+          timerPill.style.display = 'block';
+          timerPill.textContent = `Auto in ${countdownSec}s`;
+        }
         gatewayTimer = setInterval(() => {
           countdownSec--;
           if (countdownSec <= 0) {
             clearInterval(gatewayTimer);
             closeDeviceGateway();
           } else {
-            timerPill.textContent = `Auto in ${countdownSec}s`;
+            if (timerPill) timerPill.textContent = `Auto in ${countdownSec}s`;
           }
         }, 1000);
       } else {
-        timerPill.style.display = 'none';
+        if (timerPill) timerPill.style.display = 'none';
       }
     }
 
     function closeDeviceGateway() {
       clearInterval(gatewayTimer);
+      clearTimeout(loadingWarmupTimer);
       document.getElementById('deviceGatewayModal').classList.remove('show');
     }
 
@@ -1850,8 +1958,34 @@
       showToast("Opening Head Unit Bluetooth Pairing Settings");
     }
 
-    // 8-second auto gateway countdown on page load
-    openDeviceGateway(true);
+    function simulateCockpitReboot() {
+      const loader = document.getElementById('cockpitStartupLoader');
+      const modal = document.getElementById('deviceGatewayModal');
+      if (modal) modal.classList.remove('show');
+      if (loader) loader.classList.remove('hidden');
+      clearInterval(gatewayTimer);
+      clearTimeout(loadingWarmupTimer);
+      showToast('Engine Ignition: Rebooting ApexDrive Cockpit...');
+
+      setTimeout(() => {
+        if (loader) loader.classList.add('hidden');
+        setTimeout(() => {
+          openDeviceGateway(true, true);
+        }, 300);
+      }, 1000);
+    }
+
+    // Vehicle Cold Boot Sequence:
+    // 1. Show APEXDRIVE Cockpit Boot Loader while HAL/telemetry initializes
+    // 2. Smoothly cross-fade into Dashboard
+    // 3. Waking Bluetooth stack pops Driver Phone Gateway
+    setTimeout(() => {
+      const loader = document.getElementById('cockpitStartupLoader');
+      if (loader) loader.classList.add('hidden');
+      setTimeout(() => {
+        openDeviceGateway(true, true);
+      }, 300);
+    }, 1000);
 
     // Car Thermometer Live Simulation (Santa Fe CAN-bus & Calibration)
     let currentTempC = 34;

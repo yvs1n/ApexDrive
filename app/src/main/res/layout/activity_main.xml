@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@color/cockpit_surface_base">
+
+    <!-- Primary Cockpit Container -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@color/cockpit_surface_base">
 
     <!-- Top Swiss Cockpit Header (Translucent Smoked Glass) -->
     <LinearLayout
@@ -371,4 +377,57 @@
 
     </LinearLayout>
 
-</LinearLayout>
+    </LinearLayout>
+
+    <!-- Swiss Cockpit Boot Loader Overlay (Eliminates abrupt element loading / dark screen flicker) -->
+    <LinearLayout
+        android:id="@+id/layoutStartupLoader"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@color/cockpit_surface_base"
+        android:clickable="true"
+        android:focusable="true">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="APEXDRIVE"
+            android:textColor="@color/cockpit_text_primary"
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.12" />
+
+        <TextView
+            android:id="@+id/tvStartupSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="HYUNDAI SANTA FE · IX45 COCKPIT"
+            android:textColor="@color/accent_amber"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-bold"
+            android:letterSpacing="0.08" />
+
+        <ProgressBar
+            android:id="@+id/pbStartup"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_marginTop="22dp"
+            android:indeterminate="true" />
+
+        <TextView
+            android:id="@+id/tvStartupStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="INITIALIZING VEHICLE TELEMETRY..."
+            android:textColor="@color/cockpit_text_secondary"
+            android:textSize="11sp"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.06" />
+
+    </LinearLayout>
+
+</FrameLayout>

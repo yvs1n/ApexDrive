@@ -11,10 +11,12 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.res.ColorStateList;
 import android.graphics.PorterDuff;
 import android.graphics.Typeface;
 import android.location.LocationManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
@@ -33,6 +35,7 @@ import android.widget.FrameLayout;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -103,6 +106,13 @@ public class MainActivity extends AppCompatActivity {
     private final Handler clockHandler = new Handler(Looper.getMainLooper());
     private BroadcastReceiver mediaReceiver;
 
+    private View layoutStartupLoader;
+    private TextView tvStartupSubtitle, tvStartupStatus;
+    private ProgressBar pbStartup;
+    private BroadcastReceiver dialogBtReceiver;
+    private final Handler dialogPollHandler = new Handler(Looper.getMainLooper());
+    private Runnable dialogPollRunnable;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -123,7 +133,23 @@ public class MainActivity extends AppCompatActivity {
         showView(viewDash, railBtnDash);
         applyAccentColor(prefHelper.getAccentColor());
 
-        new Handler(Looper.getMainLooper()).postDelayed(() -> showDeviceSelectorDialog(true), 600);
+        // Graceful Cockpit Boot: Keep loader visible for 1.1s while HAL/subsystems initialize, then smoothly fade out
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (layoutStartupLoader != null) {
+                layoutStartupLoader.animate()
+                        .alpha(0f)
+                        .setDuration(350)
+                        .withEndAction(() -> layoutStartupLoader.setVisibility(View.GONE))
+                        .start();
+            }
+        }, 1100);
+
+        // Show driver phone selector after telemetry stabilizes and Bluetooth stack powers on
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (!isFinishing() && !isCarPlayConnected) {
+                showDeviceSelectorDialog(true);
+            }
+        }, 1300);
     }
 
     private void makeFullScreen() {
@@ -163,6 +189,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initViews() {
+        layoutStartupLoader = findViewById(R.id.layoutStartupLoader);
+        tvStartupSubtitle = findViewById(R.id.tvStartupSubtitle);
+        tvStartupStatus = findViewById(R.id.tvStartupStatus);
+        pbStartup = findViewById(R.id.pbStartup);
+
         viewContainer = findViewById(R.id.viewContainer);
         btnHeaderRecents = findViewById(R.id.btnHeaderRecents);
         ivHeaderRecentsIcon = findViewById(R.id.ivHeaderRecentsIcon);
@@ -826,6 +857,10 @@ public class MainActivity extends AppCompatActivity {
         prefHelper.setAccentColor(color);
 
         // Header & Bluetooth
+        if (tvStartupSubtitle != null) tvStartupSubtitle.setTextColor(color);
+        if (pbStartup != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            pbStartup.setIndeterminateTintList(ColorStateList.valueOf(color));
+        }
         if (ivHeaderRecentsIcon != null) ivHeaderRecentsIcon.setColorFilter(color, PorterDuff.Mode.SRC_IN);
         if (tvHeaderRecentsText != null) tvHeaderRecentsText.setTextColor(color);
         if (tvHeaderBluetooth != null) tvHeaderBluetooth.setTextColor(color);
@@ -1260,6 +1295,19 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void cleanupDialogBtReceivers() {
+        if (dialogBtReceiver != null) {
+            try {
+                unregisterReceiver(dialogBtReceiver);
+            } catch (Exception ignored) {}
+            dialogBtReceiver = null;
+        }
+        if (dialogPollRunnable != null) {
+            dialogPollHandler.removeCallbacks(dialogPollRunnable);
+            dialogPollRunnable = null;
+        }
+    }
+
     private void showDeviceSelectorDialog(boolean isAutoDismiss) {
         if (isFinishing()) return;
         if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
@@ -1269,6 +1317,7 @@ public class MainActivity extends AppCompatActivity {
             deviceSelectorTimer.cancel();
             deviceSelectorTimer = null;
         }
+        cleanupDialogBtReceivers();
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_device_selector, null);
@@ -1281,98 +1330,32 @@ public class MainActivity extends AppCompatActivity {
 
         TextView tvCountdown = dialogView.findViewById(R.id.tvCountdownTimer);
         LinearLayout deviceContainer = dialogView.findViewById(R.id.deviceListContainer);
+        View layoutDeviceLoading = dialogView.findViewById(R.id.layoutDeviceLoading);
+        ProgressBar pbDeviceLoading = dialogView.findViewById(R.id.pbDeviceLoading);
+        TextView tvDeviceLoadingText = dialogView.findViewById(R.id.tvDeviceLoadingText);
         Button btnPair = dialogView.findViewById(R.id.btnPairNewDevice);
         Button btnSkip = dialogView.findViewById(R.id.btnSkipSelector);
 
         int accentColor = prefHelper.getAccentColor();
         if (btnSkip != null) btnSkip.setTextColor(accentColor);
         if (tvCountdown != null) tvCountdown.setTextColor(accentColor);
+        if (tvDeviceLoadingText != null) tvDeviceLoadingText.setTextColor(accentColor);
+        if (pbDeviceLoading != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            pbDeviceLoading.setIndeterminateTintList(ColorStateList.valueOf(accentColor));
+        }
 
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-        @SuppressLint("MissingPermission")
-        java.util.Set<BluetoothDevice> pairedDevices = (adapter != null && adapter.isEnabled()) ? adapter.getBondedDevices() : null;
-
-        LayoutInflater inflater = LayoutInflater.from(this);
-        String savedAddr = prefHelper.getSelectedDriverDevice();
-
-        if (pairedDevices != null && !pairedDevices.isEmpty()) {
-            for (BluetoothDevice device : pairedDevices) {
-                View card = inflater.inflate(R.layout.item_device_card, deviceContainer, false);
-                TextView tvName = card.findViewById(R.id.tvDialogDeviceName);
-                TextView tvStatus = card.findViewById(R.id.tvDialogDeviceStatus);
-                TextView btnConnect = card.findViewById(R.id.btnConnectPill);
-
-                @SuppressLint("MissingPermission")
-                String name = (device.getName() != null && !device.getName().isEmpty()) ? device.getName() : "Phone (" + device.getAddress() + ")";
-                tvName.setText(name.toUpperCase());
-
-                boolean isActuallyConnected = (btWatcher != null && btWatcher.isDeviceCurrentlyConnected(device));
-                boolean isSavedDriver = (savedAddr != null && savedAddr.equalsIgnoreCase(device.getAddress()));
-                if (isActuallyConnected || (isCarPlayConnected && isSavedDriver)) {
-                    tvStatus.setText("CONNECTED · ACTIVE FOR CARPLAY & AUDIO");
-                    tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
-                    tvName.setTextColor(accentColor);
-                    btnConnect.setText("ACTIVE");
-                    btnConnect.setTextColor(accentColor);
-                } else if (isSavedDriver) {
-                    tvStatus.setText("DEFAULT DRIVER · READY FOR CARPLAY");
-                    tvStatus.setTextColor(accentColor);
-                    btnConnect.setText("CONNECT");
-                    btnConnect.setTextColor(accentColor);
-                } else {
-                    tvStatus.setText("PAIRED · READY TO CONNECT");
-                    tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.cockpit_text_secondary));
-                    btnConnect.setText("CONNECT");
-                    btnConnect.setTextColor(accentColor);
-                }
-
-                View.OnClickListener selectListener = v -> {
-                    if (deviceSelectorTimer != null) {
-                        deviceSelectorTimer.cancel();
-                        deviceSelectorTimer = null;
-                        if (tvCountdown != null) tvCountdown.setVisibility(View.GONE);
-                    }
-
-                    prefHelper.setSelectedDriverDevice(device.getAddress());
-                    tvStatus.setText("CONNECTING CARPLAY TO " + name.toUpperCase() + "...");
-                    tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
-                    tvName.setTextColor(accentColor);
-                    btnConnect.setText("LAUNCHING");
-                    btnConnect.setTextColor(accentColor);
-
-                    // Signal head unit Bluetooth to bond / link
-                    if (btWatcher != null) {
-                        btWatcher.signalConnect(device);
-                    }
-
-                    isCarPlayConnected = true;
-                    updateConnectedPhoneUi(name, "CARPLAY LINK");
-                    Toast.makeText(MainActivity.this, "Connecting " + name + " to CarPlay...", Toast.LENGTH_SHORT).show();
-
-                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                        if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
-                            deviceSelectorDialog.dismiss();
-                        }
-                        launchCarPlay();
-                    }, 400);
-                };
-
-                card.setOnClickListener(selectListener);
-                btnConnect.setOnClickListener(selectListener);
-                deviceContainer.addView(card);
-            }
-        } else {
-            TextView tvEmpty = new TextView(this);
-            tvEmpty.setText("No paired phones detected in range.\nTap \"Pair New Phone\" to link your phone via Bluetooth.");
-            tvEmpty.setTextColor(ContextCompat.getColor(this, R.color.cockpit_text_secondary));
-            tvEmpty.setTextSize(13);
-            tvEmpty.setPadding(16, 24, 16, 24);
-            tvEmpty.setGravity(android.view.Gravity.CENTER);
-            deviceContainer.addView(tvEmpty);
+        if (adapter != null && !adapter.isEnabled()) {
+            try {
+                adapter.enable();
+            } catch (Exception ignored) {}
         }
+
+        populateDeviceListWithLoader(dialogView, tvCountdown, deviceContainer, layoutDeviceLoading, adapter, accentColor, 0);
 
         if (btnPair != null) {
             btnPair.setOnClickListener(v -> {
+                cleanupDialogBtReceivers();
                 if (deviceSelectorTimer != null) deviceSelectorTimer.cancel();
                 if (deviceSelectorDialog != null) deviceSelectorDialog.dismiss();
                 openBluetoothManager();
@@ -1381,6 +1364,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (btnSkip != null) {
             btnSkip.setOnClickListener(v -> {
+                cleanupDialogBtReceivers();
                 if (deviceSelectorTimer != null) deviceSelectorTimer.cancel();
                 if (deviceSelectorDialog != null) deviceSelectorDialog.dismiss();
             });
@@ -1398,6 +1382,7 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void onFinish() {
+                    cleanupDialogBtReceivers();
                     if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
                         deviceSelectorDialog.dismiss();
                     }
@@ -1420,6 +1405,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         deviceSelectorDialog.setOnDismissListener(dialog -> {
+            cleanupDialogBtReceivers();
             if (deviceSelectorTimer != null) {
                 deviceSelectorTimer.cancel();
                 deviceSelectorTimer = null;
@@ -1431,6 +1417,144 @@ public class MainActivity extends AppCompatActivity {
         });
 
         deviceSelectorDialog.show();
+    }
+
+    private void populateDeviceListWithLoader(View dialogView, TextView tvCountdown, LinearLayout deviceContainer, View layoutDeviceLoading, BluetoothAdapter adapter, int accentColor, int attempt) {
+        @SuppressLint("MissingPermission")
+        java.util.Set<BluetoothDevice> pairedDevices = (adapter != null && adapter.isEnabled()) ? adapter.getBondedDevices() : null;
+
+        if (pairedDevices != null && !pairedDevices.isEmpty()) {
+            if (layoutDeviceLoading != null) layoutDeviceLoading.setVisibility(View.GONE);
+            renderDeviceCards(pairedDevices, deviceContainer, tvCountdown, accentColor);
+            return;
+        }
+
+        // Bluetooth stack waking up during cold boot: poll up to 8 times (4.8s) and listen for broadcast state changes
+        if (attempt < 8) {
+            if (layoutDeviceLoading != null) layoutDeviceLoading.setVisibility(View.VISIBLE);
+            if (deviceContainer != null) deviceContainer.removeAllViews();
+
+            if (dialogBtReceiver == null) {
+                dialogBtReceiver = new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        if (intent == null) return;
+                        String action = intent.getAction();
+                        if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action) ||
+                                BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(action)) {
+                            BluetoothAdapter currentAdapter = BluetoothAdapter.getDefaultAdapter();
+                            @SuppressLint("MissingPermission")
+                            java.util.Set<BluetoothDevice> devices = (currentAdapter != null && currentAdapter.isEnabled()) ? currentAdapter.getBondedDevices() : null;
+                            if (devices != null && !devices.isEmpty()) {
+                                cleanupDialogBtReceivers();
+                                if (layoutDeviceLoading != null) layoutDeviceLoading.setVisibility(View.GONE);
+                                renderDeviceCards(devices, deviceContainer, tvCountdown, accentColor);
+                            }
+                        }
+                    }
+                };
+                IntentFilter filter = new IntentFilter();
+                filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+                filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+                registerReceiver(dialogBtReceiver, filter);
+            }
+
+            dialogPollRunnable = () -> {
+                if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
+                    BluetoothAdapter currAdapter = BluetoothAdapter.getDefaultAdapter();
+                    populateDeviceListWithLoader(dialogView, tvCountdown, deviceContainer, layoutDeviceLoading, currAdapter, accentColor, attempt + 1);
+                }
+            };
+            dialogPollHandler.postDelayed(dialogPollRunnable, 600);
+        } else {
+            // Polling timeout: display clean empty state
+            cleanupDialogBtReceivers();
+            if (layoutDeviceLoading != null) layoutDeviceLoading.setVisibility(View.GONE);
+            if (deviceContainer != null) {
+                deviceContainer.removeAllViews();
+                TextView tvEmpty = new TextView(this);
+                tvEmpty.setText("No paired phones detected in range.\nTap \"Pair New Phone\" to link your phone via Bluetooth.");
+                tvEmpty.setTextColor(ContextCompat.getColor(this, R.color.cockpit_text_secondary));
+                tvEmpty.setTextSize(13);
+                tvEmpty.setPadding(16, 24, 16, 24);
+                tvEmpty.setGravity(android.view.Gravity.CENTER);
+                deviceContainer.addView(tvEmpty);
+            }
+        }
+    }
+
+    private void renderDeviceCards(java.util.Set<BluetoothDevice> pairedDevices, LinearLayout deviceContainer, TextView tvCountdown, int accentColor) {
+        if (deviceContainer == null) return;
+        deviceContainer.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(this);
+        String savedAddr = prefHelper.getSelectedDriverDevice();
+
+        for (BluetoothDevice device : pairedDevices) {
+            View card = inflater.inflate(R.layout.item_device_card, deviceContainer, false);
+            TextView tvName = card.findViewById(R.id.tvDialogDeviceName);
+            TextView tvStatus = card.findViewById(R.id.tvDialogDeviceStatus);
+            TextView btnConnect = card.findViewById(R.id.btnConnectPill);
+
+            @SuppressLint("MissingPermission")
+            String name = (device.getName() != null && !device.getName().isEmpty()) ? device.getName() : "Phone (" + device.getAddress() + ")";
+            tvName.setText(name.toUpperCase());
+
+            boolean isActuallyConnected = (btWatcher != null && btWatcher.isDeviceCurrentlyConnected(device));
+            boolean isSavedDriver = (savedAddr != null && savedAddr.equalsIgnoreCase(device.getAddress()));
+            if (isActuallyConnected || (isCarPlayConnected && isSavedDriver)) {
+                tvStatus.setText("CONNECTED · ACTIVE FOR CARPLAY & AUDIO");
+                tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
+                tvName.setTextColor(accentColor);
+                btnConnect.setText("ACTIVE");
+                btnConnect.setTextColor(accentColor);
+            } else if (isSavedDriver) {
+                tvStatus.setText("DEFAULT DRIVER · READY FOR CARPLAY");
+                tvStatus.setTextColor(accentColor);
+                btnConnect.setText("CONNECT");
+                btnConnect.setTextColor(accentColor);
+            } else {
+                tvStatus.setText("PAIRED · READY TO CONNECT");
+                tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.cockpit_text_secondary));
+                btnConnect.setText("CONNECT");
+                btnConnect.setTextColor(accentColor);
+            }
+
+            View.OnClickListener selectListener = v -> {
+                cleanupDialogBtReceivers();
+                if (deviceSelectorTimer != null) {
+                    deviceSelectorTimer.cancel();
+                    deviceSelectorTimer = null;
+                    if (tvCountdown != null) tvCountdown.setVisibility(View.GONE);
+                }
+
+                prefHelper.setSelectedDriverDevice(device.getAddress());
+                tvStatus.setText("CONNECTING CARPLAY TO " + name.toUpperCase() + "...");
+                tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
+                tvName.setTextColor(accentColor);
+                btnConnect.setText("LAUNCHING");
+                btnConnect.setTextColor(accentColor);
+
+                // Signal head unit Bluetooth to bond / link
+                if (btWatcher != null) {
+                    btWatcher.signalConnect(device);
+                }
+
+                isCarPlayConnected = true;
+                updateConnectedPhoneUi(name, "CARPLAY LINK");
+                Toast.makeText(MainActivity.this, "Connecting " + name + " to CarPlay...", Toast.LENGTH_SHORT).show();
+
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
+                        deviceSelectorDialog.dismiss();
+                    }
+                    launchCarPlay();
+                }, 400);
+            };
+
+            card.setOnClickListener(selectListener);
+            btnConnect.setOnClickListener(selectListener);
+            deviceContainer.addView(card);
+        }
     }
 
     private void initMediaReceiver() {
@@ -1684,6 +1808,7 @@ public class MainActivity extends AppCompatActivity {
         if (btWatcher != null) btWatcher.stop();
         if (thermometerWatcher != null) thermometerWatcher.stop();
         if (deviceSelectorTimer != null) deviceSelectorTimer.cancel();
+        cleanupDialogBtReceivers();
         if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
             deviceSelectorDialog.dismiss();
         }

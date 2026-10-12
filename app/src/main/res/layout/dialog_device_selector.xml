@@ -50,6 +50,44 @@
         android:layout_marginBottom="12dp"
         android:background="@color/cockpit_surface_border_subtle" />
 
+    <!-- Loading State While Bluetooth Stack Initializes at Boot -->
+    <LinearLayout
+        android:id="@+id/layoutDeviceLoading"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:id="@+id/pbDeviceLoading"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:indeterminate="true" />
+
+        <TextView
+            android:id="@+id/tvDeviceLoadingText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="INITIALIZING BLUETOOTH &amp; DETECTING PHONES..."
+            android:textColor="@color/cockpit_text_primary"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.06" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Waking head unit Bluetooth stack · Detecting paired driver phones"
+            android:textColor="@color/cockpit_text_secondary"
+            android:textSize="11sp"
+            android:fontFamily="sans-serif" />
+    </LinearLayout>
+
     <!-- Container for Paired Phone Cards (Big Fingers Friendly) -->
     <LinearLayout
         android:id="@+id/deviceListContainer"
