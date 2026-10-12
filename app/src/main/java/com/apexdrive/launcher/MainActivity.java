@@ -767,6 +767,9 @@ public class MainActivity extends AppCompatActivity {
 
             Button playPause = viewDash.findViewById(R.id.btnMediaPlayPause);
             if (playPause != null) playPause.setTextColor(color);
+
+            TextView universalHeader = viewDash.findViewById(R.id.tvHeaderUniversalAudio);
+            if (universalHeader != null) universalHeader.setTextColor(color);
         }
 
         if (viewCarPlay != null) {
