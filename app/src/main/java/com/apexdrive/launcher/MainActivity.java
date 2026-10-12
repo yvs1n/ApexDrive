@@ -68,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
     private CountDownTimer deviceSelectorTimer;
     private AlertDialog deviceSelectorDialog;
     private boolean isBtConnecting = false;
+    private boolean isCarPlayConnected = false;
     private AppsGridAdapter appsAdapter;
 
     private FrameLayout viewContainer;
@@ -206,7 +207,17 @@ public class MainActivity extends AppCompatActivity {
         setupSetupWidgets();
 
         if (pillHeaderBluetooth != null) {
-            pillHeaderBluetooth.setOnClickListener(v -> showDeviceSelectorDialog(false));
+            pillHeaderBluetooth.setOnClickListener(v -> {
+                if (isCarPlayConnected) {
+                    launchCarPlay();
+                } else {
+                    showDeviceSelectorDialog(false);
+                }
+            });
+            pillHeaderBluetooth.setOnLongClickListener(v -> {
+                showDeviceSelectorDialog(false);
+                return true;
+            });
         }
     }
 
@@ -245,7 +256,17 @@ public class MainActivity extends AppCompatActivity {
         tvBtStatusBadge = viewDash.findViewById(R.id.tvBtStatusBadge);
 
         if (cardBluetooth != null) {
-            cardBluetooth.setOnClickListener(v -> showDeviceSelectorDialog(false));
+            cardBluetooth.setOnClickListener(v -> {
+                if (isCarPlayConnected) {
+                    launchCarPlay();
+                } else {
+                    showDeviceSelectorDialog(false);
+                }
+            });
+            cardBluetooth.setOnLongClickListener(v -> {
+                showDeviceSelectorDialog(false);
+                return true;
+            });
         }
 
         Button btnCarPlay = viewDash.findViewById(R.id.btnLaunchCarPlay);
@@ -952,34 +973,102 @@ public class MainActivity extends AppCompatActivity {
     private void initBluetooth() {
         btWatcher = new BluetoothWatcher(this);
         btWatcher.setListener((isConnected, deviceName, details) -> runOnUiThread(() -> {
-            if (tvHeaderBluetooth != null) {
-                tvHeaderBluetooth.setText(isConnected ? deviceName.toUpperCase() : "NOT CONNECTED");
-                tvHeaderBluetooth.setTextColor(isConnected ? prefHelper.getAccentColor() : ContextCompat.getColor(MainActivity.this, R.color.cockpit_text_secondary));
-            }
-            if (ivHeaderBtIcon != null) {
-                ivHeaderBtIcon.setColorFilter(
-                        isConnected ? prefHelper.getAccentColor() : ContextCompat.getColor(MainActivity.this, R.color.cockpit_text_tertiary),
-                        PorterDuff.Mode.SRC_IN
-                );
-            }
-
-            if (tvBtDeviceName != null) {
-                tvBtDeviceName.setText(isConnected ? deviceName.toUpperCase() : "NO DEVICE CONNECTED");
-            }
-            if (tvBtProfileDetail != null) {
-                tvBtProfileDetail.setText(details != null ? details.toUpperCase() : "A2DP AUDIO · TELEPHONY LINK");
-            }
-            if (tvBtStatusBadge != null) {
-                if (isConnected) {
-                    tvBtStatusBadge.setText("CONNECTED");
-                    tvBtStatusBadge.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
-                } else {
-                    tvBtStatusBadge.setText("READY");
-                    tvBtStatusBadge.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.cockpit_text_secondary));
-                }
+            if (isConnected) {
+                updateConnectedPhoneUi(deviceName, details);
+            } else {
+                updateDisconnectedPhoneUi();
             }
         }));
         btWatcher.start();
+    }
+
+    private void updateConnectedPhoneUi(String deviceName, String details) {
+        int accent = prefHelper.getAccentColor();
+        if (tvHeaderBluetooth != null) {
+            tvHeaderBluetooth.setText(deviceName != null ? deviceName.toUpperCase() : "CARPLAY ACTIVE");
+            tvHeaderBluetooth.setTextColor(accent);
+        }
+        if (ivHeaderBtIcon != null) {
+            ivHeaderBtIcon.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
+        }
+        if (tvBtDeviceName != null) {
+            tvBtDeviceName.setText(deviceName != null ? deviceName.toUpperCase() : "DRIVER PHONE");
+        }
+        if (tvBtProfileDetail != null) {
+            tvBtProfileDetail.setText(details != null ? details.toUpperCase() : "WIRELESS CARPLAY & AUDIO");
+        }
+        if (tvBtStatusBadge != null) {
+            tvBtStatusBadge.setText("● ACTIVE");
+            tvBtStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.status_active));
+        }
+    }
+
+    private void updateDisconnectedPhoneUi() {
+        String savedAddr = prefHelper.getSelectedDriverDevice();
+        String savedName = getDeviceNameFromAddress(savedAddr);
+
+        if (isCarPlayConnected && savedName != null) {
+            updateConnectedPhoneUi(savedName, "WIRELESS PROJECTION ACTIVE");
+            return;
+        }
+
+        int textSec = ContextCompat.getColor(this, R.color.cockpit_text_secondary);
+        int textTert = ContextCompat.getColor(this, R.color.cockpit_text_tertiary);
+
+        if (savedName != null) {
+            if (tvHeaderBluetooth != null) {
+                tvHeaderBluetooth.setText(savedName.toUpperCase());
+                tvHeaderBluetooth.setTextColor(textSec);
+            }
+            if (ivHeaderBtIcon != null) {
+                ivHeaderBtIcon.setColorFilter(textTert, PorterDuff.Mode.SRC_IN);
+            }
+            if (tvBtDeviceName != null) {
+                tvBtDeviceName.setText(savedName.toUpperCase());
+            }
+            if (tvBtProfileDetail != null) {
+                tvBtProfileDetail.setText("CARPLAY READY · TAP TO LAUNCH");
+            }
+            if (tvBtStatusBadge != null) {
+                tvBtStatusBadge.setText("○ READY");
+                tvBtStatusBadge.setTextColor(textSec);
+            }
+        } else {
+            if (tvHeaderBluetooth != null) {
+                tvHeaderBluetooth.setText("TAP TO CONNECT");
+                tvHeaderBluetooth.setTextColor(textSec);
+            }
+            if (ivHeaderBtIcon != null) {
+                ivHeaderBtIcon.setColorFilter(textTert, PorterDuff.Mode.SRC_IN);
+            }
+            if (tvBtDeviceName != null) {
+                tvBtDeviceName.setText("NO DEVICE CONNECTED");
+            }
+            if (tvBtProfileDetail != null) {
+                tvBtProfileDetail.setText("CARPLAY LINK · READY");
+            }
+            if (tvBtStatusBadge != null) {
+                tvBtStatusBadge.setText("○ STANDBY");
+                tvBtStatusBadge.setTextColor(textSec);
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private String getDeviceNameFromAddress(String address) {
+        if (address == null || address.isEmpty()) return null;
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        if (adapter != null && adapter.isEnabled()) {
+            try {
+                for (BluetoothDevice dev : adapter.getBondedDevices()) {
+                    if (address.equalsIgnoreCase(dev.getAddress())) {
+                        String name = dev.getName();
+                        if (name != null && !name.isEmpty()) return name;
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        return null;
     }
 
     private void initCarThermometer() {
@@ -1150,6 +1239,7 @@ public class MainActivity extends AppCompatActivity {
         java.util.Set<BluetoothDevice> pairedDevices = (adapter != null && adapter.isEnabled()) ? adapter.getBondedDevices() : null;
 
         LayoutInflater inflater = LayoutInflater.from(this);
+        String savedAddr = prefHelper.getSelectedDriverDevice();
 
         if (pairedDevices != null && !pairedDevices.isEmpty()) {
             for (BluetoothDevice device : pairedDevices) {
@@ -1163,11 +1253,17 @@ public class MainActivity extends AppCompatActivity {
                 tvName.setText(name.toUpperCase());
 
                 boolean isActuallyConnected = (btWatcher != null && btWatcher.isDeviceCurrentlyConnected(device));
-                if (isActuallyConnected) {
+                boolean isSavedDriver = (savedAddr != null && savedAddr.equalsIgnoreCase(device.getAddress()));
+                if (isActuallyConnected || (isCarPlayConnected && isSavedDriver)) {
                     tvStatus.setText("CONNECTED · ACTIVE FOR CARPLAY & AUDIO");
                     tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
                     tvName.setTextColor(accentColor);
                     btnConnect.setText("ACTIVE");
+                    btnConnect.setTextColor(accentColor);
+                } else if (isSavedDriver) {
+                    tvStatus.setText("DEFAULT DRIVER · READY FOR CARPLAY");
+                    tvStatus.setTextColor(accentColor);
+                    btnConnect.setText("CONNECT");
                     btnConnect.setTextColor(accentColor);
                 } else {
                     tvStatus.setText("PAIRED · READY TO CONNECT");
@@ -1177,77 +1273,34 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 View.OnClickListener selectListener = v -> {
-                    if (isBtConnecting) return;
-
                     if (deviceSelectorTimer != null) {
                         deviceSelectorTimer.cancel();
                         deviceSelectorTimer = null;
                         if (tvCountdown != null) tvCountdown.setVisibility(View.GONE);
                     }
 
-                    if (btWatcher != null && btWatcher.isDeviceCurrentlyConnected(device)) {
-                        prefHelper.setSelectedDriverDevice(device.getAddress());
-                        Toast.makeText(MainActivity.this, name + " is already active", Toast.LENGTH_SHORT).show();
+                    prefHelper.setSelectedDriverDevice(device.getAddress());
+                    tvStatus.setText("CONNECTING CARPLAY TO " + name.toUpperCase() + "...");
+                    tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
+                    tvName.setTextColor(accentColor);
+                    btnConnect.setText("LAUNCHING");
+                    btnConnect.setTextColor(accentColor);
+
+                    // Signal head unit Bluetooth to bond / link
+                    if (btWatcher != null) {
+                        btWatcher.signalConnect(device);
+                    }
+
+                    isCarPlayConnected = true;
+                    updateConnectedPhoneUi(name, "CARPLAY LINK");
+                    Toast.makeText(MainActivity.this, "Connecting " + name + " to CarPlay...", Toast.LENGTH_SHORT).show();
+
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
                         if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
                             deviceSelectorDialog.dismiss();
                         }
                         launchCarPlay();
-                        return;
-                    }
-
-                    if (btWatcher == null) {
-                        Toast.makeText(MainActivity.this, "Bluetooth service unavailable", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    isBtConnecting = true;
-                    tvStatus.setText("CONNECTING TO " + name.toUpperCase() + "...");
-                    tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.cockpit_text_secondary));
-                    btnConnect.setText("CONNECTING...");
-                    btnConnect.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.cockpit_text_secondary));
-
-                    btWatcher.connectToDevice(device, new BluetoothWatcher.DeviceConnectionCallback() {
-                        @Override
-                        public void onConnecting(BluetoothDevice dev) {
-                            runOnUiThread(() -> {
-                                tvStatus.setText("ESTABLISHING BLUETOOTH LINK...");
-                                btnConnect.setText("CONNECTING...");
-                            });
-                        }
-
-                        @Override
-                        public void onSuccess(BluetoothDevice dev) {
-                            runOnUiThread(() -> {
-                                isBtConnecting = false;
-                                prefHelper.setSelectedDriverDevice(dev.getAddress());
-                                tvStatus.setText("CONNECTED · ACTIVE FOR CARPLAY & AUDIO");
-                                tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
-                                tvName.setTextColor(accentColor);
-                                btnConnect.setText("ACTIVE");
-                                btnConnect.setTextColor(accentColor);
-                                Toast.makeText(MainActivity.this, "Connected to " + name, Toast.LENGTH_SHORT).show();
-
-                                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                                    if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
-                                        deviceSelectorDialog.dismiss();
-                                    }
-                                    launchCarPlay();
-                                }, 600);
-                            });
-                        }
-
-                        @Override
-                        public void onFailure(BluetoothDevice dev, String errorMessage) {
-                            runOnUiThread(() -> {
-                                isBtConnecting = false;
-                                tvStatus.setText("CONNECTION FAILED · TAP TO RETRY");
-                                tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.accent_sport_red));
-                                btnConnect.setText("RETRY");
-                                btnConnect.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.accent_sport_red));
-                                Toast.makeText(MainActivity.this, "Connection failed to " + name + ". Please verify phone Bluetooth is ON and try again.", Toast.LENGTH_LONG).show();
-                            });
-                        }
-                    });
+                    }, 400);
                 };
 
                 card.setOnClickListener(selectListener);
@@ -1293,6 +1346,18 @@ public class MainActivity extends AppCompatActivity {
                 public void onFinish() {
                     if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
                         deviceSelectorDialog.dismiss();
+                    }
+                    String saved = prefHelper.getSelectedDriverDevice();
+                    if (saved != null && !saved.isEmpty() && btWatcher != null) {
+                        BluetoothAdapter a = BluetoothAdapter.getDefaultAdapter();
+                        if (a != null && a.isEnabled()) {
+                            try {
+                                BluetoothDevice dev = a.getRemoteDevice(saved);
+                                if (dev != null) {
+                                    btWatcher.signalConnect(dev);
+                                }
+                            } catch (Exception ignored) {}
+                        }
                     }
                 }
             }.start();
@@ -1361,6 +1426,15 @@ public class MainActivity extends AppCompatActivity {
                 if (btnMediaPlayPause != null && hasPlayState) {
                     btnMediaPlayPause.setText(isPlaying ? "PAUSE" : "PLAY");
                 }
+
+                String action = intent.getAction();
+                boolean isCarPlaySource = action != null && (action.startsWith("com.zlink") || action.startsWith("zjinnova") || action.contains("diplay"));
+                if (isCarPlaySource || (isPlaying && title != null && !title.trim().isEmpty() && !title.startsWith("FM "))) {
+                    isCarPlayConnected = true;
+                    String saved = prefHelper.getSelectedDriverDevice();
+                    String savedName = getDeviceNameFromAddress(saved);
+                    updateConnectedPhoneUi(savedName != null ? savedName : "CARPLAY", "WIRELESS PROJECTION ACTIVE");
+                }
             }
         };
 
@@ -1392,52 +1466,58 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void launchCarPlay() {
+        isCarPlayConnected = true;
+        String savedAddr = prefHelper.getSelectedDriverDevice();
+        String savedName = getDeviceNameFromAddress(savedAddr);
+        updateConnectedPhoneUi(savedName != null ? savedName : "CARPLAY", "LAUNCHING PROJECTION...");
+
         String pkg = prefHelper.getCarPlayPackage();
 
-        // Release competing Zlink/TLink background services when initiating projection
+        // 1. Try launching Zlink via its explicit intent first
         try {
-            Intent pauseZlink = new Intent("com.zlink.command");
-            pauseZlink.putExtra("action", "pause");
-            sendBroadcast(pauseZlink);
+            Intent zlinkIntent = new Intent("zjinnova.android.intent.action.ZLINK_MAIN");
+            zlinkIntent.putExtra("page", "LINK");
+            zlinkIntent.putExtra("feature", "carplay");
+            zlinkIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(zlinkIntent);
+            return;
         } catch (Exception ignored) {}
 
-        if (!launchAppPackage(pkg)) {
-            String[] commonCarPlayPackages = {
-                    "com.shihab.diplay",
-                    "com.zjinnova.zlink",
-                    "com.zlink.carplay",
-                    "com.speedplay.carplay",
-                    "cn.manstep.phonemirrorbox",
-                    "com.zlink",
-                    "com.autokit",
-                    "com.carlinke",
-                    "com.sygic.aura",
-                    "com.carplay"
-            };
-            boolean launched = false;
-            for (String fallback : commonCarPlayPackages) {
-                if (launchAppPackage(fallback)) {
-                    prefHelper.setCarPlayPackage(fallback);
-                    if ("com.shihab.diplay".equals(fallback)) {
-                        prefHelper.setCarPlayName("DiPlay");
-                    }
-                    launched = true;
-                    break;
-                }
+        // 2. Try launching package selected by user
+        if (launchAppPackage(pkg)) return;
+
+        // 3. Fallback to common CarPlay packages
+        String[] commonCarPlayPackages = {
+                "com.zjinnova.zlink",
+                "com.zlink.carplay",
+                "com.speedplay.carplay",
+                "cn.manstep.phonemirrorbox",
+                "com.zlink",
+                "com.shihab.diplay",
+                "com.autokit",
+                "com.carlinke"
+        };
+        boolean launched = false;
+        for (String fallback : commonCarPlayPackages) {
+            if (launchAppPackage(fallback)) {
+                prefHelper.setCarPlayPackage(fallback);
+                prefHelper.setCarPlayName("TLink 5.3");
+                launched = true;
+                break;
             }
-            if (!launched) {
-                new AlertDialog.Builder(this)
-                        .setTitle("CARPLAY APP NOT FOUND")
-                        .setMessage("Could not find " + prefHelper.getCarPlayName() + " or any standard CarPlay projection app (Zlink, SpeedPlay, AutoKit).\n\nSelect a projection bridge from your installed apps or open Android Settings.")
-                        .setPositiveButton("SELECT APP", (dialog, which) -> showCarPlayPicker())
-                        .setNeutralButton("OPEN SETTINGS", (dialog, which) -> {
-                            try {
-                                startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                            } catch (Exception ignored) {}
-                        })
-                        .setNegativeButton("CANCEL", null)
-                        .show();
-            }
+        }
+        if (!launched) {
+            new AlertDialog.Builder(this)
+                    .setTitle("CARPLAY APP NOT FOUND")
+                    .setMessage("Could not find " + prefHelper.getCarPlayName() + " or any standard CarPlay projection app (Zlink, SpeedPlay, AutoKit).\n\nSelect a projection bridge from your installed apps or open Android Settings.")
+                    .setPositiveButton("SELECT APP", (dialog, which) -> showCarPlayPicker())
+                    .setNeutralButton("OPEN SETTINGS", (dialog, which) -> {
+                        try {
+                            startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                        } catch (Exception ignored) {}
+                    })
+                    .setNegativeButton("CANCEL", null)
+                    .show();
         }
     }
 

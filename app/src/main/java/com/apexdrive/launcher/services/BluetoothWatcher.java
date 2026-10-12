@@ -203,16 +203,33 @@ public class BluetoothWatcher {
     }
 
     @SuppressLint("MissingPermission")
+    public void signalConnect(final BluetoothDevice target) {
+        if (target == null) return;
+        broadcastHeadUnitConnect(target);
+        try {
+            if (target.getBondState() != BluetoothDevice.BOND_BONDED) {
+                target.createBond();
+            }
+        } catch (Exception ignored) {}
+        try {
+            Method connectMethod = target.getClass().getMethod("connect");
+            connectMethod.invoke(target);
+        } catch (Exception ignored) {}
+    }
+
+    @SuppressLint("MissingPermission")
     public void connectToDevice(final BluetoothDevice target, final DeviceConnectionCallback callback) {
+        if (target == null) {
+            if (callback != null) callback.onFailure(null, "Invalid target device.");
+            return;
+        }
+
+        signalConnect(target);
+
         if (callback == null) return;
 
         if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
             callback.onFailure(target, "Bluetooth is disabled on this head unit.");
-            return;
-        }
-
-        if (target == null) {
-            callback.onFailure(null, "Invalid target device.");
             return;
         }
 

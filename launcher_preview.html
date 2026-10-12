@@ -1683,7 +1683,7 @@
 
       // If already connected
       if (activeDevIndex === index) {
-        showToast(`${name} is already connected`);
+        showToast(`${name} is active · Launching CarPlay`);
         closeDeviceGateway();
         launchCarPlay();
         return;
@@ -1694,28 +1694,14 @@
       const pillEl = document.getElementById(`cardPill${index}`);
       const cardEl = document.getElementById(`cardDev${index}`);
 
-      statusEl.textContent = `CONNECTING TO ${name}...`;
-      statusEl.style.color = "var(--text-secondary)";
-      pillEl.textContent = "CONNECTING...";
-      pillEl.style.color = "var(--text-secondary)";
-      showToast(`Initiating Bluetooth link to ${name}...`);
+      statusEl.textContent = `CONNECTING CARPLAY TO ${name}...`;
+      statusEl.style.color = "var(--status-active, #22c55e)";
+      pillEl.textContent = "LAUNCHING";
+      pillEl.style.color = "var(--accent)";
+      showToast(`Linking ${name} to CarPlay projection...`);
 
-      // Simulate live connection attempt (2.2s delay)
+      // Fast CarPlay-first handoff (400ms)
       setTimeout(() => {
-        // Demonstrate failure fallback on first attempt for Sarah's iPhone to show the exact scenario user reported!
-        if (index === 2 && !failedAttempts[index]) {
-          failedAttempts[index] = true;
-          isConnectingDev = false;
-          statusEl.textContent = "CONNECTION FAILED · TAP TO RETRY";
-          statusEl.style.color = "#ef4444";
-          pillEl.textContent = "RETRY";
-          pillEl.style.color = "#ef4444";
-          showToast(`Connection failed to ${name}. Please verify phone Bluetooth is ON and try again.`);
-          // Device is NOT selected, header is NOT changed!
-          return;
-        }
-
-        // Connection Success
         isConnectingDev = false;
         // Unmark previous active
         if (activeDevIndex) {
@@ -1742,13 +1728,13 @@
 
         document.getElementById('headerBtName').textContent = name;
         document.getElementById('btDeviceName').textContent = name;
-        showToast(`Connected to ${name} · Launching CarPlay`);
+        showToast(`Connected ${name} · Launching CarPlay projection`);
 
         setTimeout(() => {
           closeDeviceGateway();
           launchCarPlay();
-        }, 700);
-      }, 2200);
+        }, 400);
+      }, 400);
     }
 
     function simulatePairNewDevice() {
