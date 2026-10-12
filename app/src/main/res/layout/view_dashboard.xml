@@ -103,46 +103,46 @@
 
                 <Button
                     android:id="@+id/btnLaunchCarPlay"
-                    android:layout_width="wrap_content"
-                    android:layout_height="54dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
                     android:layout_marginTop="14dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
                     android:background="@drawable/bg_elevated_btn"
                     android:text="LAUNCH PROJECTION"
                     android:textColor="@color/cockpit_text_primary"
-                    android:textSize="13sp"
+                    android:textSize="14sp"
                     android:fontFamily="sans-serif-black"
-                    android:letterSpacing="0.08"
-                    android:paddingStart="32dp"
-                    android:paddingEnd="32dp" />
+                    android:letterSpacing="0.08" />
 
             </LinearLayout>
 
         </LinearLayout>
 
-        <!-- Left Bottom: Compact Bluetooth Card (Clickable, Big Finger Friendly 64dp) -->
+        <!-- Left Bottom: Compact Bluetooth Card (Clickable, Big Finger Friendly 72dp) -->
         <LinearLayout
             android:id="@+id/cardBluetooth"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="72dp"
             android:layout_marginTop="8dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:background="@drawable/bg_panel"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
             android:clickable="true"
             android:focusable="true">
 
             <ImageView
-                android:layout_width="26dp"
-                android:layout_height="26dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:src="@drawable/ic_nav_bluetooth"
                 android:contentDescription="Bluetooth" />
 
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="14dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -152,7 +152,7 @@
                     android:layout_height="wrap_content"
                     android:text="SANTAFEMR"
                     android:textColor="@color/cockpit_text_primary"
-                    android:textSize="13sp"
+                    android:textSize="15sp"
                     android:fontFamily="sans-serif-black"
                     android:letterSpacing="0.04" />
 
@@ -160,10 +160,10 @@
                     android:id="@+id/tvBtProfileDetail"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
+                    android:layout_marginTop="3dp"
                     android:text="A2DP AUDIO · TELEPHONY LINK"
                     android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="10sp"
+                    android:textSize="11sp"
                     android:fontFamily="sans-serif-bold"
                     android:letterSpacing="0.04" />
             </LinearLayout>
@@ -171,14 +171,14 @@
             <TextView
                 android:id="@+id/tvBtStatusBadge"
                 android:layout_width="wrap_content"
-                android:layout_height="32dp"
+                android:layout_height="36dp"
                 android:background="@drawable/bg_elevated_btn"
                 android:gravity="center"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
                 android:text="CONNECTED"
                 android:textColor="@color/status_active"
-                android:textSize="10sp"
+                android:textSize="11sp"
                 android:fontFamily="sans-serif-black"
                 android:letterSpacing="0.06" />
 
@@ -389,10 +389,10 @@
                     android:ellipsize="end" />
             </LinearLayout>
 
-            <!-- Touch Transport Buttons (Big Finger Friendly 54dp height) -->
+            <!-- Touch Transport Buttons (Big Finger Friendly 64dp height) -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="54dp"
+                android:layout_height="64dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
@@ -404,7 +404,7 @@
                     android:background="@drawable/bg_elevated_btn"
                     android:text="PREV"
                     android:textColor="@color/cockpit_text_primary"
-                    android:textSize="12sp"
+                    android:textSize="13sp"
                     android:fontFamily="sans-serif-black"
                     android:letterSpacing="0.08" />
 
@@ -418,7 +418,7 @@
                     android:background="@drawable/bg_elevated_btn"
                     android:text="PAUSE / PLAY"
                     android:textColor="@color/accent_amber"
-                    android:textSize="12sp"
+                    android:textSize="13sp"
                     android:fontFamily="sans-serif-black"
                     android:letterSpacing="0.08" />
 
@@ -430,7 +430,7 @@
                     android:background="@drawable/bg_elevated_btn"
                     android:text="NEXT"
                     android:textColor="@color/cockpit_text_primary"
-                    android:textSize="12sp"
+                    android:textSize="13sp"
                     android:fontFamily="sans-serif-black"
                     android:letterSpacing="0.08" />
             </LinearLayout>

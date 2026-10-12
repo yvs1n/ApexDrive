@@ -27,7 +27,7 @@
       --status-active: #22c55e;
       --status-inactive: #6b7280;
       
-      --dock-width: 86px; /* Big-finger friendly driver rail */
+      --dock-width: 92px; /* Big-finger friendly driver rail */
       --radius-sm: 8px;
       --radius-md: 14px;
       --radius-lg: 18px;
@@ -94,10 +94,10 @@
     }
 
     /* -------------------------------------------------------------
-       SWISS COCKPIT HEADER BAR (48PX HEIGHT)
+       SWISS COCKPIT HEADER BAR (50PX HEIGHT)
        ------------------------------------------------------------- */
     .cockpit-header {
-      height: 48px;
+      height: 50px;
       padding: 0 16px;
       background: var(--surface-panel);
       backdrop-filter: blur(12px);
@@ -113,6 +113,33 @@
       display: flex;
       align-items: center;
       gap: 14px;
+    }
+
+    /* Task Switcher / Recent Background Apps (Top Left) */
+    .header-recents-btn {
+      height: 38px;
+      padding: 0 14px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      cursor: pointer;
+      transition: all var(--spring-fast);
+    }
+
+    .header-recents-btn:hover {
+      background: var(--surface-elevated-hover);
+      border-color: var(--accent);
+    }
+
+    .header-recents-btn:active {
+      transform: scale(0.96);
     }
 
     .header-clock {
@@ -134,9 +161,9 @@
       border: 1px solid var(--surface-border-subtle);
     }
 
-    /* Big Finger Friendly Header Pills (36px height) */
+    /* Big Finger Friendly Header Pills (38px height) */
     .header-pill {
-      height: 36px;
+      height: 38px;
       padding: 0 14px;
       background: var(--surface-elevated);
       border: 1px solid var(--surface-border);
@@ -161,7 +188,7 @@
     }
 
     /* -------------------------------------------------------------
-       COCKPIT BODY & DRIVER NAVIGATION RAIL (86PX WIDE)
+       COCKPIT BODY & DRIVER NAVIGATION RAIL (92PX WIDE)
        ------------------------------------------------------------- */
     .cockpit-body {
       flex: 1;
@@ -185,10 +212,10 @@
       z-index: 10;
     }
 
-    /* Big Finger Friendly Rail Buttons (74x58px) */
+    /* Big Finger Friendly Rail Buttons (80x64px) */
     .rail-btn {
-      width: 74px;
-      height: 58px;
+      width: 80px;
+      height: 64px;
       background: transparent;
       border: 1px solid transparent;
       border-radius: 12px;
@@ -202,16 +229,16 @@
     }
 
     .rail-btn svg {
-      width: 22px;
-      height: 22px;
+      width: 20px;
+      height: 20px;
       stroke-width: 2.2;
       stroke: currentColor;
       fill: none;
     }
 
     .rail-btn span {
-      font-size: 10px;
-      font-weight: 700;
+      font-size: 11px;
+      font-weight: 800;
       letter-spacing: 0.05em;
       text-transform: uppercase;
     }
@@ -544,7 +571,7 @@
       letter-spacing: 0.04em;
     }
 
-    /* Big Finger Friendly Media Transport Buttons (54px height) */
+    /* Big Finger Friendly Media Transport Buttons (64px height) */
     .media-transport {
       display: flex;
       align-items: center;
@@ -553,7 +580,7 @@
 
     .transport-btn {
       flex: 1;
-      height: 54px;
+      height: 64px;
       background: var(--surface-elevated);
       border: 1px solid var(--surface-border);
       border-radius: var(--radius-sm);
@@ -561,7 +588,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -571,7 +598,7 @@
     .transport-btn.play-pause {
       flex: 1.4;
       color: var(--accent);
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 800;
       letter-spacing: 0.08em;
     }
@@ -634,15 +661,15 @@
       margin-top: 10px;
     }
 
-    /* Big Finger Friendly POI & Navigation Buttons (52px / 50px) */
+    /* Big Finger Friendly POI & Navigation Buttons (58px height) */
     .poi-btn {
-      height: 52px;
+      height: 58px;
       background: var(--surface-elevated);
       border: 1px solid var(--surface-border);
       border-radius: var(--radius-sm);
       color: var(--text-primary);
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 800;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -661,13 +688,13 @@
     }
 
     .nav-engine-btn {
-      height: 50px;
+      height: 58px;
       background: var(--surface-elevated);
       border: 1px solid var(--surface-border);
       border-radius: var(--radius-sm);
       color: var(--text-primary);
-      font-size: 13px;
-      font-weight: 700;
+      font-size: 14px;
+      font-weight: 800;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -724,7 +751,7 @@
     }
 
     .app-tile {
-      height: 90px;
+      height: 106px;
       background: var(--surface-panel);
       border: 1px solid var(--surface-border);
       border-radius: 14px;
@@ -748,8 +775,8 @@
     }
 
     .app-squircle-icon {
-      width: 44px;
-      height: 44px;
+      width: 52px;
+      height: 52px;
       border-radius: 12px;
       display: flex;
       align-items: center;
@@ -757,7 +784,7 @@
     }
 
     .app-label {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
       color: var(--text-primary);
       letter-spacing: 0.02em;
@@ -786,10 +813,10 @@
       margin-top: 4px;
     }
 
-    /* Big Finger Friendly Color Swatches (50x46px) */
+    /* Big Finger Friendly Color Swatches (56x52px) */
     .color-dot {
-      width: 50px;
-      height: 46px;
+      width: 56px;
+      height: 52px;
       border-radius: 10px;
       border: 2px solid transparent;
       cursor: pointer;
@@ -805,16 +832,16 @@
       box-shadow: 0 0 14px rgba(255, 255, 255, 0.4);
     }
 
-    /* Big Finger Friendly Setup Shortcuts (50px height) */
+    /* Big Finger Friendly Setup Shortcuts (56px height) */
     .shortcut-btn {
       width: 100%;
-      height: 50px;
+      height: 56px;
       background: var(--surface-elevated);
       border: 1px solid var(--surface-border);
       border-radius: var(--radius-sm);
       color: var(--text-primary);
-      font-size: 12px;
-      font-weight: 700;
+      font-size: 13px;
+      font-weight: 800;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1132,9 +1159,90 @@
       </div>
     </div>
 
+    <!-- Task Switcher / Background Apps Drawer Modal -->
+    <div class="gateway-overlay" id="recentsDrawerModal">
+      <div class="gateway-dialog" style="width: 580px;">
+        <div class="gateway-header">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+              <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+              <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+              <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+            </svg>
+            <span class="gateway-title">ACTIVE BACKGROUND APPS</span>
+          </div>
+          <span class="gateway-countdown" id="recentsCountBadge">3 RUNNING</span>
+        </div>
+        <p class="gateway-desc">Switch directly to a background app or close background tasks to free RAM on the Allwinner T3 head unit.</p>
+        
+        <div class="device-card-list" id="recentsList">
+          <!-- Item 1: CarPlay / Zlink -->
+          <div class="device-card" id="recentApp1">
+            <div class="device-card-left">
+              <div style="width: 38px; height: 38px; background: rgba(59, 130, 246, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #3b82f6; font-weight: 900; font-size: 12px;">CP</div>
+              <div>
+                <div class="device-name">CarPlay (Zlink 5.3)</div>
+                <div class="device-status">Active in background · Wireless projection &amp; audio</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="device-connect-pill" onclick="switchRecentApp('CarPlay')">SWITCH</button>
+              <button class="device-connect-pill" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" onclick="closeRecentApp('recentApp1', 'CarPlay (Zlink 5.3)')">CLOSE</button>
+            </div>
+          </div>
+
+          <!-- Item 2: Google Maps -->
+          <div class="device-card" id="recentApp2">
+            <div class="device-card-left">
+              <div style="width: 38px; height: 38px; background: rgba(34, 197, 94, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #22c55e; font-weight: 900; font-size: 12px;">MAP</div>
+              <div>
+                <div class="device-name">Google Maps</div>
+                <div class="device-status">Active in background · GPS Telemetry listener</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="device-connect-pill" onclick="switchRecentApp('Google Maps')">SWITCH</button>
+              <button class="device-connect-pill" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" onclick="closeRecentApp('recentApp2', 'Google Maps')">CLOSE</button>
+            </div>
+          </div>
+
+          <!-- Item 3: Spotify -->
+          <div class="device-card" id="recentApp3">
+            <div class="device-card-left">
+              <div style="width: 38px; height: 38px; background: rgba(16, 185, 129, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #10b981; font-weight: 900; font-size: 12px;">SPT</div>
+              <div>
+                <div class="device-name">Spotify Audio</div>
+                <div class="device-status">Active in background · MediaSession broadcast</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="device-connect-pill" onclick="switchRecentApp('Spotify')">SWITCH</button>
+              <button class="device-connect-pill" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" onclick="closeRecentApp('recentApp3', 'Spotify Audio')">CLOSE</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="device-actions">
+          <button class="btn-dialog-secondary" onclick="closeRecentsModal()">RETURN TO LAUNCHER</button>
+          <button class="btn-dialog-primary" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.5);" onclick="closeAllRecents()">CLOSE ALL BACKGROUND APPS</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Swiss Cockpit Top Header -->
     <header class="cockpit-header">
       <div class="header-left">
+        <!-- Task Switcher / Recent Background Apps (Top Left) -->
+        <button class="header-recents-btn" id="btnHeaderRecents" onclick="openRecentsModal()" title="Task Switcher / Background Apps">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+            <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+            <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+            <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+          </svg>
+          <span>RECENTS</span>
+        </button>
         <span class="header-clock" id="headerClock">12:45</span>
         <span class="header-vehicle-badge">SANTA FE · IX45</span>
       </div>
@@ -1875,6 +1983,51 @@
     // Dynamic POI Search
     function triggerPoi(poiName) {
       showToast(`Navigating to nearest ${poiName} (geo:0,0?q=${encodeURIComponent(poiName)})`);
+    }
+
+    // Task Switcher (Recent Apps) Simulation
+    function openRecentsModal() {
+      document.getElementById('recentsDrawerModal').classList.add('show');
+    }
+
+    function closeRecentsModal() {
+      document.getElementById('recentsDrawerModal').classList.remove('show');
+    }
+
+    function switchRecentApp(appName) {
+      closeRecentsModal();
+      showToast(`Switched to ${appName}`);
+      if (appName.toLowerCase().includes('carplay')) {
+        switchTab('carplay');
+      } else if (appName.toLowerCase().includes('map')) {
+        switchTab('maps');
+      }
+    }
+
+    let activeAppsCount = 3;
+    function closeRecentApp(elementId, appName) {
+      const el = document.getElementById(elementId);
+      if (el) {
+        el.style.opacity = '0';
+        el.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+          el.remove();
+          activeAppsCount = Math.max(0, activeAppsCount - 1);
+          document.getElementById('recentsCountBadge').textContent = `${activeAppsCount} RUNNING`;
+          showToast(`Killed background task: ${appName}`);
+          if (activeAppsCount === 0) {
+            document.getElementById('recentsList').innerHTML = '<div style="text-align: center; padding: 24px; color: var(--text-secondary); font-size: 13px;">No background apps running. All RAM freed!</div>';
+          }
+        }, 150);
+      }
+    }
+
+    function closeAllRecents() {
+      document.getElementById('recentsList').innerHTML = '<div style="text-align: center; padding: 24px; color: var(--text-secondary); font-size: 13px;">No background apps running. All RAM freed!</div>';
+      activeAppsCount = 0;
+      document.getElementById('recentsCountBadge').textContent = '0 RUNNING';
+      showToast('All background apps terminated · Memory optimized');
+      setTimeout(closeRecentsModal, 600);
     }
 
     // App Library Search Filter

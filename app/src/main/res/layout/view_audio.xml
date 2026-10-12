@@ -16,57 +16,57 @@
         <Button
             android:id="@+id/btnSrcRadio"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="60dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="01  FM RADIO TUNER"
             android:textColor="@color/accent_amber"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:fontFamily="sans-serif-black"
             android:letterSpacing="0.06"
             android:gravity="start|center_vertical"
-            android:paddingStart="16dp" />
+            android:paddingStart="20dp" />
 
         <Button
             android:id="@+id/btnSrcSpotify"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="60dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="02  SPOTIFY AUDIO"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:fontFamily="sans-serif-black"
             android:letterSpacing="0.06"
             android:gravity="start|center_vertical"
-            android:paddingStart="16dp" />
+            android:paddingStart="20dp" />
 
         <Button
             android:id="@+id/btnSrcBluetooth"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="60dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="03  BLUETOOTH STREAM"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:fontFamily="sans-serif-black"
             android:letterSpacing="0.06"
             android:gravity="start|center_vertical"
-            android:paddingStart="16dp" />
+            android:paddingStart="20dp" />
 
         <Button
             android:id="@+id/btnSrcUsb"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="60dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="04  USB MEDIA"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:fontFamily="sans-serif-black"
             android:letterSpacing="0.06"
             android:gravity="start|center_vertical"
-            android:paddingStart="16dp" />
+            android:paddingStart="20dp" />
 
     </LinearLayout>
 
@@ -152,44 +152,41 @@
 
             <Button
                 android:id="@+id/btnRadioScanDown"
-                android:layout_width="wrap_content"
-                android:layout_height="52dp"
+                android:layout_width="0dp"
+                android:layout_height="62dp"
+                android:layout_weight="1"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="SEEK DOWN"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.08"
-                android:paddingStart="24dp"
-                android:paddingEnd="24dp" />
+                android:letterSpacing="0.08" />
 
             <Button
                 android:id="@+id/btnRadioPlay"
-                android:layout_width="wrap_content"
-                android:layout_height="52dp"
+                android:layout_width="0dp"
+                android:layout_height="62dp"
+                android:layout_weight="1.2"
                 android:layout_marginStart="14dp"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="PLAY RADIO"
                 android:textColor="@color/accent_amber"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.08"
-                android:paddingStart="28dp"
-                android:paddingEnd="28dp" />
+                android:letterSpacing="0.08" />
 
             <Button
                 android:id="@+id/btnRadioScanUp"
-                android:layout_width="wrap_content"
-                android:layout_height="52dp"
+                android:layout_width="0dp"
+                android:layout_height="62dp"
+                android:layout_weight="1"
                 android:layout_marginStart="14dp"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="SEEK UP"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.08"
-                android:paddingStart="24dp"
-                android:paddingEnd="24dp" />
+                android:letterSpacing="0.08" />
         </LinearLayout>
 
     </LinearLayout>

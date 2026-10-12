@@ -97,20 +97,20 @@
                 android:textSize="11sp"
                 android:fontFamily="sans-serif" />
 
-            <!-- Direct Launch into CarPlay Navigation (Big Finger Friendly 52dp) -->
+            <!-- Direct Launch into CarPlay Navigation (Big Finger Friendly 60dp) -->
             <Button
                 android:id="@+id/btnNavCarPlayRoute"
                 android:layout_width="wrap_content"
-                android:layout_height="52dp"
-                android:layout_marginTop="14dp"
+                android:layout_height="60dp"
+                android:layout_marginTop="16dp"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="OPEN CARPLAY NAVIGATION"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:fontFamily="sans-serif-black"
                 android:letterSpacing="0.05"
-                android:paddingStart="26dp"
-                android:paddingEnd="26dp" />
+                android:paddingStart="32dp"
+                android:paddingEnd="32dp" />
 
         </LinearLayout>
 
@@ -178,7 +178,7 @@
             android:layout_marginTop="8dp"
             android:background="@color/cockpit_surface_border_subtle" />
 
-        <!-- 1-Tap POI Quick Triggers (Uses system GPS geo: intent - Big Finger Friendly 52dp) -->
+        <!-- 1-Tap POI Quick Triggers (Uses system GPS geo: intent - Big Finger Friendly 58dp) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -188,25 +188,25 @@
             <Button
                 android:id="@+id/btnNavFuel"
                 android:layout_width="0dp"
-                android:layout_height="52dp"
+                android:layout_height="58dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="FUEL STATION"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:fontFamily="sans-serif-black"
                 android:letterSpacing="0.08" />
 
             <Button
                 android:id="@+id/btnNavParking"
                 android:layout_width="0dp"
-                android:layout_height="52dp"
+                android:layout_height="58dp"
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="PARKING"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:fontFamily="sans-serif-black"
                 android:letterSpacing="0.08" />
         </LinearLayout>
@@ -220,25 +220,25 @@
             <Button
                 android:id="@+id/btnNavCoffee"
                 android:layout_width="0dp"
-                android:layout_height="52dp"
+                android:layout_height="58dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="REST AREA"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:fontFamily="sans-serif-black"
                 android:letterSpacing="0.08" />
 
             <Button
                 android:id="@+id/btnNavHospital"
                 android:layout_width="0dp"
-                android:layout_height="52dp"
+                android:layout_height="58dp"
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="HOSPITAL"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:fontFamily="sans-serif-black"
                 android:letterSpacing="0.08" />
         </LinearLayout>
@@ -262,24 +262,24 @@
         <Button
             android:id="@+id/btnOpenGoogleMaps"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="58dp"
             android:layout_marginTop="10dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="GOOGLE MAPS"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="13sp"
+            android:textSize="14sp"
             android:fontFamily="sans-serif-black"
             android:letterSpacing="0.08" />
 
         <Button
             android:id="@+id/btnOpenWaze"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="58dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="WAZE NAVIGATION"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="13sp"
+            android:textSize="14sp"
             android:fontFamily="sans-serif-black"
             android:letterSpacing="0.08" />
 

@@ -39,35 +39,35 @@
 
             <Button
                 android:id="@+id/btnColorAmber"
-                android:layout_width="50dp"
-                android:layout_height="46dp"
+                android:layout_width="56dp"
+                android:layout_height="52dp"
                 android:background="@color/accent_amber" />
 
             <Button
                 android:id="@+id/btnColorBlue"
-                android:layout_width="50dp"
-                android:layout_height="46dp"
+                android:layout_width="56dp"
+                android:layout_height="52dp"
                 android:layout_marginStart="8dp"
                 android:background="@color/accent_hyundai_blue" />
 
             <Button
                 android:id="@+id/btnColorRed"
-                android:layout_width="50dp"
-                android:layout_height="46dp"
+                android:layout_width="56dp"
+                android:layout_height="52dp"
                 android:layout_marginStart="8dp"
                 android:background="@color/accent_sport_red" />
 
             <Button
                 android:id="@+id/btnColorGreen"
-                android:layout_width="50dp"
-                android:layout_height="46dp"
+                android:layout_width="56dp"
+                android:layout_height="52dp"
                 android:layout_marginStart="8dp"
                 android:background="@color/accent_emerald" />
 
             <Button
                 android:id="@+id/btnColorWhite"
-                android:layout_width="50dp"
-                android:layout_height="46dp"
+                android:layout_width="56dp"
+                android:layout_height="52dp"
                 android:layout_marginStart="8dp"
                 android:background="@color/accent_platinum" />
         </LinearLayout>
@@ -98,14 +98,14 @@
             <Button
                 android:id="@+id/btnSelectCarPlayApp"
                 android:layout_width="wrap_content"
-                android:layout_height="46dp"
+                android:layout_height="52dp"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="Zlink 5.3"
                 android:textColor="@color/accent_amber"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:fontFamily="sans-serif-black"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp" />
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp" />
         </LinearLayout>
 
         <LinearLayout
@@ -127,14 +127,14 @@
             <Button
                 android:id="@+id/btnToggleUnit"
                 android:layout_width="wrap_content"
-                android:layout_height="46dp"
+                android:layout_height="52dp"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="KM/H"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:fontFamily="sans-serif-black"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp" />
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp" />
         </LinearLayout>
 
         <LinearLayout
@@ -156,14 +156,14 @@
             <Button
                 android:id="@+id/btnGpsRefreshRate"
                 android:layout_width="wrap_content"
-                android:layout_height="46dp"
+                android:layout_height="52dp"
                 android:background="@drawable/bg_elevated_btn"
                 android:text="LIVE 20Hz"
                 android:textColor="@color/status_active"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:fontFamily="sans-serif-black"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp" />
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp" />
         </LinearLayout>
 
     </LinearLayout>
@@ -202,11 +202,11 @@
         <Button
             android:id="@+id/btnSelectDriverPhone"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
+            android:layout_height="56dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="01 · SELECT DRIVER PHONE"
             android:textColor="@color/accent_amber"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:fontFamily="sans-serif-black"
             android:letterSpacing="0.06"
             android:gravity="center" />
@@ -215,12 +215,12 @@
         <Button
             android:id="@+id/btnShortcutFactorySettings"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:layout_marginTop="6dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="02 · FACTORY SETTINGS (PIN 123456)"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:fontFamily="sans-serif-black"
             android:letterSpacing="0.06"
             android:gravity="center" />
@@ -229,12 +229,12 @@
         <Button
             android:id="@+id/btnShortcutAndroidSettings"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:layout_marginTop="6dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="03 · SYSTEM SETTINGS (WIFI &amp; SOUND)"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:fontFamily="sans-serif-black"
             android:letterSpacing="0.06"
             android:gravity="center" />
@@ -243,12 +243,12 @@
         <Button
             android:id="@+id/btnShortcutAudioEq"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:layout_marginTop="6dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="04 · DSP EQUALIZER TUNER"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:fontFamily="sans-serif-black"
             android:letterSpacing="0.06"
             android:gravity="center" />
@@ -257,12 +257,12 @@
         <Button
             android:id="@+id/btnShortcutBluetooth"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:layout_marginTop="6dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="05 · BLUETOOTH MANAGER"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:fontFamily="sans-serif-black"
             android:letterSpacing="0.06"
             android:gravity="center" />
@@ -271,12 +271,12 @@
         <Button
             android:id="@+id/btnRestartLauncher"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:layout_marginTop="6dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
             android:text="06 · RESTART APEXDRIVE"
             android:textColor="@color/cockpit_text_secondary"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:fontFamily="sans-serif-black"
             android:letterSpacing="0.06"
             android:gravity="center" />

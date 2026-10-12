@@ -18,6 +18,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Looper;
 import android.provider.Settings;
 import android.text.Editable;
@@ -49,6 +50,7 @@ import com.apexdrive.launcher.services.GpsTelemetryManager;
 import com.apexdrive.launcher.services.MediaSyncService;
 import com.apexdrive.launcher.utils.PreferenceHelper;
 
+import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -72,6 +74,9 @@ public class MainActivity extends AppCompatActivity {
     private AppsGridAdapter appsAdapter;
 
     private FrameLayout viewContainer;
+    private View btnHeaderRecents;
+    private ImageView ivHeaderRecentsIcon;
+    private TextView tvHeaderRecentsText;
     private TextView tvClock, tvHeaderBluetooth, tvWeatherText, tvWeatherIcon;
     private View pillHeaderWeather;
     private ImageView ivHeaderBtIcon;
@@ -159,6 +164,13 @@ public class MainActivity extends AppCompatActivity {
 
     private void initViews() {
         viewContainer = findViewById(R.id.viewContainer);
+        btnHeaderRecents = findViewById(R.id.btnHeaderRecents);
+        ivHeaderRecentsIcon = findViewById(R.id.ivHeaderRecentsIcon);
+        tvHeaderRecentsText = findViewById(R.id.tvHeaderRecentsText);
+        if (btnHeaderRecents != null) {
+            btnHeaderRecents.setOnClickListener(v -> openRecentApps());
+        }
+
         tvClock = findViewById(R.id.tvClock);
         tvHeaderBluetooth = findViewById(R.id.tvHeaderBluetooth);
         ivHeaderBtIcon = findViewById(R.id.ivHeaderBtIcon);
@@ -218,6 +230,46 @@ public class MainActivity extends AppCompatActivity {
                 showDeviceSelectorDialog(false);
                 return true;
             });
+        }
+    }
+
+    private void openRecentApps() {
+        // 1. Direct root / shell keyevent for KEYCODE_APP_SWITCH (187)
+        try {
+            Runtime.getRuntime().exec("input keyevent 187");
+            return;
+        } catch (Exception ignored) {}
+
+        // 2. Reflection on IStatusBarService toggleRecentApps()
+        try {
+            Class<?> serviceManager = Class.forName("android.os.ServiceManager");
+            Method getService = serviceManager.getMethod("getService", String.class);
+            IBinder binder = (IBinder) getService.invoke(null, "statusbar");
+            if (binder != null) {
+                Class<?> statusBarStub = Class.forName("com.android.internal.statusbar.IStatusBarService$Stub");
+                Method asInterface = statusBarStub.getMethod("asInterface", IBinder.class);
+                Object statusBar = asInterface.invoke(null, binder);
+                if (statusBar != null) {
+                    Method toggleRecents = statusBar.getClass().getMethod("toggleRecentApps");
+                    toggleRecents.invoke(statusBar);
+                    return;
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // 3. Automotive ROM vendor broadcast intents for Task Switcher / Recent Apps
+        String[] vendorRecentActions = {
+                "com.android.systemui.recent.action.TOGGLE_RECENTS",
+                "action.hct.recents",
+                "com.syu.recents",
+                "com.ts.recents",
+                "com.microntek.recents",
+                "com.android.internal.policy.impl.recents"
+        };
+        for (String action : vendorRecentActions) {
+            try {
+                sendBroadcast(new Intent(action));
+            } catch (Exception ignored) {}
         }
     }
 
@@ -774,6 +826,8 @@ public class MainActivity extends AppCompatActivity {
         prefHelper.setAccentColor(color);
 
         // Header & Bluetooth
+        if (ivHeaderRecentsIcon != null) ivHeaderRecentsIcon.setColorFilter(color, PorterDuff.Mode.SRC_IN);
+        if (tvHeaderRecentsText != null) tvHeaderRecentsText.setTextColor(color);
         if (tvHeaderBluetooth != null) tvHeaderBluetooth.setTextColor(color);
         if (ivHeaderBtIcon != null) ivHeaderBtIcon.setColorFilter(color, PorterDuff.Mode.SRC_IN);
         if (tvWeatherIcon != null) tvWeatherIcon.setTextColor(color);

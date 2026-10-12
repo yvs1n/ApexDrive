@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="96dp"
+    android:layout_height="106dp"
     android:orientation="vertical"
     android:gravity="center"
     android:padding="4dp">
 
-    <!-- Apple/Swiss Continuous Squircle Icon Container (56dp x 56dp) -->
+    <!-- Apple/Swiss Continuous Squircle Icon Container (64dp x 64dp) -->
     <FrameLayout
-        android:layout_width="56dp"
-        android:layout_height="56dp"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
         android:background="@drawable/bg_squircle"
-        android:padding="8dp">
+        android:padding="9dp">
 
         <ImageView
             android:id="@+id/ivAppIcon"
@@ -21,18 +21,18 @@
             android:contentDescription="App Icon" />
     </FrameLayout>
 
-    <!-- App Name Label (Optical Sizing: 11sp, Swiss medium, crisp) -->
+    <!-- App Name Label (Optical Sizing: 12sp, Swiss medium, crisp) -->
     <TextView
         android:id="@+id/tvAppName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="5dp"
-        android:maxWidth="80dp"
+        android:layout_marginTop="6dp"
+        android:maxWidth="92dp"
         android:ellipsize="end"
         android:maxLines="1"
         android:gravity="center"
         android:textColor="@color/cockpit_text_primary"
-        android:textSize="11sp"
+        android:textSize="12sp"
         android:fontFamily="sans-serif-medium" />
 
 </LinearLayout>
