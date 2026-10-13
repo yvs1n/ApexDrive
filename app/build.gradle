@@ -16,6 +16,34 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    flavorDimensions "edition"
+    productFlavors {
+        cockpit {
+            dimension "edition"
+            applicationId "com.apexdrive.launcher"
+            versionNameSuffix "-cockpit"
+            manifestPlaceholders = [
+                appName: "ApexDrive",
+                cockpitHomeCategory: "android.intent.category.HOME",
+                cockpitLauncherCategory: "android.intent.category.LAUNCHER",
+                carplayHomeCategory: "android.intent.category.DEFAULT",
+                carplayLauncherCategory: "android.intent.category.LAUNCHER"
+            ]
+        }
+        carplayBeta {
+            dimension "edition"
+            applicationId "com.apexdrive.launcher.carplay"
+            versionNameSuffix "-carplay-beta"
+            manifestPlaceholders = [
+                appName: "CarPlay Beta",
+                cockpitHomeCategory: "android.intent.category.DEFAULT",
+                cockpitLauncherCategory: "android.intent.category.LAUNCHER",
+                carplayHomeCategory: "android.intent.category.HOME",
+                carplayLauncherCategory: "android.intent.category.LAUNCHER"
+            ]
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false

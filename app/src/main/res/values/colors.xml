@@ -22,4 +22,17 @@
     <!-- Status Colors -->
     <color name="status_active">#22C55E</color>
     <color name="status_inactive">#6B7280</color>
+
+    <!-- Apple CarPlay Tokens (Automotive HIG) -->
+    <color name="cp_bg">#0B0D13</color>
+    <color name="cp_dock_bg">#11141B</color>
+    <color name="cp_dock_border">#1C202B</color>
+    <color name="cp_card_bg">#151821</color>
+    <color name="cp_card_border">#242836</color>
+    <color name="cp_card_inner">#1C202C</color>
+    <color name="cp_accent_blue">#0A84FF</color>
+    <color name="cp_accent_green">#30D158</color>
+    <color name="cp_accent_red">#FF453A</color>
+    <color name="cp_accent_orange">#FF9F0A</color>
+    <color name="cp_accent_amber">#FFD60A</color>
 </resources>

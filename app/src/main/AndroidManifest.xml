@@ -24,16 +24,17 @@
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
-        android:label="@string/app_name"
+        android:label="${appName}"
         android:roundIcon="@drawable/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.ApexDrive"
         android:hardwareAccelerated="true"
         android:usesCleartextTraffic="true">
 
-        <!-- Root Launcher Activity -->
+        <!-- Classic Swiss Cockpit Launcher Activity -->
         <activity
             android:name=".MainActivity"
+            android:label="${appName}"
             android:exported="true"
             android:launchMode="singleTask"
             android:clearTaskOnLaunch="true"
@@ -42,17 +43,39 @@
             android:configChanges="orientation|keyboardHidden|screenSize|smallestScreenSize|screenLayout|uiMode|density|fontScale|keyboard|navigation|locale|layoutDirection"
             android:windowSoftInputMode="adjustPan">
 
-            <!-- Identifies this application as an Android Home Launcher -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.HOME" />
+                <category android:name="${cockpitHomeCategory}" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
-            <!-- Also allows normal app launch from app drawer if needed -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="${cockpitLauncherCategory}" />
+            </intent-filter>
+        </activity>
+
+        <!-- Apple CarPlay Layout Launcher Activity (Beta) -->
+        <activity
+            android:name=".CarPlayActivity"
+            android:label="${appName}"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:clearTaskOnLaunch="true"
+            android:stateNotNeeded="true"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|keyboardHidden|screenSize|smallestScreenSize|screenLayout|uiMode|density|fontScale|keyboard|navigation|locale|layoutDirection"
+            android:windowSoftInputMode="adjustPan">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="${carplayHomeCategory}" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="${carplayLauncherCategory}" />
             </intent-filter>
         </activity>
 
