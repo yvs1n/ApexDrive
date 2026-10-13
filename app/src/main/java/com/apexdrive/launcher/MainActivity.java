@@ -104,6 +104,9 @@ public class MainActivity extends AppCompatActivity {
     private Button btnMediaPlayPause;
     private Button btnSelectCarPlayApp;
     private Button btnSelectRadioApp;
+    private Button btnSelectMapApp;
+    private Button btnOpenOsmAnd;
+    private Button btnChooseMapApp;
     private Button btnToggleUnit;
     private Button btnSelectDriverPhone;
     private boolean isRadioPlaying = false;
@@ -576,7 +579,30 @@ public class MainActivity extends AppCompatActivity {
         viewDash.findViewById(R.id.btnMediaPrev).setOnClickListener(v ->
                 MediaSyncService.sendMediaKey(this, KeyEvent.KEYCODE_MEDIA_PREVIOUS));
 
-        btnMediaPlayPause.setOnClickListener(v -> MediaSyncService.togglePlayPause(this));
+        btnMediaPlayPause.setOnClickListener(v -> {
+            if (isRadioPlaying) {
+                isRadioPlaying = false;
+                Button btnRadio = viewAudio != null ? viewAudio.findViewById(R.id.btnRadioPlay) : null;
+                if (btnRadio != null) btnRadio.setText("PLAY RADIO");
+                TextView tvPreset = viewAudio != null ? viewAudio.findViewById(R.id.tvAudioPresetBadge) : null;
+                if (tvPreset != null) tvPreset.setText("STANDBY");
+                sendRadioHardwarePauseBroadcasts();
+                MediaSyncService.pauseAllMedia(this);
+                btnMediaPlayPause.setText("PLAY");
+            } else if (tvTrackTitle != null && tvTrackTitle.getText() != null && tvTrackTitle.getText().toString().startsWith("FM ")) {
+                isRadioPlaying = true;
+                Button btnRadio = viewAudio != null ? viewAudio.findViewById(R.id.btnRadioPlay) : null;
+                if (btnRadio != null) btnRadio.setText("PAUSE RADIO");
+                TextView tvFreq = viewAudio != null ? viewAudio.findViewById(R.id.tvRadioFreq) : null;
+                String freq = tvFreq != null ? tvFreq.getText().toString() : "87.5";
+                TextView tvPreset = viewAudio != null ? viewAudio.findViewById(R.id.tvAudioPresetBadge) : null;
+                if (tvPreset != null) tvPreset.setText("ACTIVE · " + freq + " MHZ");
+                sendRadioHardwareBroadcasts(freq);
+                btnMediaPlayPause.setText("PAUSE");
+            } else {
+                MediaSyncService.togglePlayPause(this);
+            }
+        });
 
         btnMediaPlayPause.setOnLongClickListener(v -> {
             MediaSyncService.pauseAllMedia(this);
@@ -620,25 +646,19 @@ public class MainActivity extends AppCompatActivity {
         viewMaps.findViewById(R.id.btnNavCoffee).setOnClickListener(v -> launchPoiSearch("coffee"));
         viewMaps.findViewById(R.id.btnNavHospital).setOnClickListener(v -> launchPoiSearch("hospital"));
 
-        viewMaps.findViewById(R.id.btnOpenGoogleMaps).setOnClickListener(v -> {
-            if (!launchAppPackage("com.google.android.apps.maps")) {
-                if (launchAppPackage("com.waze")) {
-                    Toast.makeText(this, "Google Maps not found · Opened Waze", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(this, "Google Maps is not installed. Tap APPS or connect CarPlay.", Toast.LENGTH_LONG).show();
-                }
+        btnOpenOsmAnd = viewMaps.findViewById(R.id.btnOpenOsmAnd);
+        if (btnOpenOsmAnd != null) {
+            String mapName = prefHelper.getMapName();
+            if (mapName != null && !mapName.isEmpty()) {
+                btnOpenOsmAnd.setText("LAUNCH " + mapName.toUpperCase());
             }
-        });
+            btnOpenOsmAnd.setOnClickListener(v -> launchOfflineMap());
+        }
 
-        viewMaps.findViewById(R.id.btnOpenWaze).setOnClickListener(v -> {
-            if (!launchAppPackage("com.waze")) {
-                if (launchAppPackage("com.google.android.apps.maps")) {
-                    Toast.makeText(this, "Waze not found · Opened Google Maps", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(this, "Waze is not installed. Tap APPS or connect CarPlay.", Toast.LENGTH_LONG).show();
-                }
-            }
-        });
+        btnChooseMapApp = viewMaps.findViewById(R.id.btnChooseMapApp);
+        if (btnChooseMapApp != null) {
+            btnChooseMapApp.setOnClickListener(v -> showMapPicker());
+        }
     }
 
     private void checkAndOpenLocationSettings() {
@@ -655,34 +675,104 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void launchOfflineMap() {
+        // 1. Try configured package
+        String configuredPkg = prefHelper.getMapPackage();
+        if (configuredPkg != null && !configuredPkg.isEmpty()) {
+            if (launchAppPackage(configuredPkg)) return;
+        }
+
+        // 2. Try known OsmAnd variants (Full/Plus or standard)
+        if (launchAppPackage("net.osmand.plus")) {
+            prefHelper.setMapPackage("net.osmand.plus");
+            prefHelper.setMapName("OsmAnd+");
+            return;
+        }
+        if (launchAppPackage("net.osmand")) {
+            prefHelper.setMapPackage("net.osmand");
+            prefHelper.setMapName("OsmAnd");
+            return;
+        }
+
+        // 3. Fallbacks to other offline navigators if installed
+        if (launchAppPackage("app.organicmaps")) return;
+        if (launchAppPackage("com.mapswithme.maps.pro")) return;
+        if (launchAppPackage("com.here.app.maps")) return;
+        if (launchAppPackage("ru.dublgis.dgismobile")) return;
+        if (launchAppPackage("com.google.android.apps.maps")) return;
+        if (launchAppPackage("com.waze")) return;
+
+        // 4. OsmAnd not found - show clear dialog guiding user to install from USB
+        new AlertDialog.Builder(this)
+                .setTitle("OSMAND NOT INSTALLED")
+                .setMessage("OsmAnd 4.5.10 APK was not detected on this head unit.\n\n"
+                        + "Please sideload the APK and UAE offline map from your USB drive:\n"
+                        + "1. Copy net.osmand.plus APK & United-arab-emirates_asia.obf to USB\n"
+                        + "2. Insert USB into car head unit\n"
+                        + "3. Open File Manager and install OsmAnd APK")
+                .setPositiveButton("OPEN FILE MANAGER", (dialog, which) -> {
+                    String[] fmPackages = {
+                            "com.android.rk", "com.mediatek.filemanager", "com.estrongs.android.pop",
+                            "com.android.documentsui", "com.google.android.documentsui", "com.sec.android.app.myfiles"
+                    };
+                    for (String fm : fmPackages) {
+                        if (launchAppPackage(fm)) return;
+                    }
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW).setType("*/*").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Please open your car's File Manager app from APPS screen", Toast.LENGTH_LONG).show();
+                    }
+                })
+                .setNeutralButton("CHOOSE MAP APP", (dialog, which) -> showMapPicker())
+                .setNegativeButton("DISMISS", null)
+                .show();
+    }
+
     private void launchPoiSearch(String query) {
+        String mapPkg = prefHelper.getMapPackage();
         try {
             Uri gmmIntentUri = Uri.parse("geo:0,0?q=" + Uri.encode(query));
             Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
             mapIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (mapPkg != null && !mapPkg.isEmpty()) {
+                mapIntent.setPackage(mapPkg);
+                if (mapIntent.resolveActivity(getPackageManager()) != null) {
+                    startActivity(mapIntent);
+                    return;
+                }
+            }
+            mapIntent.setPackage("net.osmand.plus");
+            if (mapIntent.resolveActivity(getPackageManager()) != null) {
+                startActivity(mapIntent);
+                return;
+            }
+            mapIntent.setPackage("net.osmand");
+            if (mapIntent.resolveActivity(getPackageManager()) != null) {
+                startActivity(mapIntent);
+                return;
+            }
+            mapIntent.setPackage(null);
             if (mapIntent.resolveActivity(getPackageManager()) != null) {
                 startActivity(mapIntent);
                 return;
             }
         } catch (Exception ignored) {}
 
+        if (mapPkg != null && launchAppPackage(mapPkg)) return;
+        if (launchAppPackage("net.osmand.plus")) return;
+        if (launchAppPackage("net.osmand")) return;
+        if (launchAppPackage("app.organicmaps")) return;
+        if (launchAppPackage("com.mapswithme.maps.pro")) return;
+        if (launchAppPackage("ru.dublgis.dgismobile")) return;
         if (launchAppPackage("com.google.android.apps.maps")) return;
         if (launchAppPackage("com.waze")) return;
-        if (launchAppPackage("com.autonavi.amapauto")) return;
-        if (launchAppPackage("com.google.android.apps.mapslite")) return;
 
         new AlertDialog.Builder(this)
                 .setTitle("NAVIGATION APP NOT FOUND")
-                .setMessage("No navigation engine installed for searching \"" + query.toUpperCase() + "\".\n\nWould you like to search in your web browser or launch CarPlay Navigation?")
+                .setMessage("No navigation engine installed for searching \"" + query.toUpperCase() + "\".\n\nWould you like to install OsmAnd Offline Maps from USB or launch CarPlay Navigation?")
                 .setPositiveButton("LAUNCH CARPLAY", (d, w) -> launchCarPlay())
-                .setNeutralButton("BROWSER MAPS", (d, w) -> {
-                    try {
-                        Uri webUri = Uri.parse("https://www.google.com/maps/search/" + Uri.encode(query));
-                        startActivity(new Intent(Intent.ACTION_VIEW, webUri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                    } catch (Exception e) {
-                        Toast.makeText(this, "No web browser installed", Toast.LENGTH_SHORT).show();
-                    }
-                })
+                .setNeutralButton("OFFLINE MAP SETUP", (d, w) -> launchOfflineMap())
                 .setNegativeButton("CANCEL", null)
                 .show();
     }
@@ -720,47 +810,38 @@ public class MainActivity extends AppCompatActivity {
                         tvPreset.setText("ACTIVE · " + tvFreq.getText() + " MHZ");
                     }
 
-                    // 1. Wake up vendor radio hardware tuner IC
+                    // 1. Wake up vendor radio hardware tuner IC in background without switching away from launcher
                     sendRadioHardwareBroadcasts(tvFreq.getText().toString());
 
-                    // 2. Launch configured or auto-detected radio tuner application
-                    String configuredPkg = prefHelper.getRadioPackage();
-                    boolean launched = false;
-                    if (configuredPkg != null && !configuredPkg.isEmpty()) {
-                        launched = launchAppPackage(configuredPkg);
-                    }
-                    if (!launched) {
-                        String detectedPkg = findInstalledRadioPackage();
-                        if (detectedPkg != null) {
-                            prefHelper.setRadioPackage(detectedPkg);
-                            try {
-                                ApplicationInfo ai = getPackageManager().getApplicationInfo(detectedPkg, 0);
-                                prefHelper.setRadioName(getPackageManager().getApplicationLabel(ai).toString());
-                            } catch (Exception ignored) {}
-                            launched = launchAppPackage(detectedPkg);
-                        }
-                    }
-
-                    if (!launched) {
-                        Toast.makeText(this, "Radio app not found. Select your car's tuner app below.", Toast.LENGTH_LONG).show();
-                        showRadioPicker();
-                    }
-
-                    // 3. Update dashboard track display
+                    // 2. Update dashboard track display
                     if (tvTrackTitle != null) tvTrackTitle.setText("FM " + tvFreq.getText() + " MHz");
                     if (tvTrackArtist != null) tvTrackArtist.setText("Radio Tuner Broadcast");
                     if (btnMediaPlayPause != null) btnMediaPlayPause.setText("PAUSE");
+
+                    Toast.makeText(this, "Radio Tuner Playing · " + tvFreq.getText() + " MHz", Toast.LENGTH_SHORT).show();
                 } else {
                     isRadioPlaying = false;
                     btnRadioPlay.setText("PLAY RADIO");
                     if (tvPreset != null) {
                         tvPreset.setText("STANDBY");
                     }
-                    MediaSyncService.pauseAllMedia(this);
                     sendRadioHardwarePauseBroadcasts();
+                    MediaSyncService.pauseAllMedia(this);
                     if (btnMediaPlayPause != null) btnMediaPlayPause.setText("PLAY");
+                    Toast.makeText(this, "Radio Tuner Paused", Toast.LENGTH_SHORT).show();
                 }
             });
+
+            // Long press to open full tuner app if user explicitly wants full-screen controls
+            btnRadioPlay.setOnLongClickListener(v -> {
+                launchRadioApp();
+                return true;
+            });
+        }
+
+        // Tap frequency readout to open full tuner app
+        if (tvFreq != null) {
+            tvFreq.setOnClickListener(v -> launchRadioApp());
         }
 
         viewAudio.findViewById(R.id.btnSrcSpotify).setOnClickListener(v -> {
@@ -823,10 +904,15 @@ public class MainActivity extends AppCompatActivity {
                 if (isRadioPlaying && tvPreset != null) {
                     tvPreset.setText("ACTIVE · " + freqStr + " MHZ");
                 }
+                if (isRadioPlaying && tvTrackTitle != null) {
+                    tvTrackTitle.setText("FM " + freqStr + " MHz");
+                }
                 try {
                     int freqKhz = (int) (Double.parseDouble(freqStr) * 1000);
                     sendBroadcast(new Intent("com.ts.radio.tune").putExtra("freq", freqKhz));
                     sendBroadcast(new Intent("com.microntek.radio.tune").putExtra("freq", freqKhz));
+                    sendBroadcast(new Intent("com.allwinner.radio.tune").putExtra("freq", freqKhz));
+                    sendBroadcast(new Intent("com.syu.radio.tune").putExtra("freq", freqKhz));
                 } catch (Exception ignored) {}
             } catch (Exception ignored) {}
         });
@@ -839,10 +925,15 @@ public class MainActivity extends AppCompatActivity {
                 if (isRadioPlaying && tvPreset != null) {
                     tvPreset.setText("ACTIVE · " + freqStr + " MHZ");
                 }
+                if (isRadioPlaying && tvTrackTitle != null) {
+                    tvTrackTitle.setText("FM " + freqStr + " MHz");
+                }
                 try {
                     int freqKhz = (int) (Double.parseDouble(freqStr) * 1000);
                     sendBroadcast(new Intent("com.ts.radio.tune").putExtra("freq", freqKhz));
                     sendBroadcast(new Intent("com.microntek.radio.tune").putExtra("freq", freqKhz));
+                    sendBroadcast(new Intent("com.allwinner.radio.tune").putExtra("freq", freqKhz));
+                    sendBroadcast(new Intent("com.syu.radio.tune").putExtra("freq", freqKhz));
                 } catch (Exception ignored) {}
             } catch (Exception ignored) {}
         });
@@ -911,6 +1002,12 @@ public class MainActivity extends AppCompatActivity {
         if (btnSelectRadioApp != null) {
             btnSelectRadioApp.setText(prefHelper.getRadioName());
             btnSelectRadioApp.setOnClickListener(v -> showRadioPicker());
+        }
+
+        btnSelectMapApp = viewSetup.findViewById(R.id.btnSelectMapApp);
+        if (btnSelectMapApp != null) {
+            btnSelectMapApp.setText(prefHelper.getMapName());
+            btnSelectMapApp.setOnClickListener(v -> showMapPicker());
         }
 
         btnToggleUnit = viewSetup.findViewById(R.id.btnToggleUnit);
@@ -1120,6 +1217,88 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, "Radio Tuner set to: " + name, Toast.LENGTH_SHORT).show();
     }
 
+    private void launchRadioApp() {
+        String configuredPkg = prefHelper.getRadioPackage();
+        boolean launched = false;
+        if (configuredPkg != null && !configuredPkg.isEmpty()) {
+            launched = launchAppPackage(configuredPkg);
+        }
+        if (!launched) {
+            String detectedPkg = findInstalledRadioPackage();
+            if (detectedPkg != null) {
+                prefHelper.setRadioPackage(detectedPkg);
+                try {
+                    ApplicationInfo ai = getPackageManager().getApplicationInfo(detectedPkg, 0);
+                    prefHelper.setRadioName(getPackageManager().getApplicationLabel(ai).toString());
+                } catch (Exception ignored) {}
+                launched = launchAppPackage(detectedPkg);
+            }
+        }
+        if (!launched) {
+            Toast.makeText(this, "Radio app not found. Select your car's tuner app in Setup.", Toast.LENGTH_LONG).show();
+            showRadioPicker();
+        }
+    }
+
+    private void showMapPicker() {
+        final List<AppInfo> apps = loadInstalledApps();
+        List<String> names = new ArrayList<>();
+        final List<String> packages = new ArrayList<>();
+
+        String[] known = {
+                "OsmAnd+ Offline (net.osmand.plus)",
+                "OsmAnd Standard (net.osmand)",
+                "Organic Maps Offline (app.organicmaps)",
+                "Maps.Me Offline (com.mapswithme.maps.pro)",
+                "HERE WeGo Offline (com.here.app.maps)",
+                "2GIS Navigation (ru.dublgis.dgismobile)",
+                "Google Maps (com.google.android.apps.maps)",
+                "Waze (com.waze)"
+        };
+        String[] knownPkgs = {
+                "net.osmand.plus",
+                "net.osmand",
+                "app.organicmaps",
+                "com.mapswithme.maps.pro",
+                "com.here.app.maps",
+                "ru.dublgis.dgismobile",
+                "com.google.android.apps.maps",
+                "com.waze"
+        };
+        for (int i = 0; i < known.length; i++) {
+            names.add(known[i]);
+            packages.add(knownPkgs[i]);
+        }
+
+        for (AppInfo app : apps) {
+            if (!packages.contains(app.getPackageName())) {
+                names.add(app.getLabel() + " (" + app.getPackageName() + ")");
+                packages.add(app.getPackageName());
+            }
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Select Navigation Map Engine");
+        builder.setItems(names.toArray(new String[0]), (dialog, which) -> {
+            String selectedPkg = packages.get(which);
+            String selectedName = names.get(which).split(" \\(")[0];
+            saveMapApp(selectedPkg, selectedName);
+        });
+        builder.show();
+    }
+
+    private void saveMapApp(String pkg, String name) {
+        prefHelper.setMapPackage(pkg);
+        prefHelper.setMapName(name);
+        if (btnSelectMapApp != null) {
+            btnSelectMapApp.setText(name);
+        }
+        if (btnOpenOsmAnd != null) {
+            btnOpenOsmAnd.setText("LAUNCH " + name.toUpperCase());
+        }
+        Toast.makeText(this, "Map Engine set to: " + name, Toast.LENGTH_SHORT).show();
+    }
+
     private String findInstalledRadioPackage() {
         PackageManager pm = getPackageManager();
         String[] knownRadioPackages = {
@@ -1178,22 +1357,47 @@ public class MainActivity extends AppCompatActivity {
             try {
                 freqKhz = (int) (Double.parseDouble(freqStr) * 1000);
             } catch (Exception ignored) {}
+
+            // Topway / Allwinner T3 hardware tuner broadcasts
             sendBroadcast(new Intent("com.ts.radio.start"));
+            sendBroadcast(new Intent("com.ts.radio.play"));
             sendBroadcast(new Intent("com.ts.radio.tune").putExtra("freq", freqKhz));
+
+            // Allwinner specific tuner intents
+            sendBroadcast(new Intent("com.allwinner.radio.power"));
+            sendBroadcast(new Intent("com.allwinner.radio.play"));
+            sendBroadcast(new Intent("com.allwinner.radio.tune").putExtra("freq", freqKhz));
+
+            // Microntek / Rockchip / PX head units
             sendBroadcast(new Intent("com.microntek.radio.power"));
             sendBroadcast(new Intent("com.microntek.radio.tune").putExtra("freq", freqKhz));
+            sendBroadcast(new Intent("com.microntek.media.key").putExtra("keycode", KeyEvent.KEYCODE_MEDIA_PLAY));
+
+            // SYU / FYT / Joying head units
             sendBroadcast(new Intent("com.syu.radio.play"));
-            sendBroadcast(new Intent("com.allwinner.radio.power"));
+            sendBroadcast(new Intent("com.syu.radio.tune").putExtra("freq", freqKhz));
+
+            // HCT / MCU hardware broadcast key
             sendBroadcast(new Intent("action.hct.media.key").putExtra("keycode", KeyEvent.KEYCODE_MEDIA_PLAY));
+
+            // Standard Android FM Tuner intent
+            sendBroadcast(new Intent("com.android.fm.play"));
+            sendBroadcast(new Intent("com.android.radio.PLAY"));
         } catch (Exception ignored) {}
     }
 
     private void sendRadioHardwarePauseBroadcasts() {
         try {
             sendBroadcast(new Intent("com.ts.radio.stop"));
+            sendBroadcast(new Intent("com.ts.radio.pause"));
+            sendBroadcast(new Intent("com.allwinner.radio.stop"));
+            sendBroadcast(new Intent("com.allwinner.radio.pause"));
             sendBroadcast(new Intent("com.microntek.radio.power"));
+            sendBroadcast(new Intent("com.microntek.radio.stop"));
+            sendBroadcast(new Intent("com.microntek.media.key").putExtra("keycode", KeyEvent.KEYCODE_MEDIA_PAUSE));
             sendBroadcast(new Intent("com.syu.radio.pause"));
             sendBroadcast(new Intent("action.hct.media.key").putExtra("keycode", KeyEvent.KEYCODE_MEDIA_PAUSE));
+            sendBroadcast(new Intent("com.android.fm.stop"));
         } catch (Exception ignored) {}
     }
 
@@ -1234,6 +1438,7 @@ public class MainActivity extends AppCompatActivity {
         if (viewMaps != null) {
             TextView navHeading = viewMaps.findViewById(R.id.tvNavHeadingBig);
             if (navHeading != null) navHeading.setTextColor(color);
+            if (btnOpenOsmAnd != null) btnOpenOsmAnd.setTextColor(color);
         }
 
         if (viewAudio != null) {
@@ -1258,6 +1463,7 @@ public class MainActivity extends AppCompatActivity {
         if (viewSetup != null) {
             if (btnSelectCarPlayApp != null) btnSelectCarPlayApp.setTextColor(color);
             if (btnSelectRadioApp != null) btnSelectRadioApp.setTextColor(color);
+            if (btnSelectMapApp != null) btnSelectMapApp.setTextColor(color);
             if (btnSelectDriverPhone != null) btnSelectDriverPhone.setTextColor(color);
 
             Button btnFactory = viewSetup.findViewById(R.id.btnShortcutFactorySettings);

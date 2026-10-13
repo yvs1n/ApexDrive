@@ -247,7 +247,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
-            android:text="INSTALLED NAVIGATION ENGINES"
+            android:text="PRIMARY NAVIGATION ENGINE"
             android:textColor="@color/cockpit_text_secondary"
             android:textSize="10sp"
             android:fontFamily="sans-serif-medium"
@@ -259,29 +259,42 @@
             android:layout_marginTop="6dp"
             android:background="@color/cockpit_surface_border_subtle" />
 
+        <!-- Primary Hero Button: OsmAnd Offline Navigation -->
         <Button
-            android:id="@+id/btnOpenGoogleMaps"
+            android:id="@+id/btnOpenOsmAnd"
             android:layout_width="match_parent"
-            android:layout_height="58dp"
+            android:layout_height="64dp"
             android:layout_marginTop="10dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="GOOGLE MAPS"
-            android:textColor="@color/cockpit_text_primary"
+            android:text="LAUNCH OSMAND OFFLINE"
+            android:textColor="@color/accent_amber"
             android:textSize="14sp"
             android:fontFamily="sans-serif-black"
             android:letterSpacing="0.08" />
 
-        <Button
-            android:id="@+id/btnOpenWaze"
+        <TextView
+            android:id="@+id/tvMapStatusBadge"
             android:layout_width="match_parent"
-            android:layout_height="58dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center"
+            android:text="● RADARS · ROAD BUMPS · OFFLINE LANES ACTIVE"
+            android:textColor="@color/status_active"
+            android:textSize="10sp"
+            android:fontFamily="sans-serif-bold"
+            android:letterSpacing="0.05" />
+
+        <Button
+            android:id="@+id/btnChooseMapApp"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="WAZE NAVIGATION"
-            android:textColor="@color/cockpit_text_primary"
-            android:textSize="14sp"
+            android:text="CHANGE DEFAULT MAP ENGINE"
+            android:textColor="@color/cockpit_text_secondary"
+            android:textSize="12sp"
             android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.08" />
+            android:letterSpacing="0.06" />
 
     </LinearLayout>
 

@@ -137,6 +137,25 @@ public class PreferenceHelper {
         prefs.edit().putFloat(KEY_TEMP_OFFSET, offset).apply();
     }
 
+    private static final String KEY_MAP_PACKAGE = "map_package";
+    private static final String KEY_MAP_NAME = "map_name";
+
+    public String getMapPackage() {
+        return prefs.getString(KEY_MAP_PACKAGE, "net.osmand.plus");
+    }
+
+    public void setMapPackage(String pkg) {
+        prefs.edit().putString(KEY_MAP_PACKAGE, pkg).apply();
+    }
+
+    public String getMapName() {
+        return prefs.getString(KEY_MAP_NAME, "OsmAnd Offline Maps");
+    }
+
+    public void setMapName(String name) {
+        prefs.edit().putString(KEY_MAP_NAME, name).apply();
+    }
+
     private static final String KEY_RECENT_APPS = "recent_apps_list";
 
     public List<String> getRecentApps() {
