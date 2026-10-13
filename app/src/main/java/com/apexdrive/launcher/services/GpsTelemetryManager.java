@@ -38,6 +38,10 @@ public class GpsTelemetryManager implements LocationListener {
         this.isMph = useMph;
     }
 
+    public Location getLastLocation() {
+        return lastLocation;
+    }
+
     public void resetTrip() {
         totalDistanceMeters = 0.0;
         lastLocation = null;

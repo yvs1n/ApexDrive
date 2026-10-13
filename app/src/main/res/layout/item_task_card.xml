@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="64dp"
+    android:layout_marginBottom="8dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_card_inner"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp">
+
+    <!-- App Icon -->
+    <ImageView
+        android:id="@+id/ivTaskIcon"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:scaleType="fitCenter"
+        android:contentDescription="App Icon" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvTaskName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CarPlay"
+            android:textColor="@color/cockpit_text_primary"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.02" />
+
+        <TextView
+            android:id="@+id/tvTaskStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Active in background"
+            android:textColor="@color/cockpit_text_secondary"
+            android:textSize="11sp"
+            android:fontFamily="sans-serif" />
+    </LinearLayout>
+
+    <!-- Switch Button -->
+    <Button
+        android:id="@+id/btnSwitchTask"
+        android:layout_width="wrap_content"
+        android:layout_height="42dp"
+        android:background="@drawable/bg_elevated_btn"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:text="SWITCH"
+        android:textColor="@color/accent_amber"
+        android:textSize="11sp"
+        android:fontFamily="sans-serif-black" />
+
+    <!-- Close Button -->
+    <Button
+        android:id="@+id/btnCloseTask"
+        android:layout_width="wrap_content"
+        android:layout_height="42dp"
+        android:layout_marginStart="8dp"
+        android:background="@drawable/bg_elevated_btn"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:text="CLOSE"
+        android:textColor="@color/accent_sport_red"
+        android:textSize="11sp"
+        android:fontFamily="sans-serif-black" />
+
+</LinearLayout>

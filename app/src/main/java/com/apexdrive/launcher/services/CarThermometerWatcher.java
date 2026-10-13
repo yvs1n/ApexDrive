@@ -8,6 +8,8 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
@@ -37,14 +39,19 @@ public class CarThermometerWatcher implements SensorEventListener {
     private final Handler pollHandler = new Handler(Looper.getMainLooper());
     private boolean isMph = false;
     private float currentTempC = 32.0f;
+    private float rawTempC = 32.0f;
     private String currentCondition = "OUTSIDE";
+    private String currentCity = "";
     private long lastOnlineFetchTime = 0;
+    private double lastFetchLat = 0.0;
+    private double lastFetchLon = 0.0;
 
     public CarThermometerWatcher(Context context, TemperatureListener listener) {
         this.context = context;
         this.listener = listener;
         this.prefHelper = new PreferenceHelper(context);
         this.currentTempC = prefHelper.getSavedTempCelsius();
+        this.rawTempC = this.currentTempC;
         this.currentCondition = prefHelper.getSavedCondition();
     }
 
@@ -57,8 +64,16 @@ public class CarThermometerWatcher implements SensorEventListener {
         return currentTempC;
     }
 
+    public float getRawTempCelsius() {
+        return rawTempC;
+    }
+
     public String getCurrentCondition() {
         return currentCondition;
+    }
+
+    public String getCurrentCity() {
+        return currentCity;
     }
 
     public void setManualTemp(float tempC, String condition) {
@@ -70,8 +85,16 @@ public class CarThermometerWatcher implements SensorEventListener {
         notifyTemp(currentTempC);
     }
 
+    public void setTempOffset(float offset) {
+        prefHelper.setTempOffset(offset);
+        this.currentTempC = this.rawTempC + offset;
+        prefHelper.setSavedTempCelsius(this.currentTempC);
+        notifyTemp(this.currentTempC);
+    }
+
     public void clearManualCalibration() {
         prefHelper.setManualTempCalibration(false);
+        prefHelper.setTempOffset(0.0f);
     }
 
     public boolean isManualCalibration() {
@@ -119,13 +142,79 @@ public class CarThermometerWatcher implements SensorEventListener {
         pollCanSettings();
         checkSystemProperties();
         startPeriodicPoll();
+
+        // Immediate automatic location-based weather sync on ignition / boot
+        if (prefHelper.isAutoWeatherEnabled()) {
+            triggerImmediateLocationWeatherSync();
+        }
+    }
+
+    public void triggerImmediateLocationWeatherSync() {
+        try {
+            LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+            Location last = null;
+            if (lm != null) {
+                last = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                if (last == null) last = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                if (last == null) last = lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
+            }
+            if (last != null && (last.getLatitude() != 0.0 || last.getLongitude() != 0.0)) {
+                fetchOnlineWeather(last.getLatitude(), last.getLongitude());
+            } else {
+                fetchIpGeolocationAndWeather();
+            }
+        } catch (Exception e) {
+            fetchIpGeolocationAndWeather();
+        }
+    }
+
+    public void onLocationUpdated(double latitude, double longitude) {
+        if (latitude == 0.0 && longitude == 0.0) return;
+        if (!prefHelper.isAutoWeatherEnabled() && prefHelper.isManualTempCalibration()) return;
+
+        long now = System.currentTimeMillis();
+        boolean timeElapsed = (now - lastOnlineFetchTime > 10 * 60 * 1000); // 10 minutes debounce
+        boolean distMoved = (Math.abs(latitude - lastFetchLat) > 0.03 || Math.abs(longitude - lastFetchLon) > 0.03); // ~3km
+        if (lastOnlineFetchTime == 0 || timeElapsed || distMoved) {
+            fetchOnlineWeather(latitude, longitude);
+        }
+    }
+
+    public void fetchIpGeolocationAndWeather() {
+        new Thread(() -> {
+            try {
+                URL url = new URL("http://ip-api.com/json");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setConnectTimeout(4000);
+                conn.setReadTimeout(4000);
+                if (conn.getResponseCode() == 200) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) sb.append(line);
+                    reader.close();
+                    JSONObject json = new JSONObject(sb.toString());
+                    if ("success".equalsIgnoreCase(json.optString("status"))) {
+                        double lat = json.optDouble("lat", 0.0);
+                        double lon = json.optDouble("lon", 0.0);
+                        String city = json.optString("city", "");
+                        if (!city.isEmpty()) {
+                            currentCity = city.toUpperCase(Locale.US);
+                        }
+                        if (lat != 0.0 && lon != 0.0) {
+                            fetchOnlineWeather(lat, lon);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }).start();
     }
 
     public void fetchOnlineWeather(double latitude, double longitude) {
-        if (prefHelper.isManualTempCalibration()) return;
-        long now = System.currentTimeMillis();
-        if (now - lastOnlineFetchTime < 180000) return; // 3 minutes debounce
-        lastOnlineFetchTime = now;
+        if (latitude == 0.0 && longitude == 0.0) return;
+        lastOnlineFetchTime = System.currentTimeMillis();
+        lastFetchLat = latitude;
+        lastFetchLon = longitude;
 
         new Thread(() -> {
             try {
@@ -153,16 +242,49 @@ public class CarThermometerWatcher implements SensorEventListener {
                         int code = cw.optInt("weathercode", 0);
                         String condition = mapWeatherCode(code);
 
-                        currentTempC = temp;
+                        rawTempC = temp;
+                        float offset = prefHelper.getTempOffset();
+                        currentTempC = temp + offset;
                         currentCondition = condition;
-                        prefHelper.setSavedTempCelsius(temp);
+                        prefHelper.setSavedTempCelsius(currentTempC);
                         prefHelper.setSavedCondition(condition);
+
+                        if (currentCity.isEmpty()) {
+                            resolveCityName(latitude, longitude);
+                        }
 
                         pollHandler.post(() -> notifyTemp(currentTempC));
                     }
                 }
             } catch (Exception ignored) {}
         }).start();
+    }
+
+    private void resolveCityName(double latitude, double longitude) {
+        try {
+            String geoUrl = String.format(Locale.US,
+                    "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=%.4f&longitude=%.4f&localityLanguage=en",
+                    latitude, longitude);
+            URL url = new URL(geoUrl);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(3000);
+            if (conn.getResponseCode() == 200) {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) sb.append(line);
+                reader.close();
+                JSONObject obj = new JSONObject(sb.toString());
+                String city = obj.optString("city", "");
+                if (city.isEmpty()) city = obj.optString("locality", "");
+                if (city.isEmpty()) city = obj.optString("principalSubdivision", "");
+                if (!city.isEmpty()) {
+                    currentCity = city.toUpperCase(Locale.US);
+                    pollHandler.post(() -> notifyTemp(currentTempC));
+                }
+            }
+        } catch (Exception ignored) {}
     }
 
     private String mapWeatherCode(int code) {
@@ -282,11 +404,12 @@ public class CarThermometerWatcher implements SensorEventListener {
     private void notifyTemp(float tempC) {
         if (listener == null) return;
         String formatted;
+        String desc = !currentCity.isEmpty() ? currentCity + " · " + currentCondition : currentCondition;
         if (isMph) {
             float tempF = (tempC * 9f / 5f) + 32f;
-            formatted = String.format(Locale.US, "%.0f°F · %s", tempF, currentCondition);
+            formatted = String.format(Locale.US, "%.0f°F · %s", tempF, desc);
         } else {
-            formatted = String.format(Locale.US, "%.0f°C · %s", tempC, currentCondition);
+            formatted = String.format(Locale.US, "%.0f°C · %s", tempC, desc);
         }
         listener.onTemperatureUpdated(formatted, tempC, currentCondition);
     }

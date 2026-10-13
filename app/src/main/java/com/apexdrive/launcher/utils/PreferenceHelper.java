@@ -3,6 +3,9 @@ package com.apexdrive.launcher.utils;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class PreferenceHelper {
     private static final String PREF_NAME = "apexdrive_settings";
     private static final String KEY_ACCENT_COLOR = "accent_color";
@@ -95,5 +98,91 @@ public class PreferenceHelper {
 
     public void setManualTempCalibration(boolean manual) {
         prefs.edit().putBoolean(KEY_MANUAL_TEMP_CALIBRATION, manual).apply();
+    }
+
+    private static final String KEY_RADIO_PACKAGE = "radio_package";
+    private static final String KEY_RADIO_NAME = "radio_name";
+    private static final String KEY_AUTO_WEATHER = "auto_weather";
+    private static final String KEY_TEMP_OFFSET = "temp_offset";
+
+    public String getRadioPackage() {
+        return prefs.getString(KEY_RADIO_PACKAGE, "");
+    }
+
+    public void setRadioPackage(String pkg) {
+        prefs.edit().putString(KEY_RADIO_PACKAGE, pkg).apply();
+    }
+
+    public String getRadioName() {
+        return prefs.getString(KEY_RADIO_NAME, "Built-in Radio");
+    }
+
+    public void setRadioName(String name) {
+        prefs.edit().putString(KEY_RADIO_NAME, name).apply();
+    }
+
+    public boolean isAutoWeatherEnabled() {
+        return prefs.getBoolean(KEY_AUTO_WEATHER, true);
+    }
+
+    public void setAutoWeatherEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_AUTO_WEATHER, enabled).apply();
+    }
+
+    public float getTempOffset() {
+        return prefs.getFloat(KEY_TEMP_OFFSET, 0.0f);
+    }
+
+    public void setTempOffset(float offset) {
+        prefs.edit().putFloat(KEY_TEMP_OFFSET, offset).apply();
+    }
+
+    private static final String KEY_RECENT_APPS = "recent_apps_list";
+
+    public List<String> getRecentApps() {
+        String raw = prefs.getString(KEY_RECENT_APPS, "");
+        List<String> list = new ArrayList<>();
+        if (!raw.isEmpty()) {
+            for (String p : raw.split(",")) {
+                String trimmed = p.trim();
+                if (!trimmed.isEmpty() && !list.contains(trimmed)) {
+                    list.add(trimmed);
+                }
+            }
+        }
+        return list;
+    }
+
+    public void addRecentApp(String pkg) {
+        if (pkg == null || pkg.trim().isEmpty()) return;
+        List<String> list = getRecentApps();
+        list.remove(pkg);
+        list.add(0, pkg);
+        while (list.size() > 15) {
+            list.remove(list.size() - 1);
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < list.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append(list.get(i));
+        }
+        prefs.edit().putString(KEY_RECENT_APPS, sb.toString()).apply();
+    }
+
+    public void removeRecentApp(String pkg) {
+        if (pkg == null || pkg.trim().isEmpty()) return;
+        List<String> list = getRecentApps();
+        if (list.remove(pkg)) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) sb.append(",");
+                sb.append(list.get(i));
+            }
+            prefs.edit().putString(KEY_RECENT_APPS, sb.toString()).apply();
+        }
+    }
+
+    public void clearRecentApps() {
+        prefs.edit().remove(KEY_RECENT_APPS).apply();
     }
 }

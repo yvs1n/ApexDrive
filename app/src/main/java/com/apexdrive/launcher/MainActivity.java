@@ -2,6 +2,7 @@ package com.apexdrive.launcher;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.ActivityManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
@@ -9,11 +10,13 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.ColorStateList;
 import android.graphics.PorterDuff;
 import android.graphics.Typeface;
+import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
@@ -58,8 +61,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -97,6 +103,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvTrackTitle, tvTrackArtist, tvCarPlayProtocol;
     private Button btnMediaPlayPause;
     private Button btnSelectCarPlayApp;
+    private Button btnSelectRadioApp;
     private Button btnToggleUnit;
     private Button btnSelectDriverPhone;
     private boolean isRadioPlaying = false;
@@ -199,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
         ivHeaderRecentsIcon = findViewById(R.id.ivHeaderRecentsIcon);
         tvHeaderRecentsText = findViewById(R.id.tvHeaderRecentsText);
         if (btnHeaderRecents != null) {
-            btnHeaderRecents.setOnClickListener(v -> openRecentApps());
+            btnHeaderRecents.setOnClickListener(v -> showActiveAppsSwitcherDialog());
         }
 
         tvClock = findViewById(R.id.tvClock);
@@ -264,7 +271,212 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void openRecentApps() {
+    private void showActiveAppsSwitcherDialog() {
+        if (isFinishing()) return;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_task_switcher, null);
+        builder.setView(dialogView);
+        AlertDialog dialog = builder.create();
+
+        ImageView ivSwitcherIcon = dialogView.findViewById(R.id.ivSwitcherIcon);
+        TextView tvRecentsBadge = dialogView.findViewById(R.id.tvRecentsBadge);
+        TextView tvNoRecentTasks = dialogView.findViewById(R.id.tvNoRecentTasks);
+        LinearLayout llTasksList = dialogView.findViewById(R.id.llTasksList);
+        Button btnCloseAllTasks = dialogView.findViewById(R.id.btnCloseAllTasks);
+        Button btnSystemRecents = dialogView.findViewById(R.id.btnSystemRecents);
+        Button btnDismissSwitcher = dialogView.findViewById(R.id.btnDismissSwitcher);
+
+        int accentColor = prefHelper.getAccentColor();
+        if (ivSwitcherIcon != null) {
+            ivSwitcherIcon.setColorFilter(accentColor, PorterDuff.Mode.SRC_IN);
+        }
+        if (tvRecentsBadge != null) {
+            tvRecentsBadge.setTextColor(accentColor);
+        }
+
+        ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        PackageManager pm = getPackageManager();
+
+        // 1. Collect currently running background processes
+        Set<String> runningPackages = new HashSet<>();
+        if (am != null) {
+            try {
+                List<ActivityManager.RunningAppProcessInfo> runningProcesses = am.getRunningAppProcesses();
+                if (runningProcesses != null) {
+                    for (ActivityManager.RunningAppProcessInfo proc : runningProcesses) {
+                        if (proc.pkgList != null) {
+                            for (String pkg : proc.pkgList) {
+                                if (!isSystemOrSelfPackage(pkg)) {
+                                    runningPackages.add(pkg);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // 2. Merge with recent apps saved by launcher
+        List<String> storedRecents = prefHelper.getRecentApps();
+        LinkedHashSet<String> combinedPackages = new LinkedHashSet<>();
+        for (String pkg : runningPackages) {
+            combinedPackages.add(pkg);
+        }
+        for (String pkg : storedRecents) {
+            if (!isSystemOrSelfPackage(pkg)) {
+                combinedPackages.add(pkg);
+            }
+        }
+
+        List<String> taskList = new ArrayList<>(combinedPackages);
+        if (taskList.size() > 12) {
+            taskList = taskList.subList(0, 12);
+        }
+
+        llTasksList.removeAllViews();
+        int activeCount = 0;
+
+        for (String pkg : taskList) {
+            try {
+                ApplicationInfo appInfo = pm.getApplicationInfo(pkg, 0);
+                CharSequence label = pm.getApplicationLabel(appInfo);
+                android.graphics.drawable.Drawable icon = pm.getApplicationIcon(appInfo);
+
+                boolean isRunning = runningPackages.contains(pkg);
+                if (isRunning) activeCount++;
+
+                View cardView = LayoutInflater.from(this).inflate(R.layout.item_task_card, llTasksList, false);
+                ImageView ivIcon = cardView.findViewById(R.id.ivTaskIcon);
+                TextView tvName = cardView.findViewById(R.id.tvTaskName);
+                TextView tvStatus = cardView.findViewById(R.id.tvTaskStatus);
+                Button btnSwitch = cardView.findViewById(R.id.btnSwitchTask);
+                Button btnClose = cardView.findViewById(R.id.btnCloseTask);
+
+                if (ivIcon != null) ivIcon.setImageDrawable(icon);
+                if (tvName != null) tvName.setText(label);
+                if (tvStatus != null) {
+                    if (isRunning) {
+                        tvStatus.setText("RUNNING IN BACKGROUND");
+                        tvStatus.setTextColor(accentColor);
+                    } else {
+                        tvStatus.setText("RECENT TASK · READY");
+                        tvStatus.setTextColor(ContextCompat.getColor(this, R.color.cockpit_text_secondary));
+                    }
+                }
+
+                if (btnSwitch != null) {
+                    btnSwitch.setTextColor(accentColor);
+                    btnSwitch.setOnClickListener(v -> {
+                        dialog.dismiss();
+                        recordRecentApp(pkg);
+                        launchAppPackage(pkg);
+                    });
+                }
+
+                if (btnClose != null) {
+                    btnClose.setOnClickListener(v -> {
+                        if (am != null) {
+                            try {
+                                am.killBackgroundProcesses(pkg);
+                            } catch (Exception ignored) {}
+                        }
+                        try {
+                            Runtime.getRuntime().exec("am force-stop " + pkg);
+                        } catch (Exception ignored) {}
+                        try {
+                            sendBroadcast(new Intent("com.microntek.kill").putExtra("pkg", pkg));
+                        } catch (Exception ignored) {}
+                        prefHelper.removeRecentApp(pkg);
+                        llTasksList.removeView(cardView);
+                        Toast.makeText(this, label + " closed · Memory released", Toast.LENGTH_SHORT).show();
+                        if (llTasksList.getChildCount() == 0) {
+                            if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.VISIBLE);
+                            if (tvRecentsBadge != null) tvRecentsBadge.setText("OPTIMIZED");
+                            if (btnCloseAllTasks != null) btnCloseAllTasks.setEnabled(false);
+                        } else {
+                            if (tvRecentsBadge != null) {
+                                tvRecentsBadge.setText(llTasksList.getChildCount() + " TASKS");
+                            }
+                        }
+                    });
+                }
+
+                llTasksList.addView(cardView);
+            } catch (PackageManager.NameNotFoundException ignored) {
+                prefHelper.removeRecentApp(pkg);
+            }
+        }
+
+        if (llTasksList.getChildCount() == 0) {
+            if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.VISIBLE);
+            if (tvRecentsBadge != null) tvRecentsBadge.setText("OPTIMIZED");
+            if (btnCloseAllTasks != null) btnCloseAllTasks.setEnabled(false);
+        } else {
+            if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.GONE);
+            if (tvRecentsBadge != null) {
+                tvRecentsBadge.setText(activeCount > 0 ? activeCount + " RUNNING" : llTasksList.getChildCount() + " RECENT");
+            }
+            if (btnCloseAllTasks != null) {
+                btnCloseAllTasks.setEnabled(true);
+                final List<String> finalTaskList = new ArrayList<>(taskList);
+                btnCloseAllTasks.setOnClickListener(v -> {
+                    if (am != null) {
+                        for (String p : finalTaskList) {
+                            try {
+                                am.killBackgroundProcesses(p);
+                            } catch (Exception ignored) {}
+                            try {
+                                Runtime.getRuntime().exec("am force-stop " + p);
+                            } catch (Exception ignored) {}
+                        }
+                    }
+                    prefHelper.clearRecentApps();
+                    llTasksList.removeAllViews();
+                    if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.VISIBLE);
+                    if (tvRecentsBadge != null) tvRecentsBadge.setText("RAM OPTIMIZED");
+                    btnCloseAllTasks.setEnabled(false);
+                    Toast.makeText(this, "All background tasks closed · Head unit RAM freed", Toast.LENGTH_SHORT).show();
+                });
+            }
+        }
+
+        if (btnSystemRecents != null) {
+            btnSystemRecents.setOnClickListener(v -> {
+                dialog.dismiss();
+                triggerSystemRecents();
+            });
+        }
+
+        if (btnDismissSwitcher != null) {
+            btnDismissSwitcher.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+            int width = (int) (getResources().getDisplayMetrics().widthPixels * 0.75);
+            dialog.getWindow().setLayout(Math.max(width, 540), android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private boolean isSystemOrSelfPackage(String pkg) {
+        if (pkg == null || pkg.isEmpty()) return true;
+        if (pkg.equals(getPackageName())) return true;
+        return pkg.equals("android") ||
+                pkg.equals("com.android.systemui") ||
+                pkg.startsWith("com.google.android.inputmethod") ||
+                pkg.startsWith("com.android.inputmethod") ||
+                pkg.equals("com.android.phone");
+    }
+
+    private void recordRecentApp(String pkg) {
+        if (!isSystemOrSelfPackage(pkg)) {
+            prefHelper.addRecentApp(pkg);
+        }
+    }
+
+    private void triggerSystemRecents() {
         // 1. Direct root / shell keyevent for KEYCODE_APP_SWITCH (187)
         try {
             Runtime.getRuntime().exec("input keyevent 187");
@@ -509,28 +721,29 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     // 1. Wake up vendor radio hardware tuner IC
-                    try {
-                        sendBroadcast(new Intent("com.ts.radio.start"));
-                        sendBroadcast(new Intent("com.microntek.radio.power"));
-                        sendBroadcast(new Intent("com.syu.radio.play"));
-                        sendBroadcast(new Intent("action.hct.media.key").putExtra("keycode", KeyEvent.KEYCODE_MEDIA_PLAY));
-                    } catch (Exception ignored) {}
+                    sendRadioHardwareBroadcasts(tvFreq.getText().toString());
 
-                    // 2. Launch radio application so audio channel is open
-                    String[] radioPackages = {"com.ts.radio", "com.microntek.radio", "com.syu.radio", "com.android.radio", "com.autonavi.radio", "com.car.radio"};
+                    // 2. Launch configured or auto-detected radio tuner application
+                    String configuredPkg = prefHelper.getRadioPackage();
                     boolean launched = false;
-                    for (String pkg : radioPackages) {
-                        if (launchAppPackage(pkg)) {
-                            launched = true;
-                            break;
-                        }
+                    if (configuredPkg != null && !configuredPkg.isEmpty()) {
+                        launched = launchAppPackage(configuredPkg);
                     }
                     if (!launched) {
-                        try {
-                            Intent musicIntent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_MUSIC);
-                            musicIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            startActivity(musicIntent);
-                        } catch (Exception ignored) {}
+                        String detectedPkg = findInstalledRadioPackage();
+                        if (detectedPkg != null) {
+                            prefHelper.setRadioPackage(detectedPkg);
+                            try {
+                                ApplicationInfo ai = getPackageManager().getApplicationInfo(detectedPkg, 0);
+                                prefHelper.setRadioName(getPackageManager().getApplicationLabel(ai).toString());
+                            } catch (Exception ignored) {}
+                            launched = launchAppPackage(detectedPkg);
+                        }
+                    }
+
+                    if (!launched) {
+                        Toast.makeText(this, "Radio app not found. Select your car's tuner app below.", Toast.LENGTH_LONG).show();
+                        showRadioPicker();
                     }
 
                     // 3. Update dashboard track display
@@ -544,11 +757,7 @@ public class MainActivity extends AppCompatActivity {
                         tvPreset.setText("STANDBY");
                     }
                     MediaSyncService.pauseAllMedia(this);
-                    try {
-                        sendBroadcast(new Intent("com.ts.radio.stop"));
-                        sendBroadcast(new Intent("com.microntek.radio.power"));
-                        sendBroadcast(new Intent("action.hct.media.key").putExtra("keycode", KeyEvent.KEYCODE_MEDIA_PAUSE));
-                    } catch (Exception ignored) {}
+                    sendRadioHardwarePauseBroadcasts();
                     if (btnMediaPlayPause != null) btnMediaPlayPause.setText("PLAY");
                 }
             });
@@ -697,6 +906,12 @@ public class MainActivity extends AppCompatActivity {
         btnSelectCarPlayApp = viewSetup.findViewById(R.id.btnSelectCarPlayApp);
         btnSelectCarPlayApp.setText(prefHelper.getCarPlayName());
         btnSelectCarPlayApp.setOnClickListener(v -> showCarPlayPicker());
+
+        btnSelectRadioApp = viewSetup.findViewById(R.id.btnSelectRadioApp);
+        if (btnSelectRadioApp != null) {
+            btnSelectRadioApp.setText(prefHelper.getRadioName());
+            btnSelectRadioApp.setOnClickListener(v -> showRadioPicker());
+        }
 
         btnToggleUnit = viewSetup.findViewById(R.id.btnToggleUnit);
         btnToggleUnit.setText(prefHelper.getSpeedUnit());
@@ -853,6 +1068,135 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, "CarPlay set to: " + name, Toast.LENGTH_SHORT).show();
     }
 
+    private void showRadioPicker() {
+        final List<AppInfo> apps = loadInstalledApps();
+        List<String> names = new ArrayList<>();
+        final List<String> packages = new ArrayList<>();
+
+        String[] known = {
+                "Allwinner Radio (com.allwinner.radio)",
+                "SYU Radio (com.syu.radio)",
+                "TopWay Radio (com.ts.radio)",
+                "Microntek Radio (com.microntek.radio)",
+                "Android Radio Tuner (com.android.radio)",
+                "Car FM Tuner (com.car.radio)"
+        };
+        String[] knownPkgs = {
+                "com.allwinner.radio",
+                "com.syu.radio",
+                "com.ts.radio",
+                "com.microntek.radio",
+                "com.android.radio",
+                "com.car.radio"
+        };
+        for (int i = 0; i < known.length; i++) {
+            names.add(known[i]);
+            packages.add(knownPkgs[i]);
+        }
+
+        for (AppInfo app : apps) {
+            if (!packages.contains(app.getPackageName())) {
+                names.add(app.getLabel() + " (" + app.getPackageName() + ")");
+                packages.add(app.getPackageName());
+            }
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Select Radio Tuner App");
+        builder.setItems(names.toArray(new String[0]), (dialog, which) -> {
+            String selectedPkg = packages.get(which);
+            String selectedName = names.get(which).split(" \\(")[0];
+            saveRadioApp(selectedPkg, selectedName);
+        });
+        builder.show();
+    }
+
+    private void saveRadioApp(String pkg, String name) {
+        prefHelper.setRadioPackage(pkg);
+        prefHelper.setRadioName(name);
+        if (btnSelectRadioApp != null) {
+            btnSelectRadioApp.setText(name);
+        }
+        Toast.makeText(this, "Radio Tuner set to: " + name, Toast.LENGTH_SHORT).show();
+    }
+
+    private String findInstalledRadioPackage() {
+        PackageManager pm = getPackageManager();
+        String[] knownRadioPackages = {
+                "com.allwinner.radio",
+                "com.softwinner.radio",
+                "com.syu.radio",
+                "com.ts.radio",
+                "com.microntek.radio",
+                "com.microntek.fm",
+                "com.android.radio",
+                "com.car.radio",
+                "com.car.fm",
+                "com.autonavi.radio",
+                "com.hct.radio",
+                "com.xy.radio",
+                "com.mediatek.radio",
+                "com.nwd.radio",
+                "com.yecon.radio",
+                "com.forfan.radio",
+                "com.sds.radio",
+                "cn.flyaudio.radio",
+                "com.roadrover.radio",
+                "com.chaochuang.radio",
+                "com.tw.radio",
+                "com.t3.radio",
+                "com.dingwei.radio"
+        };
+        for (String pkg : knownRadioPackages) {
+            try {
+                pm.getPackageInfo(pkg, 0);
+                return pkg;
+            } catch (PackageManager.NameNotFoundException ignored) {}
+        }
+
+        Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
+        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        List<ResolveInfo> apps = pm.queryIntentActivities(mainIntent, 0);
+        if (apps != null) {
+            for (ResolveInfo info : apps) {
+                String pkg = info.activityInfo.packageName;
+                if (pkg.equals(getPackageName())) continue;
+                String label = info.loadLabel(pm).toString().toLowerCase(Locale.US);
+                String pkgLower = pkg.toLowerCase(Locale.US);
+                if (pkgLower.contains("radio") || pkgLower.contains("tuner") ||
+                        label.contains("radio") || label.contains("fm tuner") || label.equals("fm")) {
+                    return pkg;
+                }
+            }
+        }
+        return null;
+    }
+
+    private void sendRadioHardwareBroadcasts(String freqStr) {
+        try {
+            int freqKhz = 87500;
+            try {
+                freqKhz = (int) (Double.parseDouble(freqStr) * 1000);
+            } catch (Exception ignored) {}
+            sendBroadcast(new Intent("com.ts.radio.start"));
+            sendBroadcast(new Intent("com.ts.radio.tune").putExtra("freq", freqKhz));
+            sendBroadcast(new Intent("com.microntek.radio.power"));
+            sendBroadcast(new Intent("com.microntek.radio.tune").putExtra("freq", freqKhz));
+            sendBroadcast(new Intent("com.syu.radio.play"));
+            sendBroadcast(new Intent("com.allwinner.radio.power"));
+            sendBroadcast(new Intent("action.hct.media.key").putExtra("keycode", KeyEvent.KEYCODE_MEDIA_PLAY));
+        } catch (Exception ignored) {}
+    }
+
+    private void sendRadioHardwarePauseBroadcasts() {
+        try {
+            sendBroadcast(new Intent("com.ts.radio.stop"));
+            sendBroadcast(new Intent("com.microntek.radio.power"));
+            sendBroadcast(new Intent("com.syu.radio.pause"));
+            sendBroadcast(new Intent("action.hct.media.key").putExtra("keycode", KeyEvent.KEYCODE_MEDIA_PAUSE));
+        } catch (Exception ignored) {}
+    }
+
     private void applyAccentColor(int color) {
         prefHelper.setAccentColor(color);
 
@@ -913,6 +1257,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (viewSetup != null) {
             if (btnSelectCarPlayApp != null) btnSelectCarPlayApp.setTextColor(color);
+            if (btnSelectRadioApp != null) btnSelectRadioApp.setTextColor(color);
             if (btnSelectDriverPhone != null) btnSelectDriverPhone.setTextColor(color);
 
             Button btnFactory = viewSetup.findViewById(R.id.btnShortcutFactorySettings);
@@ -1027,7 +1372,7 @@ public class MainActivity extends AppCompatActivity {
                         tvNavAccuracy.setText(String.format(Locale.US, "● 3D Fix · ±%.1fm", accuracyMeters));
                     }
                     if (thermometerWatcher != null && Math.abs(latitude) > 0.01 && Math.abs(longitude) > 0.01) {
-                        thermometerWatcher.fetchOnlineWeather(latitude, longitude);
+                        thermometerWatcher.onLocationUpdated(latitude, longitude);
                     }
                 });
             }
@@ -1271,15 +1616,24 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog dialog = builder.create();
 
         btnSyncGps.setOnClickListener(v -> {
+            prefHelper.setAutoWeatherEnabled(true);
             thermometerWatcher.clearManualCalibration();
-            thermometerWatcher.fetchOnlineWeather(24.4539, 54.3773);
-            Toast.makeText(this, "Fetching live online weather via GPS...", Toast.LENGTH_SHORT).show();
+            Location loc = (gpsManager != null) ? gpsManager.getLastLocation() : null;
+            if (loc != null && Math.abs(loc.getLatitude()) > 0.01 && Math.abs(loc.getLongitude()) > 0.01) {
+                thermometerWatcher.onLocationUpdated(loc.getLatitude(), loc.getLongitude());
+            } else {
+                thermometerWatcher.triggerImmediateLocationWeatherSync();
+            }
+            Toast.makeText(this, "Auto GPS weather enabled · Updating for vehicle location...", Toast.LENGTH_SHORT).show();
             dialog.dismiss();
         });
 
         btnSave.setOnClickListener(v -> {
-            thermometerWatcher.setManualTemp(tempHolder[0], "DASHBOARD");
-            Toast.makeText(this, String.format(Locale.US, "Locked to %.0f°C (Matches car dashboard)", tempHolder[0]), Toast.LENGTH_SHORT).show();
+            float raw = thermometerWatcher.getRawTempCelsius();
+            float target = tempHolder[0];
+            float offset = target - raw;
+            thermometerWatcher.setTempOffset(offset);
+            Toast.makeText(this, String.format(Locale.US, "Calibrated: offset set to %+.1f°C (Matches car dashboard)", offset), Toast.LENGTH_SHORT).show();
             dialog.dismiss();
         });
 
@@ -1708,6 +2062,7 @@ public class MainActivity extends AppCompatActivity {
                 intent.setComponent(new ComponentName(app.getPackageName(), app.getActivityName()));
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
                 startActivity(intent);
+                recordRecentApp(app.getPackageName());
                 return true;
             }
         } catch (Exception ignored) {}
@@ -1722,6 +2077,7 @@ public class MainActivity extends AppCompatActivity {
             if (intent != null) {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
                 startActivity(intent);
+                recordRecentApp(packageName);
                 return true;
             }
 
@@ -1737,6 +2093,7 @@ public class MainActivity extends AppCompatActivity {
                 launchIntent.setComponent(cn);
                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
                 startActivity(launchIntent);
+                recordRecentApp(packageName);
                 return true;
             }
         } catch (Exception e) {

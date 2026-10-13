@@ -108,6 +108,36 @@
                 android:paddingEnd="20dp" />
         </LinearLayout>
 
+        <!-- Radio App Selection -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Radio Tuner App"
+                android:textColor="@color/cockpit_text_primary"
+                android:textSize="13sp"
+                android:fontFamily="sans-serif-medium" />
+
+            <Button
+                android:id="@+id/btnSelectRadioApp"
+                android:layout_width="wrap_content"
+                android:layout_height="52dp"
+                android:background="@drawable/bg_elevated_btn"
+                android:text="Auto Tuner"
+                android:textColor="@color/accent_amber"
+                android:textSize="13sp"
+                android:fontFamily="sans-serif-black"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp" />
+        </LinearLayout>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
