@@ -76,14 +76,33 @@ public class BluetoothWatcher {
                 if (intent == null || intent.getAction() == null) return;
                 String action = intent.getAction();
 
-                if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action) ||
-                        "android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED".equals(action) ||
-                        "android.bluetooth.headset.profile.action.CONNECTION_STATE_CHANGED".equals(action) ||
+                boolean isProfileChange = "android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED".equals(action) ||
+                        "android.bluetooth.headset.profile.action.CONNECTION_STATE_CHANGED".equals(action);
+                int profileState = isProfileChange ? intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1) : -1;
+
+                boolean isConnectedAction = BluetoothDevice.ACTION_ACL_CONNECTED.equals(action) ||
+                        (isProfileChange && profileState == BluetoothProfile.STATE_CONNECTED) ||
                         "com.goc.bluetooth.connected".equals(action) ||
                         "com.android.ecar.bluetooth.connected".equals(action) ||
                         "com.syu.bt.connected".equals(action) ||
-                        "action.hct.bt.connected".equals(action)) {
+                        "action.hct.bt.connected".equals(action) ||
+                        "com.ts.bt.connected".equals(action) ||
+                        "com.microntek.bt.connected".equals(action) ||
+                        "com.allwinner.bt.connected".equals(action);
 
+                boolean isDisconnectedAction = BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action) ||
+                        BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED.equals(action) ||
+                        (isProfileChange && profileState == BluetoothProfile.STATE_DISCONNECTED) ||
+                        "com.goc.bluetooth.disconnected".equals(action) ||
+                        "com.syu.bt.disconnected".equals(action) ||
+                        "action.hct.bt.disconnected".equals(action) ||
+                        "com.ts.bt.disconnected".equals(action) ||
+                        "com.microntek.bt.disconnected".equals(action) ||
+                        "com.allwinner.bt.disconnected".equals(action) ||
+                        BluetoothAdapter.ACTION_STATE_CHANGED.equals(action) ||
+                        BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED.equals(action);
+
+                if (isConnectedAction) {
                     BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                     if (device == null && intent.hasExtra("address")) {
                         String addr = intent.getStringExtra("address");
@@ -100,12 +119,7 @@ public class BluetoothWatcher {
                         checkCurrentState();
                     }
 
-                } else if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action) ||
-                        "com.goc.bluetooth.disconnected".equals(action) ||
-                        "com.syu.bt.disconnected".equals(action) ||
-                        BluetoothAdapter.ACTION_STATE_CHANGED.equals(action) ||
-                        BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED.equals(action)) {
-
+                } else if (isDisconnectedAction) {
                     BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                     if (device != null && pendingConnectDevice != null &&
                             device.getAddress().equalsIgnoreCase(pendingConnectDevice.getAddress())) {
@@ -131,6 +145,7 @@ public class BluetoothWatcher {
         IntentFilter filter = new IntentFilter();
         filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
         filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+        filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED);
         filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
         filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
         filter.addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED);
@@ -142,6 +157,13 @@ public class BluetoothWatcher {
         filter.addAction("com.syu.bt.connected");
         filter.addAction("com.syu.bt.disconnected");
         filter.addAction("action.hct.bt.connected");
+        filter.addAction("action.hct.bt.disconnected");
+        filter.addAction("com.ts.bt.connected");
+        filter.addAction("com.ts.bt.disconnected");
+        filter.addAction("com.microntek.bt.connected");
+        filter.addAction("com.microntek.bt.disconnected");
+        filter.addAction("com.allwinner.bt.connected");
+        filter.addAction("com.allwinner.bt.disconnected");
 
         try {
             context.registerReceiver(receiver, filter);
@@ -192,6 +214,18 @@ public class BluetoothWatcher {
             if (isConn != null && isConn) {
                 connectedDevice = device;
                 return true;
+            }
+        } catch (Exception ignored) {}
+
+        // Profile connection verification
+        try {
+            int a2dpState = bluetoothAdapter.getProfileConnectionState(BluetoothProfile.A2DP);
+            int headsetState = bluetoothAdapter.getProfileConnectionState(BluetoothProfile.HEADSET);
+            if (a2dpState == BluetoothAdapter.STATE_CONNECTED || headsetState == BluetoothAdapter.STATE_CONNECTED) {
+                if (pendingConnectDevice != null && device.getAddress().equalsIgnoreCase(pendingConnectDevice.getAddress())) {
+                    connectedDevice = device;
+                    return true;
+                }
             }
         } catch (Exception ignored) {}
 
@@ -247,31 +281,23 @@ public class BluetoothWatcher {
         pendingCallback = callback;
         callback.onConnecting(target);
 
-        // Schedule timeout at 7.5 seconds
-        pollHandler.postDelayed(pendingTimeoutRunnable, 7500);
+        // Schedule timeout at 12.0 seconds (adequate time for automotive head unit Bluetooth negotiation)
+        pollHandler.postDelayed(pendingTimeoutRunnable, 12000);
 
-        // Check intermittently at 2s and 4s in case reflection detects connection before broadcast arrives
-        pollHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (pendingConnectDevice != null && pendingCallback != null && target.equals(pendingConnectDevice)) {
-                    if (isDeviceCurrentlyConnected(target)) {
-                        confirmConnected(target);
+        // Check intermittently at 1.5s, 3.5s, 6.0s, 8.5s, and 10.5s in case reflection detects connection before broadcast
+        long[] checkIntervals = {1500, 3500, 6000, 8500, 10500};
+        for (long delay : checkIntervals) {
+            pollHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (pendingConnectDevice != null && pendingCallback != null && target.equals(pendingConnectDevice)) {
+                        if (isDeviceCurrentlyConnected(target)) {
+                            confirmConnected(target);
+                        }
                     }
                 }
-            }
-        }, 2200);
-
-        pollHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (pendingConnectDevice != null && pendingCallback != null && target.equals(pendingConnectDevice)) {
-                    if (isDeviceCurrentlyConnected(target)) {
-                        confirmConnected(target);
-                    }
-                }
-            }
-        }, 4400);
+            }, delay);
+        }
 
         // Attempt 1: A2DP Profile Proxy connect via reflection
         try {
@@ -344,7 +370,10 @@ public class BluetoothWatcher {
                 "com.syu.bt.connect",
                 "action.hct.bt.connect",
                 "com.ts.bt.connect",
-                "com.microntek.bt.connect"
+                "com.microntek.bt.connect",
+                "com.allwinner.bt.connect",
+                "cn.manstep.phonemirrorbox.bt.connect",
+                "com.zjinnova.zlink.bt.connect"
         };
 
         for (String action : actions) {

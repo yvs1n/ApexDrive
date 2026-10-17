@@ -22,6 +22,7 @@
     <!-- Status Colors -->
     <color name="status_active">#22C55E</color>
     <color name="status_inactive">#6B7280</color>
+    <color name="status_error">#EF4444</color>
 
     <!-- Apple CarPlay Tokens (Automotive HIG) -->
     <color name="cp_bg">#0B0D13</color>

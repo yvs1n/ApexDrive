@@ -387,6 +387,7 @@
         android:orientation="vertical"
         android:gravity="center"
         android:background="@color/cockpit_surface_base"
+        android:visibility="gone"
         android:clickable="true"
         android:focusable="true">
 

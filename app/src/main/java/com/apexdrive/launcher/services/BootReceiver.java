@@ -3,16 +3,18 @@ package com.apexdrive.launcher.services;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-
-import com.apexdrive.launcher.MainActivity;
+import android.util.Log;
 
 public class BootReceiver extends BroadcastReceiver {
+    private static final String TAG = "ApexDriveBoot";
+
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
-            Intent launchIntent = new Intent(context, MainActivity.class);
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(launchIntent);
+        if (intent != null && Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
+            // Launcher lifecycle is natively managed by Android's WindowManager and ActivityManager
+            // based on the user's HOME settings. We intentionally do NOT force startActivity() here
+            // to prevent stealing screen focus from boot apps or causing duplicate activity loads.
+            Log.d(TAG, "BOOT_COMPLETED received. Keeping foreground intact.");
         }
     }
 }

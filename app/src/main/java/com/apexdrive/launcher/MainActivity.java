@@ -143,23 +143,10 @@ public class MainActivity extends AppCompatActivity {
         showView(viewDash, railBtnDash);
         applyAccentColor(prefHelper.getAccentColor());
 
-        // Graceful Cockpit Boot: Keep loader visible for 1.1s while HAL/subsystems initialize, then smoothly fade out
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            if (layoutStartupLoader != null) {
-                layoutStartupLoader.animate()
-                        .alpha(0f)
-                        .setDuration(350)
-                        .withEndAction(() -> layoutStartupLoader.setVisibility(View.GONE))
-                        .start();
-            }
-        }, 1100);
-
-        // Show driver phone selector after telemetry stabilizes and Bluetooth stack powers on
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            if (!isFinishing() && !isCarPlayConnected) {
-                showDeviceSelectorDialog(true);
-            }
-        }, 1300);
+        // Instant Cockpit Display: Hide startup loader immediately so interface is ready without delay
+        if (layoutStartupLoader != null) {
+            layoutStartupLoader.setVisibility(View.GONE);
+        }
     }
 
     private void makeFullScreen() {
@@ -261,7 +248,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (pillHeaderBluetooth != null) {
             pillHeaderBluetooth.setOnClickListener(v -> {
-                if (isCarPlayConnected) {
+                if (isCarPlayConnected && btWatcher != null && btWatcher.getConnectedDevice() != null) {
                     launchCarPlay();
                 } else {
                     showDeviceSelectorDialog(false);
@@ -555,7 +542,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (cardBluetooth != null) {
             cardBluetooth.setOnClickListener(v -> {
-                if (isCarPlayConnected) {
+                if (isCarPlayConnected && btWatcher != null && btWatcher.getConnectedDevice() != null) {
                     launchCarPlay();
                 } else {
                     showDeviceSelectorDialog(false);
@@ -1613,6 +1600,7 @@ public class MainActivity extends AppCompatActivity {
     private void initBluetooth() {
         btWatcher = new BluetoothWatcher(this);
         btWatcher.setListener((isConnected, deviceName, details) -> runOnUiThread(() -> {
+            isCarPlayConnected = isConnected;
             if (isConnected) {
                 updateConnectedPhoneUi(deviceName, details);
             } else {
@@ -2080,6 +2068,8 @@ public class MainActivity extends AppCompatActivity {
             }
 
             View.OnClickListener selectListener = v -> {
+                if (isBtConnecting) return;
+
                 cleanupDialogBtReceivers();
                 if (deviceSelectorTimer != null) {
                     deviceSelectorTimer.cancel();
@@ -2087,28 +2077,112 @@ public class MainActivity extends AppCompatActivity {
                     if (tvCountdown != null) tvCountdown.setVisibility(View.GONE);
                 }
 
-                prefHelper.setSelectedDriverDevice(device.getAddress());
-                tvStatus.setText("CONNECTING CARPLAY TO " + name.toUpperCase() + "...");
-                tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
-                tvName.setTextColor(accentColor);
-                btnConnect.setText("LAUNCHING");
-                btnConnect.setTextColor(accentColor);
-
-                // Signal head unit Bluetooth to bond / link
-                if (btWatcher != null) {
-                    btWatcher.signalConnect(device);
-                }
-
-                isCarPlayConnected = true;
-                updateConnectedPhoneUi(name, "CARPLAY LINK");
-                Toast.makeText(MainActivity.this, "Connecting " + name + " to CarPlay...", Toast.LENGTH_SHORT).show();
-
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                // If this device is ALREADY verified as connected
+                if (btWatcher != null && btWatcher.isDeviceCurrentlyConnected(device)) {
+                    prefHelper.setSelectedDriverDevice(device.getAddress());
+                    isCarPlayConnected = true;
+                    updateConnectedPhoneUi(name, "CONNECTED · CARPLAY READY");
+                    Toast.makeText(MainActivity.this, name + " is connected. Starting CarPlay...", Toast.LENGTH_SHORT).show();
                     if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
                         deviceSelectorDialog.dismiss();
                     }
                     launchCarPlay();
-                }, 400);
+                    return;
+                }
+
+                // Device is not yet connected: initiate real connection and gate CarPlay launch on success
+                isBtConnecting = true;
+                prefHelper.setSelectedDriverDevice(device.getAddress());
+
+                tvStatus.setText("CONNECTING TO " + name.toUpperCase() + "...");
+                tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.accent_amber));
+                tvName.setTextColor(accentColor);
+                btnConnect.setText("CONNECTING...");
+                btnConnect.setTextColor(accentColor);
+
+                // Disable all cards while connection is in progress so driver doesn't spam
+                for (int i = 0; i < deviceContainer.getChildCount(); i++) {
+                    View c = deviceContainer.getChildAt(i);
+                    c.setEnabled(false);
+                    View b = c.findViewById(R.id.btnConnectPill);
+                    if (b != null) b.setEnabled(false);
+                }
+
+                updateConnectedPhoneUi(name, "CONNECTING BLUETOOTH...");
+                Toast.makeText(MainActivity.this, "Initiating Bluetooth connection to " + name + "...", Toast.LENGTH_SHORT).show();
+
+                if (btWatcher != null) {
+                    btWatcher.connectToDevice(device, new BluetoothWatcher.DeviceConnectionCallback() {
+                        @Override
+                        public void onConnecting(BluetoothDevice dev) {
+                            runOnUiThread(() -> {
+                                if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
+                                    tvStatus.setText("ESTABLISHING LINK TO " + name.toUpperCase() + "...");
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onSuccess(BluetoothDevice dev) {
+                            runOnUiThread(() -> {
+                                isBtConnecting = false;
+                                isCarPlayConnected = true;
+                                prefHelper.setSelectedDriverDevice(device.getAddress());
+
+                                if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
+                                    tvStatus.setText("CONNECTED · STARTING CARPLAY");
+                                    tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
+                                    btnConnect.setText("CONNECTED");
+                                    btnConnect.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
+                                }
+
+                                updateConnectedPhoneUi(name, "CONNECTED · CARPLAY READY");
+                                Toast.makeText(MainActivity.this, "Connected to " + name + "! Starting CarPlay...", Toast.LENGTH_SHORT).show();
+
+                                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                                    if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
+                                        deviceSelectorDialog.dismiss();
+                                    }
+                                    launchCarPlay();
+                                }, 500);
+                            });
+                        }
+
+                        @Override
+                        public void onFailure(BluetoothDevice dev, String errorMessage) {
+                            runOnUiThread(() -> {
+                                isBtConnecting = false;
+                                isCarPlayConnected = false;
+                                updateDisconnectedPhoneUi();
+
+                                if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
+                                    tvStatus.setText("CONNECTION FAILED · NOT IN RANGE");
+                                    tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_error));
+                                    btnConnect.setText("RETRY");
+                                    btnConnect.setTextColor(accentColor);
+
+                                    // Re-enable cards for retry or choosing another device
+                                    for (int i = 0; i < deviceContainer.getChildCount(); i++) {
+                                        View c = deviceContainer.getChildAt(i);
+                                        c.setEnabled(true);
+                                        View b = c.findViewById(R.id.btnConnectPill);
+                                        if (b != null) b.setEnabled(true);
+                                    }
+                                }
+
+                                String msg = (errorMessage != null && !errorMessage.isEmpty())
+                                        ? errorMessage
+                                        : "Failed to connect to " + name;
+                                Toast.makeText(MainActivity.this, msg + " · CarPlay not launched", Toast.LENGTH_LONG).show();
+
+                                // Explicitly do NOT launch CarPlay
+                            });
+                        }
+                    });
+                } else {
+                    isBtConnecting = false;
+                    Toast.makeText(MainActivity.this, "Bluetooth service unavailable", Toast.LENGTH_SHORT).show();
+                }
             };
 
             card.setOnClickListener(selectListener);
