@@ -34,17 +34,11 @@ jobs:
         with:
           gradle-version: '8.2'
 
-      - name: Assemble Debug APKs
+      - name: Assemble Debug APK
         run: gradle assembleDebug --stacktrace
 
-      - name: Upload Classic Cockpit APK
+      - name: Upload ApexDrive APK
         uses: actions/upload-artifact@v4
         with:
-          name: ApexDrive-Cockpit-APK
-          path: app/build/outputs/apk/cockpit/debug/app-cockpit-debug.apk
-
-      - name: Upload CarPlay Beta APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: ApexDrive-CarPlayBeta-APK
-          path: app/build/outputs/apk/carplayBeta/debug/app-carplayBeta-debug.apk
+          name: ApexDrive-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
