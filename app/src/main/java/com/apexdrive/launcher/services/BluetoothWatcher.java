@@ -20,6 +20,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Set;
 
+@SuppressLint("MissingPermission")
 public class BluetoothWatcher {
 
     public interface BluetoothStateListener {
@@ -98,7 +99,7 @@ public class BluetoothWatcher {
 
                 boolean isConnectedAction = BluetoothDevice.ACTION_ACL_CONNECTED.equals(action) ||
                         (isProfileChange && profileState == BluetoothProfile.STATE_CONNECTED) ||
-                        (adapterConnState == BluetoothAdapter.STATE_CONNECTED) ||
+                        (adapterConnState == BluetoothProfile.STATE_CONNECTED) ||
                         "com.goc.bluetooth.connected".equals(action) ||
                         "com.android.ecar.bluetooth.connected".equals(action) ||
                         "com.syu.bt.connected".equals(action) ||
@@ -113,7 +114,7 @@ public class BluetoothWatcher {
                 boolean isDisconnectedAction = BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action) ||
                         BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED.equals(action) ||
                         (isProfileChange && profileState == BluetoothProfile.STATE_DISCONNECTED) ||
-                        (adapterConnState == BluetoothAdapter.STATE_DISCONNECTED) ||
+                        (adapterConnState == BluetoothProfile.STATE_DISCONNECTED) ||
                         "com.goc.bluetooth.disconnected".equals(action) ||
                         "com.syu.bt.disconnected".equals(action) ||
                         "action.hct.bt.disconnected".equals(action) ||
@@ -325,12 +326,12 @@ public class BluetoothWatcher {
         boolean isAdapterConnected = false;
         try {
             if (bluetoothAdapter != null) {
-                int connState = bluetoothAdapter.getConnectionState();
+                int connState = getAdapterConnectionState();
                 int a2dpState = bluetoothAdapter.getProfileConnectionState(BluetoothProfile.A2DP);
                 int hfpState = bluetoothAdapter.getProfileConnectionState(BluetoothProfile.HEADSET);
-                if (connState == BluetoothAdapter.STATE_CONNECTED ||
-                    a2dpState == BluetoothAdapter.STATE_CONNECTED ||
-                    hfpState == BluetoothAdapter.STATE_CONNECTED) {
+                if (connState == BluetoothProfile.STATE_CONNECTED ||
+                    a2dpState == BluetoothProfile.STATE_CONNECTED ||
+                    hfpState == BluetoothProfile.STATE_CONNECTED) {
                     isAdapterConnected = true;
                 }
             }
@@ -454,6 +455,17 @@ public class BluetoothWatcher {
             return (String) getMethod.invoke(null, key, "");
         } catch (Exception e) {
             return "";
+        }
+    }
+
+    private int getAdapterConnectionState() {
+        if (bluetoothAdapter == null) return BluetoothProfile.STATE_DISCONNECTED;
+        try {
+            Method m = bluetoothAdapter.getClass().getMethod("getConnectionState");
+            Integer state = (Integer) m.invoke(bluetoothAdapter);
+            return (state != null) ? state : BluetoothProfile.STATE_DISCONNECTED;
+        } catch (Exception ignored) {
+            return BluetoothProfile.STATE_DISCONNECTED;
         }
     }
 
@@ -666,9 +678,9 @@ public class BluetoothWatcher {
             }
 
             // Priority 4: Check if adapter connection state, audio A2DP, or vendor system state is active
-            boolean adapterConn = (bluetoothAdapter.getConnectionState() == BluetoothAdapter.STATE_CONNECTED)
-                    || (bluetoothAdapter.getProfileConnectionState(BluetoothProfile.A2DP) == BluetoothAdapter.STATE_CONNECTED)
-                    || (bluetoothAdapter.getProfileConnectionState(BluetoothProfile.HEADSET) == BluetoothAdapter.STATE_CONNECTED);
+            boolean adapterConn = (getAdapterConnectionState() == BluetoothProfile.STATE_CONNECTED)
+                    || (bluetoothAdapter.getProfileConnectionState(BluetoothProfile.A2DP) == BluetoothProfile.STATE_CONNECTED)
+                    || (bluetoothAdapter.getProfileConnectionState(BluetoothProfile.HEADSET) == BluetoothProfile.STATE_CONNECTED);
             boolean audioA2dp = isAudioA2dpActive();
             boolean vendorBt = checkVendorBtConnected();
 

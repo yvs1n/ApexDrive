@@ -2040,6 +2040,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private void renderDeviceCards(java.util.Set<BluetoothDevice> pairedDevices, LinearLayout deviceContainer, TextView tvCountdown, int accentColor) {
         if (deviceContainer == null) return;
         deviceContainer.removeAllViews();
