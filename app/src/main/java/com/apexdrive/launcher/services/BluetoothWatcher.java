@@ -1,15 +1,20 @@
 package com.apexdrive.launcher.services;
 
 import android.annotation.SuppressLint;
+import android.bluetooth.BluetoothA2dp;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothHeadset;
 import android.bluetooth.BluetoothProfile;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.AudioManager;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -34,6 +39,9 @@ public class BluetoothWatcher {
     private final Handler pollHandler = new Handler(Looper.getMainLooper());
     private boolean isRunning = false;
 
+    private BluetoothA2dp a2dpProfile = null;
+    private BluetoothHeadset headsetProfile = null;
+
     private BluetoothDevice connectedDevice = null;
     private BluetoothDevice pendingConnectDevice = null;
     private DeviceConnectionCallback pendingCallback = null;
@@ -42,7 +50,7 @@ public class BluetoothWatcher {
         @Override
         public void run() {
             if (pendingConnectDevice != null && pendingCallback != null) {
-                // Check if device actually connected before declaring timeout failure
+                // Final check: if device is connected via any channel, confirm success
                 if (isDeviceCurrentlyConnected(pendingConnectDevice)) {
                     confirmConnected(pendingConnectDevice);
                     return;
@@ -51,7 +59,7 @@ public class BluetoothWatcher {
                 BluetoothDevice dev = pendingConnectDevice;
                 pendingCallback = null;
                 pendingConnectDevice = null;
-                cb.onFailure(dev, "Connection timed out. Ensure " + getDeviceDisplayName(dev) + " is in range with Bluetooth turned on.");
+                cb.onFailure(dev, "Auto-connect timed out. Tap 'LAUNCH ANYWAY' if already connected in car, or open Car Bluetooth.");
             }
         }
     };
@@ -70,6 +78,9 @@ public class BluetoothWatcher {
         if (isRunning) return;
         isRunning = true;
 
+        // Establish persistent A2DP and Headset profile proxy bindings
+        initProfileProxies();
+
         receiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context ctx, Intent intent) {
@@ -80,47 +91,46 @@ public class BluetoothWatcher {
                         "android.bluetooth.headset.profile.action.CONNECTION_STATE_CHANGED".equals(action);
                 int profileState = isProfileChange ? intent.getIntExtra(BluetoothProfile.EXTRA_STATE, -1) : -1;
 
+                int adapterConnState = -1;
+                if (BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED.equals(action)) {
+                    adapterConnState = intent.getIntExtra(BluetoothAdapter.EXTRA_CONNECTION_STATE, -1);
+                }
+
                 boolean isConnectedAction = BluetoothDevice.ACTION_ACL_CONNECTED.equals(action) ||
                         (isProfileChange && profileState == BluetoothProfile.STATE_CONNECTED) ||
+                        (adapterConnState == BluetoothAdapter.STATE_CONNECTED) ||
                         "com.goc.bluetooth.connected".equals(action) ||
                         "com.android.ecar.bluetooth.connected".equals(action) ||
                         "com.syu.bt.connected".equals(action) ||
                         "action.hct.bt.connected".equals(action) ||
                         "com.ts.bt.connected".equals(action) ||
                         "com.microntek.bt.connected".equals(action) ||
-                        "com.allwinner.bt.connected".equals(action);
+                        "com.allwinner.bt.connected".equals(action) ||
+                        "com.allwinner.bluetooth.connected".equals(action) ||
+                        "cn.manstep.phonemirrorbox.bt.connected".equals(action) ||
+                        "com.zjinnova.zlink.bt.connected".equals(action);
 
                 boolean isDisconnectedAction = BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action) ||
                         BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED.equals(action) ||
                         (isProfileChange && profileState == BluetoothProfile.STATE_DISCONNECTED) ||
+                        (adapterConnState == BluetoothAdapter.STATE_DISCONNECTED) ||
                         "com.goc.bluetooth.disconnected".equals(action) ||
                         "com.syu.bt.disconnected".equals(action) ||
                         "action.hct.bt.disconnected".equals(action) ||
                         "com.ts.bt.disconnected".equals(action) ||
                         "com.microntek.bt.disconnected".equals(action) ||
                         "com.allwinner.bt.disconnected".equals(action) ||
-                        BluetoothAdapter.ACTION_STATE_CHANGED.equals(action) ||
-                        BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED.equals(action);
+                        "com.allwinner.bluetooth.disconnected".equals(action);
 
                 if (isConnectedAction) {
-                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                    if (device == null && intent.hasExtra("address")) {
-                        String addr = intent.getStringExtra("address");
-                        if (addr != null && bluetoothAdapter != null) {
-                            try {
-                                device = bluetoothAdapter.getRemoteDevice(addr);
-                            } catch (Exception ignored) {}
-                        }
-                    }
-
+                    BluetoothDevice device = extractDeviceFromIntent(intent);
                     if (device != null) {
                         handleDeviceConnected(device);
                     } else {
                         checkCurrentState();
                     }
-
                 } else if (isDisconnectedAction) {
-                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    BluetoothDevice device = extractDeviceFromIntent(intent);
                     if (device != null && pendingConnectDevice != null &&
                             device.getAddress().equalsIgnoreCase(pendingConnectDevice.getAddress())) {
                         pollHandler.removeCallbacks(pendingTimeoutRunnable);
@@ -128,7 +138,7 @@ public class BluetoothWatcher {
                         pendingCallback = null;
                         pendingConnectDevice = null;
                         if (cb != null) {
-                            cb.onFailure(device, "Device rejected Bluetooth link or disconnected.");
+                            cb.onFailure(device, "Device disconnected.");
                         }
                     }
 
@@ -164,6 +174,9 @@ public class BluetoothWatcher {
         filter.addAction("com.microntek.bt.disconnected");
         filter.addAction("com.allwinner.bt.connected");
         filter.addAction("com.allwinner.bt.disconnected");
+        filter.addAction("com.allwinner.bluetooth.connected");
+        filter.addAction("cn.manstep.phonemirrorbox.bt.connected");
+        filter.addAction("com.zjinnova.zlink.bt.connected");
 
         try {
             context.registerReceiver(receiver, filter);
@@ -171,6 +184,67 @@ public class BluetoothWatcher {
 
         checkCurrentState();
         startPeriodicCheck();
+    }
+
+    private void initProfileProxies() {
+        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) return;
+        try {
+            bluetoothAdapter.getProfileProxy(context, new BluetoothProfile.ServiceListener() {
+                @Override
+                public void onServiceConnected(int profile, BluetoothProfile proxy) {
+                    if (profile == BluetoothProfile.A2DP) {
+                        a2dpProfile = (BluetoothA2dp) proxy;
+                    }
+                    checkCurrentState();
+                }
+
+                @Override
+                public void onServiceDisconnected(int profile) {
+                    if (profile == BluetoothProfile.A2DP) {
+                        a2dpProfile = null;
+                    }
+                    checkCurrentState();
+                }
+            }, BluetoothProfile.A2DP);
+
+            bluetoothAdapter.getProfileProxy(context, new BluetoothProfile.ServiceListener() {
+                @Override
+                public void onServiceConnected(int profile, BluetoothProfile proxy) {
+                    if (profile == BluetoothProfile.HEADSET) {
+                        headsetProfile = (BluetoothHeadset) proxy;
+                    }
+                    checkCurrentState();
+                }
+
+                @Override
+                public void onServiceDisconnected(int profile) {
+                    if (profile == BluetoothProfile.HEADSET) {
+                        headsetProfile = null;
+                    }
+                    checkCurrentState();
+                }
+            }, BluetoothProfile.HEADSET);
+        } catch (Exception ignored) {}
+    }
+
+    @SuppressLint("MissingPermission")
+    private BluetoothDevice extractDeviceFromIntent(Intent intent) {
+        if (intent == null) return null;
+        BluetoothDevice dev = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+        if (dev != null) return dev;
+
+        String[] macKeys = {"address", "mac", "addr", "deviceAddress"};
+        for (String k : macKeys) {
+            if (intent.hasExtra(k)) {
+                String val = intent.getStringExtra(k);
+                if (val != null && bluetoothAdapter != null) {
+                    try {
+                        return bluetoothAdapter.getRemoteDevice(val);
+                    } catch (Exception ignored) {}
+                }
+            }
+        }
+        return null;
     }
 
     private void handleDeviceConnected(BluetoothDevice device) {
@@ -200,14 +274,44 @@ public class BluetoothWatcher {
 
     @SuppressLint("MissingPermission")
     public boolean isDeviceCurrentlyConnected(BluetoothDevice device) {
-        if (device == null || bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
-            return false;
-        }
+        if (device == null) return false;
 
+        // 1. Matched already verified connected device
         if (connectedDevice != null && device.getAddress().equalsIgnoreCase(connectedDevice.getAddress())) {
             return true;
         }
 
+        // 2. Direct query on persistent A2DP profile proxy
+        if (a2dpProfile != null) {
+            try {
+                List<BluetoothDevice> connected = a2dpProfile.getConnectedDevices();
+                if (connected != null) {
+                    for (BluetoothDevice d : connected) {
+                        if (d != null && d.getAddress().equalsIgnoreCase(device.getAddress())) {
+                            connectedDevice = d;
+                            return true;
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // 3. Direct query on persistent Headset profile proxy
+        if (headsetProfile != null) {
+            try {
+                List<BluetoothDevice> connected = headsetProfile.getConnectedDevices();
+                if (connected != null) {
+                    for (BluetoothDevice d : connected) {
+                        if (d != null && d.getAddress().equalsIgnoreCase(device.getAddress())) {
+                            connectedDevice = d;
+                            return true;
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // 4. Reflection isConnected() on device
         try {
             Method method = device.getClass().getMethod("isConnected");
             Boolean isConn = (Boolean) method.invoke(device);
@@ -217,19 +321,140 @@ public class BluetoothWatcher {
             }
         } catch (Exception ignored) {}
 
-        // Profile connection verification
+        // 5. System BluetoothAdapter connection state
+        boolean isAdapterConnected = false;
         try {
-            int a2dpState = bluetoothAdapter.getProfileConnectionState(BluetoothProfile.A2DP);
-            int headsetState = bluetoothAdapter.getProfileConnectionState(BluetoothProfile.HEADSET);
-            if (a2dpState == BluetoothAdapter.STATE_CONNECTED || headsetState == BluetoothAdapter.STATE_CONNECTED) {
-                if (pendingConnectDevice != null && device.getAddress().equalsIgnoreCase(pendingConnectDevice.getAddress())) {
-                    connectedDevice = device;
-                    return true;
+            if (bluetoothAdapter != null) {
+                int connState = bluetoothAdapter.getConnectionState();
+                int a2dpState = bluetoothAdapter.getProfileConnectionState(BluetoothProfile.A2DP);
+                int hfpState = bluetoothAdapter.getProfileConnectionState(BluetoothProfile.HEADSET);
+                if (connState == BluetoothAdapter.STATE_CONNECTED ||
+                    a2dpState == BluetoothAdapter.STATE_CONNECTED ||
+                    hfpState == BluetoothAdapter.STATE_CONNECTED) {
+                    isAdapterConnected = true;
                 }
             }
         } catch (Exception ignored) {}
 
+        // 6. AudioManager active Bluetooth audio link
+        boolean isAudioA2dpOn = isAudioA2dpActive();
+
+        // 7. Head unit vendor proprietary connection detection
+        boolean isVendorConnected = checkVendorBtConnected();
+
+        if (isAdapterConnected || isAudioA2dpOn || isVendorConnected) {
+            String vendorMac = getVendorBtMac();
+            String vendorName = getVendorBtName();
+
+            if (vendorMac != null && vendorMac.equalsIgnoreCase(device.getAddress())) {
+                connectedDevice = device;
+                return true;
+            }
+            if (vendorName != null && device.getName() != null && vendorName.equalsIgnoreCase(device.getName())) {
+                connectedDevice = device;
+                return true;
+            }
+            if (pendingConnectDevice != null && pendingConnectDevice.getAddress().equalsIgnoreCase(device.getAddress())) {
+                connectedDevice = device;
+                return true;
+            }
+            if (bluetoothAdapter != null) {
+                Set<BluetoothDevice> bonded = bluetoothAdapter.getBondedDevices();
+                if (bonded != null && bonded.size() == 1 && bonded.contains(device)) {
+                    connectedDevice = device;
+                    return true;
+                }
+            }
+            if (isAudioA2dpOn) {
+                connectedDevice = device;
+                return true;
+            }
+        }
+
         return false;
+    }
+
+    public boolean isAudioA2dpActive() {
+        try {
+            AudioManager am = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+            if (am != null) {
+                return am.isBluetoothA2dpOn() || am.isBluetoothScoOn();
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    public boolean checkVendorBtConnected() {
+        String[] propKeys = {
+                "sys.bt.connected", "persist.sys.bt.connected", "vendor.bt.connected",
+                "ts.bt.state", "goc.bt.connected", "sys.fyt.bluetooth",
+                "bt.connected.name", "bt.connected.mac"
+        };
+        for (String key : propKeys) {
+            String val = getSystemProperty(key);
+            if (val != null && !val.isEmpty() && !"0".equals(val) && !"false".equalsIgnoreCase(val)) {
+                return true;
+            }
+        }
+
+        try {
+            ContentResolver cr = context.getContentResolver();
+            int btState = Settings.System.getInt(cr, "bluetooth_state", 0);
+            if (btState == 1 || btState == 2) return true;
+
+            String devName = Settings.System.getString(cr, "bt_device_name");
+            if (devName != null && !devName.isEmpty()) return true;
+
+            String connName = Settings.System.getString(cr, "bt_connected_dev_name");
+            if (connName != null && !connName.isEmpty()) return true;
+
+            String connAddr = Settings.System.getString(cr, "current_connect_bt_addr");
+            if (connAddr != null && !connAddr.isEmpty()) return true;
+        } catch (Exception ignored) {}
+
+        return false;
+    }
+
+    public String getVendorBtName() {
+        String name = getSystemProperty("bt.connected.name");
+        if (name != null && !name.isEmpty()) return name;
+
+        try {
+            ContentResolver cr = context.getContentResolver();
+            String n = Settings.System.getString(cr, "bt_connected_dev_name");
+            if (n != null && !n.isEmpty()) return n;
+
+            n = Settings.System.getString(cr, "current_connect_bt_name");
+            if (n != null && !n.isEmpty()) return n;
+
+            n = Settings.System.getString(cr, "bt_device_name");
+            if (n != null && !n.isEmpty()) return n;
+        } catch (Exception ignored) {}
+
+        return null;
+    }
+
+    public String getVendorBtMac() {
+        String mac = getSystemProperty("bt.connected.mac");
+        if (mac != null && !mac.isEmpty()) return mac;
+
+        try {
+            ContentResolver cr = context.getContentResolver();
+            String m = Settings.System.getString(cr, "current_connect_bt_addr");
+            if (m != null && !m.isEmpty()) return m;
+        } catch (Exception ignored) {}
+
+        return null;
+    }
+
+    private String getSystemProperty(String key) {
+        try {
+            Class<?> sp = Class.forName("android.os.SystemProperties");
+            Method getMethod = sp.getMethod("get", String.class, String.class);
+            return (String) getMethod.invoke(null, key, "");
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     public BluetoothDevice getConnectedDevice() {
@@ -258,19 +483,20 @@ public class BluetoothWatcher {
             return;
         }
 
+        // Fast-path: If target is ALREADY verified as connected, invoke success immediately!
+        if (isDeviceCurrentlyConnected(target)) {
+            connectedDevice = target;
+            if (callback != null) callback.onSuccess(target);
+            notifyConnected(getDeviceDisplayName(target));
+            return;
+        }
+
         signalConnect(target);
 
         if (callback == null) return;
 
         if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
             callback.onFailure(target, "Bluetooth is disabled on this head unit.");
-            return;
-        }
-
-        if (isDeviceCurrentlyConnected(target)) {
-            connectedDevice = target;
-            callback.onSuccess(target);
-            notifyConnected(getDeviceDisplayName(target));
             return;
         }
 
@@ -281,12 +507,12 @@ public class BluetoothWatcher {
         pendingCallback = callback;
         callback.onConnecting(target);
 
-        // Schedule timeout at 12.0 seconds (adequate time for automotive head unit Bluetooth negotiation)
-        pollHandler.postDelayed(pendingTimeoutRunnable, 12000);
+        // Schedule timeout at 9.0 seconds
+        pollHandler.postDelayed(pendingTimeoutRunnable, 9000);
 
-        // Check intermittently at 1.5s, 3.5s, 6.0s, 8.5s, and 10.5s in case reflection detects connection before broadcast
-        long[] checkIntervals = {1500, 3500, 6000, 8500, 10500};
-        for (long delay : checkIntervals) {
+        // Active poll every 700ms to detect connection the exact moment it links
+        long[] pollDelays = {700, 1400, 2200, 3200, 4400, 5800, 7200, 8500};
+        for (long delay : pollDelays) {
             pollHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
@@ -299,53 +525,39 @@ public class BluetoothWatcher {
             }, delay);
         }
 
-        // Attempt 1: A2DP Profile Proxy connect via reflection
-        try {
-            bluetoothAdapter.getProfileProxy(context, new BluetoothProfile.ServiceListener() {
-                @Override
-                public void onServiceConnected(int profile, BluetoothProfile proxy) {
-                    try {
-                        Method connectMethod = proxy.getClass().getMethod("connect", BluetoothDevice.class);
-                        connectMethod.invoke(proxy, target);
-                    } catch (Exception ignored) {}
-                    try {
-                        bluetoothAdapter.closeProfileProxy(profile, proxy);
-                    } catch (Exception ignored) {}
-                }
+        // Profile Proxy connect via reflection on A2DP
+        if (a2dpProfile != null) {
+            try {
+                Method connectMethod = a2dpProfile.getClass().getMethod("connect", BluetoothDevice.class);
+                connectMethod.invoke(a2dpProfile, target);
+            } catch (Exception ignored) {}
+        } else {
+            try {
+                bluetoothAdapter.getProfileProxy(context, new BluetoothProfile.ServiceListener() {
+                    @Override
+                    public void onServiceConnected(int profile, BluetoothProfile proxy) {
+                        try {
+                            Method connectMethod = proxy.getClass().getMethod("connect", BluetoothDevice.class);
+                            connectMethod.invoke(proxy, target);
+                        } catch (Exception ignored) {}
+                    }
 
-                @Override
-                public void onServiceDisconnected(int profile) {}
-            }, BluetoothProfile.A2DP);
-        } catch (Exception ignored) {}
+                    @Override
+                    public void onServiceDisconnected(int profile) {}
+                }, BluetoothProfile.A2DP);
+            } catch (Exception ignored) {}
+        }
 
-        // Attempt 2: Headset Profile Proxy connect via reflection
-        try {
-            bluetoothAdapter.getProfileProxy(context, new BluetoothProfile.ServiceListener() {
-                @Override
-                public void onServiceConnected(int profile, BluetoothProfile proxy) {
-                    try {
-                        Method connectMethod = proxy.getClass().getMethod("connect", BluetoothDevice.class);
-                        connectMethod.invoke(proxy, target);
-                    } catch (Exception ignored) {}
-                    try {
-                        bluetoothAdapter.closeProfileProxy(profile, proxy);
-                    } catch (Exception ignored) {}
-                }
+        // Profile Proxy connect via reflection on Headset
+        if (headsetProfile != null) {
+            try {
+                Method connectMethod = headsetProfile.getClass().getMethod("connect", BluetoothDevice.class);
+                connectMethod.invoke(headsetProfile, target);
+            } catch (Exception ignored) {}
+        }
 
-                @Override
-                public void onServiceDisconnected(int profile) {}
-            }, BluetoothProfile.HEADSET);
-        } catch (Exception ignored) {}
-
-        // Attempt 3: Vendor Automotive Head Unit Broadcast Intents
+        // Head Unit Vendor Connect Broadcasts
         broadcastHeadUnitConnect(target);
-
-        // Attempt 4: If device is not yet bonded, create bond
-        try {
-            if (target.getBondState() != BluetoothDevice.BOND_BONDED) {
-                target.createBond();
-            }
-        } catch (Exception ignored) {}
     }
 
     public void cancelPendingConnection() {
@@ -365,15 +577,17 @@ public class BluetoothWatcher {
         String name = (target.getName() != null) ? target.getName() : "";
 
         String[] actions = {
+                "com.allwinner.bt.connect",
+                "com.allwinner.bluetooth.connect",
                 "com.goc.bluetooth.connect",
                 "com.android.ecar.bluetooth.connect",
                 "com.syu.bt.connect",
                 "action.hct.bt.connect",
                 "com.ts.bt.connect",
                 "com.microntek.bt.connect",
-                "com.allwinner.bt.connect",
                 "cn.manstep.phonemirrorbox.bt.connect",
-                "com.zjinnova.zlink.bt.connect"
+                "com.zjinnova.zlink.bt.connect",
+                "com.forfan.bt.connect"
         };
 
         for (String action : actions) {
@@ -382,6 +596,8 @@ public class BluetoothWatcher {
                 intent.putExtra("address", address);
                 intent.putExtra("mac", address);
                 intent.putExtra("name", name);
+                intent.putExtra("dev_name", name);
+                intent.putExtra("device", target);
                 context.sendBroadcast(intent);
             } catch (Exception ignored) {}
         }
@@ -417,7 +633,27 @@ public class BluetoothWatcher {
         }
 
         try {
-            // First: check bonded devices via reflection isConnected()
+            // Priority 1: Check cached A2DP proxy connected devices
+            if (a2dpProfile != null) {
+                List<BluetoothDevice> connected = a2dpProfile.getConnectedDevices();
+                if (connected != null && !connected.isEmpty()) {
+                    connectedDevice = connected.get(0);
+                    notifyConnected(getDeviceDisplayName(connectedDevice));
+                    return;
+                }
+            }
+
+            // Priority 2: Check cached Headset proxy connected devices
+            if (headsetProfile != null) {
+                List<BluetoothDevice> connected = headsetProfile.getConnectedDevices();
+                if (connected != null && !connected.isEmpty()) {
+                    connectedDevice = connected.get(0);
+                    notifyConnected(getDeviceDisplayName(connectedDevice));
+                    return;
+                }
+            }
+
+            // Priority 3: Check bonded devices with reflection isConnected()
             Set<BluetoothDevice> bonded = bluetoothAdapter.getBondedDevices();
             if (bonded != null && !bonded.isEmpty()) {
                 for (BluetoothDevice dev : bonded) {
@@ -429,37 +665,53 @@ public class BluetoothWatcher {
                 }
             }
 
-            // Second: query A2DP profile proxy
-            int a2dpState = bluetoothAdapter.getProfileConnectionState(BluetoothProfile.A2DP);
-            int headsetState = bluetoothAdapter.getProfileConnectionState(BluetoothProfile.HEADSET);
+            // Priority 4: Check if adapter connection state, audio A2DP, or vendor system state is active
+            boolean adapterConn = (bluetoothAdapter.getConnectionState() == BluetoothAdapter.STATE_CONNECTED)
+                    || (bluetoothAdapter.getProfileConnectionState(BluetoothProfile.A2DP) == BluetoothAdapter.STATE_CONNECTED)
+                    || (bluetoothAdapter.getProfileConnectionState(BluetoothProfile.HEADSET) == BluetoothAdapter.STATE_CONNECTED);
+            boolean audioA2dp = isAudioA2dpActive();
+            boolean vendorBt = checkVendorBtConnected();
 
-            if (a2dpState == BluetoothAdapter.STATE_CONNECTED || headsetState == BluetoothAdapter.STATE_CONNECTED) {
-                bluetoothAdapter.getProfileProxy(context, new BluetoothProfile.ServiceListener() {
-                    @Override
-                    public void onServiceConnected(int profile, BluetoothProfile proxy) {
-                        try {
-                            List<BluetoothDevice> connected = proxy.getConnectedDevices();
-                            if (connected != null && !connected.isEmpty()) {
-                                connectedDevice = connected.get(0);
-                                notifyConnected(getDeviceDisplayName(connectedDevice));
+            if (adapterConn || audioA2dp || vendorBt) {
+                String vendorName = getVendorBtName();
+                String vendorMac = getVendorBtMac();
+
+                if (bonded != null && !bonded.isEmpty()) {
+                    for (BluetoothDevice dev : bonded) {
+                        if (dev != null) {
+                            if (vendorMac != null && vendorMac.equalsIgnoreCase(dev.getAddress())) {
+                                connectedDevice = dev;
+                                notifyConnected(getDeviceDisplayName(dev));
+                                return;
                             }
-                        } catch (Exception ignored) {}
-                        try {
-                            bluetoothAdapter.closeProfileProxy(profile, proxy);
-                        } catch (Exception ignored) {}
+                            if (vendorName != null && dev.getName() != null && vendorName.equalsIgnoreCase(dev.getName())) {
+                                connectedDevice = dev;
+                                notifyConnected(getDeviceDisplayName(dev));
+                                return;
+                            }
+                        }
                     }
+                    if (connectedDevice != null && bonded.contains(connectedDevice)) {
+                        notifyConnected(getDeviceDisplayName(connectedDevice));
+                        return;
+                    }
+                    if (bonded.size() == 1) {
+                        connectedDevice = bonded.iterator().next();
+                        notifyConnected(getDeviceDisplayName(connectedDevice));
+                        return;
+                    }
+                }
 
-                    @Override
-                    public void onServiceDisconnected(int profile) {}
-                }, BluetoothProfile.A2DP);
-
-                if (connectedDevice != null) {
-                    notifyConnected(getDeviceDisplayName(connectedDevice));
+                if (vendorName != null && !vendorName.isEmpty()) {
+                    notifyConnected(vendorName);
                     return;
                 }
+
+                notifyConnected("Phone Connected");
+                return;
             }
 
-            // If no profile or device is actually connected:
+            // Genuinely disconnected
             connectedDevice = null;
             if (bonded != null && !bonded.isEmpty()) {
                 notifyDisconnected("Ready to Connect (" + bonded.size() + " Paired)");
@@ -520,5 +772,17 @@ public class BluetoothWatcher {
                 context.unregisterReceiver(receiver);
             } catch (Exception ignored) {}
         }
+        try {
+            if (bluetoothAdapter != null) {
+                if (a2dpProfile != null) {
+                    bluetoothAdapter.closeProfileProxy(BluetoothProfile.A2DP, a2dpProfile);
+                    a2dpProfile = null;
+                }
+                if (headsetProfile != null) {
+                    bluetoothAdapter.closeProfileProxy(BluetoothProfile.HEADSET, headsetProfile);
+                    headsetProfile = null;
+                }
+            }
+        } catch (Exception ignored) {}
     }
 }

@@ -248,7 +248,8 @@ public class MainActivity extends AppCompatActivity {
 
         if (pillHeaderBluetooth != null) {
             pillHeaderBluetooth.setOnClickListener(v -> {
-                if (isCarPlayConnected && btWatcher != null && btWatcher.getConnectedDevice() != null) {
+                boolean isBtActive = isCarPlayConnected || (btWatcher != null && (btWatcher.getConnectedDevice() != null || btWatcher.isAudioA2dpActive() || btWatcher.checkVendorBtConnected()));
+                if (isBtActive) {
                     launchCarPlay();
                 } else {
                     showDeviceSelectorDialog(false);
@@ -542,7 +543,8 @@ public class MainActivity extends AppCompatActivity {
 
         if (cardBluetooth != null) {
             cardBluetooth.setOnClickListener(v -> {
-                if (isCarPlayConnected && btWatcher != null && btWatcher.getConnectedDevice() != null) {
+                boolean isBtActive = isCarPlayConnected || (btWatcher != null && (btWatcher.getConnectedDevice() != null || btWatcher.isAudioA2dpActive() || btWatcher.checkVendorBtConnected()));
+                if (isBtActive) {
                     launchCarPlay();
                 } else {
                     showDeviceSelectorDialog(false);
@@ -1089,9 +1091,16 @@ public class MainActivity extends AppCompatActivity {
             btWatcher.forceRefresh();
         }
         String[] btPackages = {
+                "com.allwinner.bluetooth",
+                "com.allwinner.radio",
                 "com.goc.bluetooth",
                 "com.android.ecar",
-                "com.microntek.bluetooth"
+                "com.microntek.bluetooth",
+                "com.ts.bt",
+                "com.syu.bt",
+                "com.forfan.bt",
+                "cn.manstep.phonemirrorbox",
+                "com.android.bluetooth"
         };
         for (String pkg : btPackages) {
             if (launchAppPackage(pkg)) return;
@@ -2050,13 +2059,13 @@ public class MainActivity extends AppCompatActivity {
             boolean isActuallyConnected = (btWatcher != null && btWatcher.isDeviceCurrentlyConnected(device));
             boolean isSavedDriver = (savedAddr != null && savedAddr.equalsIgnoreCase(device.getAddress()));
             if (isActuallyConnected || (isCarPlayConnected && isSavedDriver)) {
-                tvStatus.setText("CONNECTED · ACTIVE FOR CARPLAY & AUDIO");
+                tvStatus.setText("CONNECTED · READY FOR CARPLAY");
                 tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
                 tvName.setTextColor(accentColor);
-                btnConnect.setText("ACTIVE");
-                btnConnect.setTextColor(accentColor);
+                btnConnect.setText("LAUNCH");
+                btnConnect.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
             } else if (isSavedDriver) {
-                tvStatus.setText("DEFAULT DRIVER · READY FOR CARPLAY");
+                tvStatus.setText("DEFAULT DRIVER · READY TO CONNECT");
                 tvStatus.setTextColor(accentColor);
                 btnConnect.setText("CONNECT");
                 btnConnect.setTextColor(accentColor);
@@ -2077,7 +2086,7 @@ public class MainActivity extends AppCompatActivity {
                     if (tvCountdown != null) tvCountdown.setVisibility(View.GONE);
                 }
 
-                // If this device is ALREADY verified as connected
+                // If this device is ALREADY verified as connected (via A2DP, Adapter, Audio routing, or vendor BT)
                 if (btWatcher != null && btWatcher.isDeviceCurrentlyConnected(device)) {
                     prefHelper.setSelectedDriverDevice(device.getAddress());
                     isCarPlayConnected = true;
@@ -2090,7 +2099,7 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
 
-                // Device is not yet connected: initiate real connection and gate CarPlay launch on success
+                // Device is not yet confirmed connected: initiate real connection and gate CarPlay launch on success
                 isBtConnecting = true;
                 prefHelper.setSelectedDriverDevice(device.getAddress());
 
@@ -2152,14 +2161,25 @@ public class MainActivity extends AppCompatActivity {
                         public void onFailure(BluetoothDevice dev, String errorMessage) {
                             runOnUiThread(() -> {
                                 isBtConnecting = false;
-                                isCarPlayConnected = false;
-                                updateDisconnectedPhoneUi();
 
                                 if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
-                                    tvStatus.setText("CONNECTION FAILED · NOT IN RANGE");
-                                    tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_error));
-                                    btnConnect.setText("RETRY");
-                                    btnConnect.setTextColor(accentColor);
+                                    tvStatus.setText("CONNECTED IN CAR? TAP TO LAUNCH ANYWAY");
+                                    tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.accent_amber));
+                                    btnConnect.setText("LAUNCH ANYWAY");
+                                    btnConnect.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
+
+                                    View.OnClickListener launchAnywayListener = fl -> {
+                                        prefHelper.setSelectedDriverDevice(device.getAddress());
+                                        isCarPlayConnected = true;
+                                        updateConnectedPhoneUi(name, "CONNECTED · CARPLAY READY");
+                                        if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
+                                            deviceSelectorDialog.dismiss();
+                                        }
+                                        launchCarPlay();
+                                    };
+
+                                    card.setOnClickListener(launchAnywayListener);
+                                    btnConnect.setOnClickListener(launchAnywayListener);
 
                                     // Re-enable cards for retry or choosing another device
                                     for (int i = 0; i < deviceContainer.getChildCount(); i++) {
@@ -2170,12 +2190,9 @@ public class MainActivity extends AppCompatActivity {
                                     }
                                 }
 
-                                String msg = (errorMessage != null && !errorMessage.isEmpty())
-                                        ? errorMessage
-                                        : "Failed to connect to " + name;
-                                Toast.makeText(MainActivity.this, msg + " · CarPlay not launched", Toast.LENGTH_LONG).show();
-
-                                // Explicitly do NOT launch CarPlay
+                                Toast.makeText(MainActivity.this,
+                                        "If " + name + " is connected in car, tap 'LAUNCH ANYWAY' or open Car Bluetooth",
+                                        Toast.LENGTH_LONG).show();
                             });
                         }
                     });
