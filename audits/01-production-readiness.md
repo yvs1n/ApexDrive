@@ -204,3 +204,49 @@ Each finding is one block:
 - **What happens:** The button labelled REST AREA runs `launchPoiSearch("coffee")`. Search terms are English literals (`:633-636`).
 - **Why it matters:** Label and action disagree; the query is wrong in non-English map apps.
 - **Fix:** Pick one meaning, and pass `geo:` queries through string resources.
+
+---
+
+## B. Fake or never-changing status labels
+
+Several labels look like live status but are static XML text that no Java code ever binds. `grep` for `tvCarPlayReadyBadge` and `tvMapStatusBadge` in `src/main/java` returns nothing. All UI text lives in layouts and Java literals: of the 20 entries in `strings.xml` only `app_name` is referenced anywhere (including `bt_default_device`, `strings.xml:14`).
+
+**P-29 · High · `view_dashboard.xml:76`, `view_carplay.xml:99`, `:144`, `:189`, `view_dashboard.xml:50`**
+- **What happens:** Green, always-on text: `●  PHONE LINK ACTIVE` (id `tvCarPlayReadyBadge`, never bound), `PROTOCOL: ZLINK 5.3 ACTIVE`, `PORT STATUS: USB 2.0 READY`, `AUDIO STREAM: I2S HARDWARE SYNC`. The `ZLINK 5.3` badge is overwritten with the saved CarPlay name at runtime (`MainActivity.java:519`), but that name can itself be wrong (P-02).
+- **Why it matters:** With no phone, no dongle and no USB device, the screen says the link is active and the port ready. A driver cannot tell a dead link from a live one.
+- **Fix:** Bind these to real state or remove them. If projection state is unknowable on a unit, show "Not detected" (grey) instead of green. Wording and colours are Audit 2's call.
+
+**P-30 · Med · `view_maps.xml:281`, `view_setup.xml:221`, `MainActivity.java:1006-1013`, `:660`**
+- **What happens:** `● RADARS · ROAD BUMPS · OFFLINE LANES ACTIVE` (id `tvMapStatusBadge`, never bound) is shown whether or not a map app is installed, and describes the external navigation app's features. `LIVE 20Hz` is a button whose handler only calls `gpsManager.start()` and toasts `"GPS Stream refreshed at 20Hz"`; another toast says `"Real-time 20Hz"` (`:660`).
+- **Why it matters:** Nothing in the code can promise 20 Hz. The request is `minTime=50 ms` (`GpsTelemetryManager.java:63-68`), which is a hint to the framework; most GNSS receivers report at 1 Hz `[verify in car]`.
+- **Fix:** Remove the badge. Replace the button with a read-only measured rate (fixes per second over the last 5 s) or remove it.
+
+**P-31 · Med · `view_audio.xml:95`, `:110`, `:159`, `:185`; `MainActivity.java:782`, `:806-808`, `:795-801`**
+- **What happens:** `FM RADIO TUNER (SI473X IC)` is a hardcoded chip name; `PRESET 01` is static text; the on-screen state (`ACTIVE · 87.5 MHZ`, the dashboard title `FM 87.5 MHz`) is set the moment the button is tapped. `isRadioPlaying` (`:112`) is purely local; the tuner never reports back.
+- **Why it matters:** The launcher shows "ACTIVE" for a tuner it cannot see. The chip name is true, at best, for the author's unit `[inferred]`. Other units have other tuner ICs. "SEEK" is a manual 0.1 MHz step (P-27).
+- **Fix:** Remove the chip name and preset text. Label the state "SENT" or read it back from the radio app if the profile supports it.
+
+**P-32 · Med · `GpsTelemetryManager.java:106`, `:169`, `:143-144`; `MainActivity.java:1574`, `:1604`; `view_maps.xml:47`**
+- **What happens:** Every fix, and every `onProviderEnabled`, reports `onGpsStatusChanged(true, 8)`: a hardcoded 8 satellites, even when there is no fix. Missing accuracy defaults to `5.0 m` and missing altitude to `0.0 m` (`:143-144`) and is displayed as real. `● 3D Fix · ±x m` is printed for any location, including a network fix; the layout placeholder reads `±3m` (`view_maps.xml:47`).
+- **Why it matters:** Invented numbers shown as measurements. The Activity currently ignores `onGpsStatusChanged` (`:1604`), but the interface contract is false and will mislead the next contributor.
+- **Fix:** Use `GnssStatus.Callback` (API 24+) or `GpsStatus.Listener` (API 21 to 23) for the real count, expose "no fix" as a state, and show `--` for missing altitude and accuracy.
+
+**P-33 · Med · `activity_main.xml:113`, `CarThermometerWatcher.java:41-43`, `PreferenceHelper.java:79-81`, `:87-89`, `MainActivity.java:1714`**
+- **What happens:** The header shows `26°C · OUTSIDE` in XML, `32°C · OUTSIDE` as the Java fallback and as the persisted default, before any source has reported. Anything parsed from a property or Settings key is labelled `VEHICLE SENSOR` (`:384`) even if it came from an unrelated key.
+- **Why it matters:** A first-launch reading of 26 or 32 °C is fabricated, and two different fabricated values exist.
+- **Fix:** Start empty (`--°`), and label sources by what was actually read.
+
+**P-34 · Med · `BluetoothWatcher.java:768`, `:722`; `view_dashboard.xml:153`, `:164`, `:179`; `MainActivity.java:1635`, `:2063`**
+- **What happens:** The connected callback always sends `"A2DP Audio & Calls Active"` whatever profiles are connected (`:768`). The dashboard card ships with `SANTAFEMR`, `A2DP AUDIO · TELEPHONY LINK` and a green `CONNECTED` badge until the first callback. The device list shows `CONNECTED · READY FOR CARPLAY` (`:2063`) even if no projection app is installed.
+- **Why it matters:** Profile detail and readiness are asserted, not detected.
+- **Fix:** Read the profiles from the proxies (A2DP, HFP) and print only those; default the card to an empty state.
+
+**P-35 · Med · `MainActivity.java:383`, `:386`, `:404`, `:428-430`; `dialog_task_switcher.xml:39`; `item_task_card.xml:31`**
+- **What happens:** Toasts and badges say `"Memory released"`, `"All background tasks closed · Head unit RAM freed"`, `OPTIMIZED`, `RAM OPTIMIZED`. The XML placeholders `3 RUNNING` and `CarPlay` are visible in the layout editor and in the preview.
+- **Why it matters:** The claims are untrue (P-15). The previous audit (`anti-slop/audit-002-2026-10-13.md`, R-17 and R-36) marks the process count as "verified" and the kill methods as "accurate"; neither holds.
+- **Fix:** Remove the claims with P-15. Retire or relabel the anti-slop audits as historical (P-68).
+
+**P-36 · Med · `dialog_device_selector.xml:41`, `PreferenceHelper.java:67-73`**
+- **What happens:** The picker says "Tap your phone to lock Bluetooth & CarPlay. Prevents hijacking other phones in the car." The selection only stores a MAC string. `getSelectedDriverDevice()` is used for labels and the dead auto-connect path (P-06), never to block or ignore other phones.
+- **Why it matters:** A security-sounding promise with no enforcement.
+- **Fix:** Reword to "Remember this phone", or implement the enforcement and test it. Audit 3 decides.
