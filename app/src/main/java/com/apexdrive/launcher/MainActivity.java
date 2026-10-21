@@ -284,22 +284,17 @@ public class MainActivity extends AppCompatActivity {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_task_switcher, null);
         builder.setView(dialogView);
         AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+            dialog.getWindow().setDimAmount(0.5f);
+        }
 
-        ImageView ivSwitcherIcon = dialogView.findViewById(R.id.ivSwitcherIcon);
         TextView tvRecentsBadge = dialogView.findViewById(R.id.tvRecentsBadge);
         TextView tvNoRecentTasks = dialogView.findViewById(R.id.tvNoRecentTasks);
         LinearLayout llTasksList = dialogView.findViewById(R.id.llTasksList);
         Button btnCloseAllTasks = dialogView.findViewById(R.id.btnCloseAllTasks);
         Button btnSystemRecents = dialogView.findViewById(R.id.btnSystemRecents);
-        Button btnDismissSwitcher = dialogView.findViewById(R.id.btnDismissSwitcher);
-
-        int accentColor = accent();
-        if (ivSwitcherIcon != null) {
-            ivSwitcherIcon.setColorFilter(accentColor, PorterDuff.Mode.SRC_IN);
-        }
-        if (tvRecentsBadge != null) {
-            tvRecentsBadge.setTextColor(accentColor);
-        }
+        View btnDismissSwitcher = dialogView.findViewById(R.id.btnDismissSwitcher);
 
         ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         PackageManager pm = getPackageManager();
@@ -363,16 +358,13 @@ public class MainActivity extends AppCompatActivity {
                 if (tvName != null) tvName.setText(label);
                 if (tvStatus != null) {
                     if (isRunning) {
-                        tvStatus.setText("Running in background");
-                        tvStatus.setTextColor(accentColor);
+                        tvStatus.setText("Running");
                     } else {
-                        tvStatus.setText("Recent app");
-                        tvStatus.setTextColor(ContextCompat.getColor(this, R.color.cockpit_text_secondary));
+                        tvStatus.setText("Recent");
                     }
                 }
 
                 if (btnSwitch != null) {
-                    btnSwitch.setTextColor(accentColor);
                     btnSwitch.setOnClickListener(v -> {
                         dialog.dismiss();
                         recordRecentApp(pkg);
@@ -397,11 +389,11 @@ public class MainActivity extends AppCompatActivity {
                         llTasksList.removeView(cardView);
                         if (llTasksList.getChildCount() == 0) {
                             if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.VISIBLE);
-                            if (tvRecentsBadge != null) tvRecentsBadge.setText("No background apps");
+                            if (tvRecentsBadge != null) tvRecentsBadge.setText("");
                             if (btnCloseAllTasks != null) btnCloseAllTasks.setEnabled(false);
                         } else {
                             if (tvRecentsBadge != null) {
-                                tvRecentsBadge.setText(llTasksList.getChildCount() + " tasks");
+                                tvRecentsBadge.setText(llTasksList.getChildCount() + " recent");
                             }
                         }
                     });
@@ -415,7 +407,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (llTasksList.getChildCount() == 0) {
             if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.VISIBLE);
-            if (tvRecentsBadge != null) tvRecentsBadge.setText("No background apps");
+            if (tvRecentsBadge != null) tvRecentsBadge.setText("");
             if (btnCloseAllTasks != null) btnCloseAllTasks.setEnabled(false);
         } else {
             if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.GONE);
@@ -439,7 +431,7 @@ public class MainActivity extends AppCompatActivity {
                     prefHelper.clearRecentApps();
                     llTasksList.removeAllViews();
                     if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.VISIBLE);
-                    if (tvRecentsBadge != null) tvRecentsBadge.setText("No background apps");
+                    if (tvRecentsBadge != null) tvRecentsBadge.setText("");
                     btnCloseAllTasks.setEnabled(false);
                     notifier.show(Notifier.Kind.OK, "Background apps closed");
                 });
@@ -1987,7 +1979,7 @@ public class MainActivity extends AppCompatActivity {
         btnMinus.setText("− 1°");
         btnMinus.setTextSize(28);
         btnMinus.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
-        btnMinus.setBackgroundResource(R.drawable.bg_elevated_btn);
+        btnMinus.setBackgroundResource(R.drawable.ad_bg_btn_secondary);
         btnMinus.setLayoutParams(new LinearLayout.LayoutParams(0, 110, 1f));
         btnMinus.setOnClickListener(v -> {
             tempHolder[0] -= 1.0f;
@@ -2001,7 +1993,7 @@ public class MainActivity extends AppCompatActivity {
         btnPlus.setText("+ 1°");
         btnPlus.setTextSize(28);
         btnPlus.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
-        btnPlus.setBackgroundResource(R.drawable.bg_elevated_btn);
+        btnPlus.setBackgroundResource(R.drawable.ad_bg_btn_secondary);
         btnPlus.setLayoutParams(new LinearLayout.LayoutParams(0, 110, 1f));
         btnPlus.setOnClickListener(v -> {
             tempHolder[0] += 1.0f;
