@@ -140,6 +140,7 @@ public class MainActivity extends AppCompatActivity {
             View chip = findViewById(R.id.chipDriving);
             if (chip != null) chip.setVisibility(driving ? View.VISIBLE : View.GONE);
             updatePairRow();
+            applyAppsDrivingMode(driving);
             if (driving && currentActiveRailBtn == railBtnSetup) {
                 showView(viewDash, railBtnDash);
                 notifier.show(Notifier.Kind.INFO, "Settings are available when parked");
@@ -1043,6 +1044,11 @@ public class MainActivity extends AppCompatActivity {
         appsAdapter.setOnAppClickListener(this::onAppItemClicked);
         gvApps.setOnItemClickListener((parent, view, position, id) -> onAppItemClicked(appsAdapter.getItem(position)));
 
+        appsAdapter.setFavouritePackages(java.util.Arrays.asList(
+                prefHelper.getMapPackage(), prefHelper.getCarPlayPackage(), prefHelper.getRadioPackage()));
+        gvApps.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+            if (b - t != ob - ot && drivingState.isDriving()) applyAppsDrivingMode(true);
+        });
         loadInstalledAppsAsync();
 
         etSearch.addTextChangedListener(new TextWatcher() {
@@ -1054,6 +1060,28 @@ public class MainActivity extends AppCompatActivity {
             }
             @Override public void afterTextChanged(Editable s) {}
         });
+    }
+
+    /** Driving: hide search, show the banner and 6 favourites in a 3 x 2 grid. */
+    private void applyAppsDrivingMode(boolean driving) {
+        if (viewApps == null || appsAdapter == null) return;
+        GridView grid = viewApps.findViewById(R.id.gvApps);
+        View field = viewApps.findViewById(R.id.fieldSearchApps);
+        View banner = viewApps.findViewById(R.id.bannerDrivingApps);
+        EditText search = viewApps.findViewById(R.id.etSearchApps);
+        if (driving && search != null) {
+            search.clearFocus();
+            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            if (imm != null) imm.hideSoftInputFromWindow(search.getWindowToken(), 0);
+        }
+        field.setVisibility(driving ? View.GONE : View.VISIBLE);
+        banner.setVisibility(driving ? View.VISIBLE : View.GONE);
+        int gap = Math.round(getResources().getDisplayMetrics().density * (driving ? 24 : 16));
+        grid.setNumColumns(driving ? 3 : 5);
+        grid.setHorizontalSpacing(gap);
+        grid.setVerticalSpacing(gap);
+        int tile = grid.getHeight() > 0 ? (grid.getHeight() - gap) / 2 : 0;
+        appsAdapter.setDriving(driving, tile);
     }
 
     private void onAppItemClicked(AppInfo app) {

@@ -5,6 +5,7 @@
     <dimen name="ad_text_display">64sp</dimen>
     <dimen name="ad_text_title">34sp</dimen>
     <dimen name="ad_text_glance">28sp</dimen>
+    <dimen name="ad_app_tile_height">136dp</dimen>
     <dimen name="ad_text_label">22sp</dimen>
     <dimen name="ad_text_body">22sp</dimen>
     <dimen name="ad_text_caption">20sp</dimen>

@@ -24,6 +24,12 @@ public class AppsGridAdapter extends BaseAdapter {
     private final LayoutInflater inflater;
     private OnAppClickListener clickListener;
     private String currentQuery = "";
+    private final List<String> favouritePackages = new ArrayList<>();
+    private boolean driving;
+    private int drivingTileHeight;
+
+    /** While driving only the favourites are shown, as larger tiles. */
+    public static final int DRIVING_LIMIT = 6;
 
     public AppsGridAdapter(Context context, List<AppInfo> apps) {
         this.fullList = new ArrayList<>(apps);
@@ -33,6 +39,18 @@ public class AppsGridAdapter extends BaseAdapter {
 
     public void setOnAppClickListener(OnAppClickListener listener) {
         this.clickListener = listener;
+    }
+
+    public void setFavouritePackages(List<String> packages) {
+        favouritePackages.clear();
+        for (String p : packages) if (p != null && !p.isEmpty()) favouritePackages.add(p);
+        filter(currentQuery);
+    }
+
+    public void setDriving(boolean driving, int tileHeightPx) {
+        this.driving = driving;
+        this.drivingTileHeight = tileHeightPx;
+        filter(currentQuery);
     }
 
     public void updateData(List<AppInfo> apps) {
@@ -69,6 +87,16 @@ public class AppsGridAdapter extends BaseAdapter {
             holder = (ViewHolder) convertView.getTag();
         }
 
+        ViewGroup.LayoutParams lp = convertView.getLayoutParams();
+        int height = driving && drivingTileHeight > 0 ? drivingTileHeight
+                : convertView.getResources().getDimensionPixelSize(R.dimen.ad_app_tile_height);
+        if (lp != null && lp.height != height) {
+            lp.height = height;
+            convertView.setLayoutParams(lp);
+        }
+        holder.tvName.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, convertView.getResources()
+                .getDimension(driving ? R.dimen.ad_text_glance : R.dimen.ad_text_label));
+
         final AppInfo app = getItem(position);
         holder.tvName.setText(app.getLabel());
         holder.ivIcon.setImageDrawable(app.getIcon());
@@ -85,7 +113,21 @@ public class AppsGridAdapter extends BaseAdapter {
     public void filter(String query) {
         this.currentQuery = (query != null) ? query : "";
         filteredList.clear();
-        if (currentQuery.trim().isEmpty()) {
+        if (driving) {
+            for (String pkg : favouritePackages) {
+                for (AppInfo app : fullList) {
+                    if (pkg.equals(app.getPackageName()) && !filteredList.contains(app)) {
+                        filteredList.add(app);
+                        break;
+                    }
+                }
+            }
+            for (AppInfo app : fullList) {
+                if (filteredList.size() >= DRIVING_LIMIT) break;
+                if (!filteredList.contains(app)) filteredList.add(app);
+            }
+            while (filteredList.size() > DRIVING_LIMIT) filteredList.remove(filteredList.size() - 1);
+        } else if (currentQuery.trim().isEmpty()) {
             filteredList.addAll(fullList);
         } else {
             String lower = currentQuery.toLowerCase().trim();
