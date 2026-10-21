@@ -440,3 +440,72 @@ Order (design-system principle "Postpone nonessential setup"; ties to F-02 and F
 - Every step has Skip; nothing blocks reaching Home. A "Finish setup" chip remains in Settings if anything was skipped.
 - Step 5 requests permissions one at a time, each with the system dialog opened from the button, not at launch.
 - Parked only: first run is shown when the car is stopped; if the car is moving, defer to the next stop.
+
+---
+
+## 6. Applying the design system to the app
+
+The design system was approved on 2026-10-21. This section maps the current resources onto it so the migration can be done in small commits.
+
+### 6.1 Resource map
+
+| Today | Becomes |
+|---|---|
+| `colors.xml` (`cockpit_surface_base #0C0D10`, panel `#13151A`, `t1 #ECEEF2`, `t2 #8B92A0`, `t3 #525866`, amber `#E5A93C`, four swatch colours, status `#22C55E`) | `values/colors_ad.xml` and `values-night/colors_ad.xml` with the 29 tokens (`ad_canvas`, `ad_surface_1..3`, `ad_label_1..4`, `ad_accent`, `ad_ok/caution/alert` …). Old names removed once no layout references them. |
+| `styles.xml` (`Theme.ApexDrive`, `windowBackground`) | Parent `Theme.AppCompat.DayNight.NoActionBar`; `windowBackground = @color/ad_canvas`; `TextAppearance.ApexDrive.*` (Speed, Display, Title, Glance, Label, Body, Caption). |
+| `fontFamily="sans-serif-black|bold|medium"` in layouts (115 attributes) | `@font/atkinson_next_regular|medium|semibold` through the text appearances. |
+| `bg_panel.xml` (`#E8121419`, stroke `#24FFFFFF`, r14) | `ad_bg_tile.xml` (`ad_surface_1`, r28, no stroke, elevation) and `ad_bg_glass_solid.xml` for glass fallbacks. |
+| `bg_card_inner.xml` (`#77181B22`, r10) | `ad_bg_row.xml` (`ad_surface_2`, r12). |
+| `bg_elevated_btn.xml` (selector, `#14FFFFFF`) | `ad_bg_btn_secondary.xml` (`ad_surface_3`, pressed `ad_fill_pressed`), `ad_bg_btn_primary.xml` (`ad_accent`, pressed `ad_accent_pressed`), capsule shape. |
+| `bg_squircle.xml` | `ad_bg_icon_tile.xml` (r20). |
+| `ic_nav_*.xml` (8 vector drawables, 20 dp) | Material Symbols Rounded exports at 32 dp (home, phone_iphone, map, music_note, apps, settings, recents). |
+| `AppsGridAdapter`, `item_app_tile.xml` | 160 px tiles, 72 px icon, 22 sp label, press state. |
+| 33 `Toast.makeText` | `NotificationView` (glass capsule, badge, close, one action) shown by a small `Notifier` helper, minimum 8 s. |
+| Programmatic dialogs with hex literals | Layout-based sheets using tokens. |
+| `applyAccentColor()` on every `showView()` | Removed (one accent from resources). |
+
+### 6.2 What is new
+
+- `GlassDrawable` and `BakedGlass` for the status bar, rail, sheets and notifications (Android resources section of the design system). Compatible with API 21–28; falls back to `ad_glass_solid` when "Solid backgrounds" is on or the blur isn't ready.
+- `DrivingState` (speed with hysteresis) that the Apps, Settings and Phone screens observe.
+- `ThemeController` for Day/Night Auto/Day/Night (F-06).
+- A vehicle profile (F-01) feeding the status-bar vehicle name and the Phone screen.
+
+### 6.3 Recommended commit sequence
+
+Each step is a small commit on its own branch and leaves the app launchable. None can be compiled on this machine; every step needs a CI build before merge.
+
+1. `feat(theme): add day/night colour tokens and text styles` (resources only, unused yet).
+2. `feat(theme): bundle atkinson hyperlegible next fonts` (needs the font files and licence added to the repo).
+3. `feat(ui): add tile, row and button drawables` (resources only).
+4. `feat(ui): add notification view and replace toasts` (code + layout).
+5. `feat(ui): add glass drawable and baked blur` (code).
+6. `refactor(ui): move rail and status bar to the new shell` (activity_main.xml, `showView`).
+7. One commit per screen: `feat(home): …`, `feat(phone): …`, `feat(maps): …`, `feat(audio): …`, `feat(apps): …`, `feat(settings): …`, `feat(sheets): …`.
+8. `feat(driving): add driving state and lock-outs`.
+9. `feat(onboarding): add first-run flow` (depends on F-01/F-02).
+10. `chore(theme): remove unused colours and drawables`.
+
+---
+
+## 7. Prioritised backlog
+
+Impact: how much it changes a driver's safety or trust. Effort: S ≤ 1 day, M ≤ 3 days, L > 3 days of focused work. Audit 1 fixes marked "A1" are prerequisites because the new UI must show real state.
+
+| Priority | Item | Findings | Effort | Needs |
+|---|---|---|---|---|
+| P0 | Text floor, weights, sentence case, 4 label levels | U-01, U-02, U-14 | M | steps 1–3 |
+| P0 | Remove fake labels and "01 ·" numbering | U-14, U-23, U-29 | S | A1 section B |
+| P0 | Real phone/GPS/media status | U-09, U-24 | M | A1 section A |
+| P0 | Notifications instead of toasts | U-18 | M | step 4 |
+| P0 | Remove 8 s countdown and silent Bluetooth enable | U-11 | S | A1 |
+| P1 | New shell (rail, status bar), 64 px targets | U-04, U-08, U-20 | M | steps 5–6 |
+| P1 | Home, Phone, Audio rebuilds | U-09, U-24 | L | steps 7 |
+| P1 | Driving state and lock-outs | U-10, U-19 | M | step 8 |
+| P1 | Settings regroup, hide PIN | U-05, U-23, U-26 | M | |
+| P2 | Maps and Apps rebuilds | U-10, U-28 | M | F-13 for saved places |
+| P2 | First-run flow | U-12, U-25 | L | F-01, F-02 |
+| P2 | Focus and pressed states for wheel keys | U-07 | M | *verify in the car* |
+| P3 | Launcher icon, tab restore, Day/Night auto | U-13, U-17 | S–M | F-06 |
+
+Everything that touches Bluetooth, radio, the headlight signal, steering-wheel keys or the real screen size needs a test in the car.
