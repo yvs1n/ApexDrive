@@ -117,9 +117,6 @@ public class MainActivity extends AppCompatActivity {
     private final Handler clockHandler = new Handler(Looper.getMainLooper());
     private BroadcastReceiver mediaReceiver;
 
-    private View layoutStartupLoader;
-    private TextView tvStartupSubtitle, tvStartupStatus;
-    private ProgressBar pbStartup;
     private BroadcastReceiver dialogBtReceiver;
     private final Handler dialogPollHandler = new Handler(Looper.getMainLooper());
     private Runnable dialogPollRunnable;
@@ -146,13 +143,9 @@ public class MainActivity extends AppCompatActivity {
         android.content.SharedPreferences display = getSharedPreferences("ad_display", MODE_PRIVATE);
         if (display.getBoolean("reopen_settings", false)) {
             display.edit().remove("reopen_settings").apply();
-            showView(viewSetup, railBtnSetup);
+            showView(screen(SCREEN_SETUP), railBtnSetup);
         }
-
-        // Instant Cockpit Display: Hide startup loader immediately so interface is ready without delay
-        if (layoutStartupLoader != null) {
-            layoutStartupLoader.setVisibility(View.GONE);
-        }
+        buildRemainingScreensWhenIdle();
     }
 
     private void makeFullScreen() {
@@ -192,11 +185,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        layoutStartupLoader = findViewById(R.id.layoutStartupLoader);
-        tvStartupSubtitle = findViewById(R.id.tvStartupSubtitle);
-        tvStartupStatus = findViewById(R.id.tvStartupStatus);
-        pbStartup = findViewById(R.id.pbStartup);
-
         viewContainer = findViewById(R.id.viewContainer);
         btnHeaderRecents = findViewById(R.id.btnHeaderRecents);
         ivHeaderRecentsIcon = findViewById(R.id.ivHeaderRecentsIcon);
@@ -237,20 +225,8 @@ public class MainActivity extends AppCompatActivity {
         tvAppsLabel = findViewById(R.id.tvAppsLabel);
         tvSetupLabel = findViewById(R.id.tvSetupLabel);
 
-        LayoutInflater inflater = LayoutInflater.from(this);
-        viewDash = inflater.inflate(R.layout.view_dashboard, viewContainer, false);
-        viewCarPlay = inflater.inflate(R.layout.view_carplay, viewContainer, false);
-        viewMaps = inflater.inflate(R.layout.view_maps, viewContainer, false);
-        viewAudio = inflater.inflate(R.layout.view_audio, viewContainer, false);
-        viewApps = inflater.inflate(R.layout.view_apps, viewContainer, false);
-        viewSetup = inflater.inflate(R.layout.view_setup, viewContainer, false);
-
-        setupDashWidgets();
-        setupCarPlayWidgets();
-        setupMapsWidgets();
-        setupAudioWidgets();
-        setupAppsWidgets();
-        setupSetupWidgets();
+        // Only Home is built here; the other screens are built after the first frame (see screen()).
+        screen(SCREEN_DASH);
 
         if (pillHeaderBluetooth != null) {
             pillHeaderBluetooth.setOnClickListener(v -> {
@@ -1143,6 +1119,7 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressWarnings("unchecked")
     private <T extends View> T settingsView(String idName) {
+        if (viewSetup == null) return null;
         return (T) viewSetup.findViewById(getResources().getIdentifier(idName, "id", getPackageName()));
     }
 
@@ -1581,11 +1558,78 @@ public class MainActivity extends AppCompatActivity {
 
     private void initNavigation() {
         railBtnDash.setOnClickListener(v -> showView(viewDash, railBtnDash));
-        railBtnCarPlay.setOnClickListener(v -> showView(viewCarPlay, railBtnCarPlay));
-        railBtnMaps.setOnClickListener(v -> showView(viewMaps, railBtnMaps));
-        railBtnAudio.setOnClickListener(v -> showView(viewAudio, railBtnAudio));
-        railBtnApps.setOnClickListener(v -> showView(viewApps, railBtnApps));
-        railBtnSetup.setOnClickListener(v -> showView(viewSetup, railBtnSetup));
+        railBtnCarPlay.setOnClickListener(v -> showView(screen(SCREEN_CARPLAY), railBtnCarPlay));
+        railBtnMaps.setOnClickListener(v -> showView(screen(SCREEN_MAPS), railBtnMaps));
+        railBtnAudio.setOnClickListener(v -> showView(screen(SCREEN_AUDIO), railBtnAudio));
+        railBtnApps.setOnClickListener(v -> showView(screen(SCREEN_APPS), railBtnApps));
+        railBtnSetup.setOnClickListener(v -> showView(screen(SCREEN_SETUP), railBtnSetup));
+    }
+
+    private static final int SCREEN_DASH = 0, SCREEN_CARPLAY = 1, SCREEN_MAPS = 2,
+            SCREEN_AUDIO = 3, SCREEN_APPS = 4, SCREEN_SETUP = 5;
+
+    /** Returns a screen, building it the first time it is needed. */
+    private View screen(int which) {
+        LayoutInflater inflater = getLayoutInflater();
+        switch (which) {
+            case SCREEN_CARPLAY:
+                if (viewCarPlay == null) {
+                    viewCarPlay = inflater.inflate(R.layout.view_carplay, viewContainer, false);
+                    setupCarPlayWidgets();
+                    if (lastPhoneName != null) {
+                        showPhoneState(lastPhoneName, lastPhoneDetail, lastPhoneStatus, lastPhoneStatusColor, lastPhoneConnected);
+                    }
+                }
+                return viewCarPlay;
+            case SCREEN_MAPS:
+                if (viewMaps == null) {
+                    viewMaps = inflater.inflate(R.layout.view_maps, viewContainer, false);
+                    setupMapsWidgets();
+                }
+                return viewMaps;
+            case SCREEN_AUDIO:
+                if (viewAudio == null) {
+                    viewAudio = inflater.inflate(R.layout.view_audio, viewContainer, false);
+                    setupAudioWidgets();
+                    MediaStateHolder.Snapshot s = MediaStateHolder.getInstance().getSnapshot();
+                    setTrackText(s.title, s.artist);
+                    if (s.hasTrack()) setPlayState(s.playing);
+                    setRadioButtonIcon(isRadioPlaying);
+                }
+                return viewAudio;
+            case SCREEN_APPS:
+                if (viewApps == null) {
+                    viewApps = inflater.inflate(R.layout.view_apps, viewContainer, false);
+                    setupAppsWidgets();
+                }
+                return viewApps;
+            case SCREEN_SETUP:
+                if (viewSetup == null) {
+                    viewSetup = inflater.inflate(R.layout.view_setup, viewContainer, false);
+                    setupSetupWidgets();
+                }
+                return viewSetup;
+            default:
+                if (viewDash == null) {
+                    viewDash = inflater.inflate(R.layout.view_dashboard, viewContainer, false);
+                    setupDashWidgets();
+                }
+                return viewDash;
+        }
+    }
+
+    /**
+     * Builds the other screens one at a time while the main thread is idle, after Home is
+     * on screen, so the first launch only pays for Home and later taps are still instant.
+     */
+    private void buildRemainingScreensWhenIdle() {
+        final int[] order = {SCREEN_CARPLAY, SCREEN_AUDIO, SCREEN_MAPS, SCREEN_APPS, SCREEN_SETUP};
+        final int[] next = {0};
+        getWindow().getDecorView().post(() -> Looper.myQueue().addIdleHandler(() -> {
+            if (isFinishing()) return false;
+            screen(order[next[0]++]);
+            return next[0] < order.length;
+        }));
     }
 
     private void showView(View targetView, View activeRailBtn) {
@@ -1629,6 +1673,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void selectAudioSource(View chosen) {
+        if (viewAudio == null) return;
         int[] ids = {R.id.btnSrcRadio, R.id.btnSrcBluetooth, R.id.btnSrcSpotify, R.id.btnSrcUsb};
         for (int id : ids) {
             View src = viewAudio.findViewById(id);
@@ -1786,6 +1831,10 @@ public class MainActivity extends AppCompatActivity {
         return dev != null && saved.equalsIgnoreCase(dev.getAddress());
     }
 
+    private String lastPhoneName, lastPhoneDetail, lastPhoneStatus;
+    private int lastPhoneStatusColor;
+    private boolean lastPhoneConnected;
+
     private void updateConnectedPhoneUi(String deviceName, String details) {
         String name = deviceName != null ? deviceName : "Phone";
         showPhoneState(name, details != null ? details : "Connected", "Connected", R.color.ad_ok, true);
@@ -1808,6 +1857,12 @@ public class MainActivity extends AppCompatActivity {
 
     /** Writes one phone state to the status bar chip, the Home tile and the Phone screen. */
     private void showPhoneState(String name, String detail, String status, int statusColor, boolean connected) {
+        // Kept so the Phone screen shows the current state when it is built later.
+        lastPhoneName = name;
+        lastPhoneDetail = detail;
+        lastPhoneStatus = status;
+        lastPhoneStatusColor = statusColor;
+        lastPhoneConnected = connected;
         int accent = accent();
         int inactive = ContextCompat.getColor(this, R.color.ad_label_3);
         if (tvHeaderBluetooth != null) tvHeaderBluetooth.setText(connected ? name : "No phone");
