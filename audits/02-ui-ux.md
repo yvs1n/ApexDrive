@@ -203,3 +203,240 @@ Source of the lock-outs: NHTSA visual-manual guidelines (manual text entry, long
 | Album art | Full size | Full size (allowed while selecting media) |
 | Video, web | Allowed through other apps | Not offered by ApexDrive |
 | Notifications | At least 8 s, any text | At least 8 s, at most two lines |
+
+---
+
+## 5. Screen overhauls
+
+Shell for every screen (design system, "Layout and shape"): a 96 px glass rail on the left (Home, Phone, Maps, Audio, Apps, Settings), a 52 px glass status bar on top (clock, outside temperature, GPS chip, phone chip), and a 896×520 content area on an 8 px grid with 24 px between tiles. Tiles are opaque. The wireframes are not to scale; sizes are in px.
+
+Notation: `[ Button ]` = 64 px target, `( chip )` = non-tappable status, `▮` = switch.
+
+### 5.1 Home (replaces DASH)
+
+Today: `view_dashboard.xml`. Left column: a projection card with a marketing headline and LAUNCH PROJECTION (60 px), plus a Bluetooth card. Right column: speed (86 sp) and Now Playing. Three different "start CarPlay" paths exist.
+
+Job: answer "where am I going, how fast, what's playing, is my phone connected" in one glance, and start the next action in one tap.
+
+```
+┌────┬──────────────────────────────────────────────────────────────┐
+│rail│ 14:32            38°            ● GPS        ● iPhone        │ status bar (glass)
+│    ├───────────────────────────────────────┬──────────────────────┤
+│Home│ Drive                                 │ Speed                │
+│    │ [ Home ] [ Work ] [ Fuel ]            │  87 km/h             │ upper half:
+│Phone│                                      │ Trip 42.6 km  Avg 71 │ what the driver checks
+│    │ [ Open Maps ]    Last: Dubai Mall     │                      │
+│Maps ├──────────────────────────────────────┼──────────────────────┤
+│    │ ┌────────┐ Long Way Home              │ Phone                │
+│Audio│ │ art    │ Saeed and the Dunes        │ iPhone               │ lower half:
+│    │ │ full   │ Bluetooth · iPhone         │ ● Connected          │ controls
+│Apps │ │ height │ [⏮] [⏸] [⏭]               │ [ Open CarPlay ]     │
+│    │ └────────┘                            │                      │
+│Sett.│                                      │                      │
+└────┴──────────────────────────────────────┴──────────────────────┘
+```
+
+Components: Drive tile, Speed tile, Now playing tile (art fills the full tile height, flush left), Phone tile, status chips.
+
+States:
+- Drive tile idle: three saved places (configurable, F-13) and Open Maps. Navigating (needs OsmAnd's API, F-11): next turn icon, distance (`display` 64), street, arrival time.
+- Speed: GPS fix → number and Trip; no fix → "–" and "Waiting for GPS"; location off → "Turn on location" as the one action. Never "0" when speed is unknown.
+- Now playing: with metadata → art, title, artist, source; nothing → "Nothing playing / Play something on your phone or pick a source" plus Radio. Art comes from the media session when the app provides it (F-05); otherwise the placeholder.
+- Phone: Connected / Not connected (Connect phone) / Connecting (Cancel). Connected state must come from a verified signal (Audit 1, section A), not from "Bluetooth is on".
+
+Driving: unchanged except the Drive tile hides "Open Maps" if the map app is full-screen already and notifications are limited to two lines. The tiles are already glanceable.
+
+Tap counts from Home: open maps 1, start route to a saved place 1, start CarPlay 1, pause 1, skip 1.
+
+Removes: projection card, "APPLE CARPLAY" and "WIRELESS & USB PROJECTION INTERFACE" copy, the A2DP caption, "UNIVERSAL AUDIO", all caps, north/compass line (`view_dashboard.xml:239`), the reset-by-tap trip row (moves to Trip history, F-15).
+
+### 5.2 Phone (replaces PHONE, a brochure)
+
+Today: `view_carplay.xml`. A header, a fullscreen launch button, and three numbered panels of copy about wireless, USB and DSP. No state.
+
+Job: connect, switch and start CarPlay; fix it when it fails.
+
+```
+┌────┬──────────────────────────────────────────────────────────────┐
+│rail│ status bar                                                   │
+│    ├───────────────────────────────────────┬──────────────────────┤
+│    │ ◯ iPhone is connected                 │ Other phones         │
+│    │   ● Calls and audio                   │ ┌──────────────────┐ │
+│    │                                       │ │ Galaxy S23       │ │
+│    │ CarPlay runs over the USB cable.      │ │ Not nearby       │ │
+│    │ Keep the phone plugged in.            │ ├──────────────────┤ │
+│    │                                       │ │ Work iPhone      │ │
+│    │ [        Open CarPlay        ]        │ │ Not nearby       │ │
+│    │                                       │ ├──────────────────┤ │
+│    │ ▮ Open automatically                  │ │ + Pair a phone   │ │
+│    │   When iPhone connects                │ └──────────────────┘ │
+│    │ > Phone settings                      │ CarPlay not starting?│
+│    │   Bluetooth app on the head unit      │ [ Show steps ]       │
+└────┴───────────────────────────────────────┴──────────────────────┘
+```
+
+Behaviour:
+- **One** Open CarPlay button. It launches the app the driver chose in Settings (today `launchCarPlay()` ignores the choice, Audit 1 section A).
+- The auto-open switch is off by default; it replaces the 8 s countdown (U-11).
+- Tapping a phone in Other phones opens the "Choose a phone" sheet (5.7). Switching a phone is 2 taps.
+- "Show steps" opens a help sheet: 1 Check the USB cable. 2 Unlock the phone. 3 Turn Bluetooth off and on. 4 Pair again. It is the only place that explains wired vs wireless and it makes no hardware claims.
+
+States: Not connected (title "No phone", chip "Not connected", primary action "Connect phone"); Connecting (spinner, Cancel); Connected; Failed (notification "CarPlay didn't start. Check the USB cable." with Try again).
+
+Driving: pairing is locked ("Available when parked"); Open CarPlay stays.
+
+Removes: all three numbered panels, hardware claims, "SantafemR", the fullscreen button label.
+
+### 5.3 Maps
+
+Today: `view_maps.xml`. A telemetry panel (coordinates, altitude, trip), four POI buttons, "LAUNCH OSMAND OFFLINE", "CHANGE DEFAULT MAP ENGINE", and a static status line.
+
+Job: start a route fast. The driver's map app does the real work.
+
+```
+┌────┬──────────────────────────────────────────────────────────────┐
+│rail│ status bar                                                   │
+│    ├───────────────────────────────────────┬──────────────────────┤
+│    │ Where to?                             │ Here                 │
+│    │ [ Home ]  [ Work ]                    │ Sheikh Zayed Rd      │
+│    │ [ Fuel ]  [ Parking ]                 │ GPS ● good           │
+│    │ [ Rest stop ] [ Hospital ]            │ Trip 42.6 km · 38 min│
+│    │                                       │                      │
+│    │ Recent                                │ [ Open map ]         │
+│    │ Dubai Mall            12 km           │ OsmAnd               │
+│    │ Mall of the Emirates  18 km           │ Change app           │
+└────┴───────────────────────────────────────┴──────────────────────┘
+```
+
+Behaviour:
+- Place buttons start a route in the chosen map app (OsmAnd intent) or search nearby if the app can't take a destination; label always matches action (today "REST AREA" searches "coffee").
+- Recent and saved places are real (F-13). Without them the section shows "Places you visit appear here."
+- GPS quality is a real word from the fix (Good, Weak, None). Coordinates and altitude move to Settings > About, not shown while driving.
+- "Change app" is a Settings row, not a prominent button.
+
+Driving: Recent list shows the three newest; no scrolling.
+
+Removes: coordinates, the static "RADARS · ROAD BUMPS · OFFLINE LANES ACTIVE" (a claim OsmAnd, not ApexDrive, can make), "3D Fix · ±3m" unless it is read from the fix.
+
+### 5.4 Audio
+
+Today: `view_audio.xml`. Four numbered source buttons (FM radio, Spotify, Bluetooth, USB) 60 px tall, a radio tuner panel with frequency 88 sp, "PRESET 01" and three buttons.
+
+Job: play something and control it. The real now-playing screen is the one missing screen.
+
+```
+┌────┬──────────────────────────────────────────────────────────────┐
+│rail│ status bar                                                   │
+│    ├──────────────────────────────────────────────────────────────┤
+│    │ ┌──────────────┐  Long Way Home                              │
+│    │ │              │  Saeed and the Dunes                        │
+│    │ │   album art  │  Bluetooth · iPhone                         │
+│    │ │   full height│  ━━━━━━━●────────────  1:42 / 3:51          │
+│    │ │              │                                             │
+│    │ │              │  [⏮]   [  ⏸  ]   [⏭]          Sources: [ ⌄ ]│
+│    │ └──────────────┘                                             │
+└────┴──────────────────────────────────────────────────────────────┘
+```
+
+Behaviour:
+- Driven by the active media session (F-05): art, title, artist, progress, transport. Source chip names the real source.
+- Sources: a segmented row (Radio, Phone, USB) of 64 px buttons, showing only what the head unit has. Radio shows frequency in `display` (64 px) with seek buttons and, once real, presets (F-05 and Audit 1, section B: remove the static "PRESET 01").
+- Radio seek must reflect the tuner, not just text. Until the tuner state can be read (*verify in the car*), seek buttons are shown but labelled with the broadcast they send.
+- Volume: use the system volume (`playing-audio.md`: don't repurpose audio controls).
+
+Driving: marquee off; title truncated to one line at 28 sp; sources locked to the current one plus Radio.
+
+### 5.5 Apps
+
+Today: `view_apps.xml`. A heading, a 260 dp EditText, a five-column grid of 106 dp tiles. Every installed app, no favourites, no refresh when apps change.
+
+Job: reach a specific app in 2 taps.
+
+Parked:
+```
+┌────┬──────────────────────────────────────────────────────────────┐
+│rail│ status bar                                                   │
+│    ├──────────────────────────────────────────────────────────────┤
+│    │ ( Search apps                      )   Favourites  All apps  │
+│    │ [OsmAnd] [ZLink] [Radio] [Phone] [Music]                     │
+│    │ [Podcast][Dashcam][Files][Weather][Calc]                     │
+└────┴──────────────────────────────────────────────────────────────┘
+```
+Driving:
+```
+┌────┬──────────────────────────────────────────────────────────────┐
+│rail│ ( 🔒 6 favourites while driving. Search and the full list     │
+│    │      come back when you stop. )                              │
+│    │ [OsmAnd]      [ZLink]      [Radio]                           │
+│    │ [Phone]       [Music]      [Dashcam]                         │
+└────┴──────────────────────────────────────────────────────────────┘
+```
+
+Behaviour: favourites first (long-press is not used; a visible "Edit favourites" action while parked); 160 px tiles with 72 px icons (the 5-column grid becomes 5 at 160 px only if the labels stay at 22 px, otherwise 4); the list refreshes on package install/removal (Audit 1, section A); icons load off the UI thread (Audit 1, section D).
+
+Removes: the heading "INSTALLED VEHICLE APPS", keyboard-first search at speed.
+
+### 5.6 Settings (replaces SETUP)
+
+Today: `view_setup.xml`. Accent swatches, pickers for CarPlay app, radio app and map, unit toggle, "GPS Refresh Rate", and six numbered shortcuts including "FACTORY SETTINGS (PIN 123456)".
+
+Job: set things once; find them later.
+
+```
+┌────┬─────────────────────┬────────────────────────────────────────┐
+│rail│ Vehicle             │ Display                                │
+│    │ Phone and CarPlay   │  Night mode            Auto  ›         │
+│    │ Navigation          │  Units                 km/h | mph      │
+│    │ Audio               │  Clock                 24-hour ▮       │
+│    │ ▌Display            │  Solid backgrounds     ▮               │
+│    │ Advanced            │  Stronger contrast     ▮               │
+│    │ About               │  Brightness            ━━━━●──         │
+└────┴─────────────────────┴────────────────────────────────────────┘
+```
+
+Groups: **Vehicle** (name, make and model from the vehicle profile, F-02; "Test my unit", F-03), **Phone and CarPlay** (driver phone, CarPlay app, open automatically), **Navigation** (map app, saved places), **Audio** (radio app, source defaults), **Display** (night mode Auto/Day/Night, units, clock, solid backgrounds, stronger contrast), **Advanced** (factory settings behind a confirmation sheet, system settings, DSP/equaliser shortcut, Bluetooth manager, restart ApexDrive, export logs F-10), **About** (version, update check F-09, licences).
+
+Rules: rows are 72 px with a switch only in rows; the number of settings is minimal (`settings.md`); setup information that can be obtained elsewhere is not asked for (`settings.md`). Driving: Advanced and pickers hidden; Display, Phone and Audio stay.
+
+Removes: accent picker, "SWISS COCKPIT ACCENT COLOR", "LIVE 20Hz", numbering, the PIN in the label, the 15-item `AlertDialog` list pickers (replaced by a sheet with large rows and search while parked).
+
+### 5.7 Dialogs and sheets
+
+**Choose a phone** (replaces `dialog_device_selector.xml`):
+```
+        ┌───────────────────────────────────────────┐
+        │ Choose a phone                         ✕  │ glass sheet,
+        │ ┌───────────────────────────────────────┐ │ scrim behind
+        │ │ iPhone              Connected      ✓  │ │
+        │ │ Galaxy S23    Last used 3 days ago [Connect] │
+        │ │ Work iPhone         Not nearby        │ │
+        │ └───────────────────────────────────────┘ │
+        │ [ + Pair a phone ]                        │
+        └───────────────────────────────────────────┘
+```
+No countdown, no `adapter.enable()` without a confirm (if Bluetooth is off the sheet says "Bluetooth is off" with a Turn on button), no "INITIALIZING…" spinner text: "Looking for phones…" with a spinner only after 2 s.
+
+**Switch app** (replaces the task switcher): a row list of running apps with the app's name; actions "Switch" and (if allowed) "Close". No "Memory released" claim unless the close actually worked (Audit 1, section A). Title "Switch app", sentence case.
+
+**Calibration** (temperature): a sheet with a stepper and "Use sensor" / "Use online"; uses tokens (no `#0F172A`/`#94A3B8`).
+
+**Confirmation sheet**: title (question), one sentence, two buttons: the safe one on the left (secondary), the action on the right (primary only if it is the expected action; a destructive action uses text colour `alert` and is not the primary).
+
+### 5.8 First run
+
+Today: none. The app starts on DASH, asks for location immediately and shows an 8 s phone picker.
+
+Order (design-system principle "Postpone nonessential setup"; ties to F-02 and F-07):
+
+```
+1 Language, units          →  Pick your language and units               [ Next ]
+2 Vehicle and head unit    →  Make → Model → Head unit  (all skippable)  [ Next ]
+3 Driver phone             →  Choose a phone / Skip for now              [ Next ]
+4 Apps                     →  CarPlay app · Map app · Radio app          [ Next ]
+5 Permissions              →  Location (why), Notification access (why)  [ Done ]
+```
+
+- Five steps, each at most one decision cluster, each with a reason line ("Location shows your speed and sets Night mode").
+- Every step has Skip; nothing blocks reaching Home. A "Finish setup" chip remains in Settings if anything was skipped.
+- Step 5 requests permissions one at a time, each with the system dialog opened from the button, not at launch.
+- Parked only: first run is shown when the car is stopped; if the car is moving, defer to the next stop.
