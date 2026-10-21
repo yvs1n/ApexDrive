@@ -74,3 +74,54 @@ The built-in Android "SWC Study" app will not detect buttons because your button
 1. Open **Settings** $\rightarrow$ **Car Settings** $\rightarrow$ **Factory Settings** (`123456`).
 2. Verify **Canbus** is set to `Simple Soft (XP) -> Hyundai Kia -> 13 All new Santafe`.
 3. Check the CAN RX packet monitor when pressing the steering wheel Volume button.
+
+---
+
+## 6. Why targetSdk 28
+
+`compileSdk` is 33 but `targetSdk` is deliberately **28**. On a head unit this keeps the legacy
+permission and background rules the app relies on, and the vendor ROMs (Allwinner T3L and similar,
+mostly Android 8 to 10) behave as the app expects. Raising it is a project of its own. Before you bump
+`targetSdk`, plan for each of these:
+
+| targetSdk | What changes | Impact on ApexDrive |
+| :--- | :--- | :--- |
+| 29 | Background location needs `ACCESS_BACKGROUND_LOCATION` as a separate runtime grant | GPS speedometer and trip data stop when the launcher is not in front |
+| 30 | Package visibility filtering: `getInstalledApplications`, `queryIntentActivities` and `getLaunchIntentForPackage` only see packages declared in `<queries>` | App drawer, CarPlay dongle detection and map pickers come back empty unless `<queries>` is added (or `QUERY_ALL_PACKAGES`, which Play restricts) |
+| 31 | `BLUETOOTH_CONNECT` / `BLUETOOTH_SCAN` runtime permissions replace `BLUETOOTH`; every component with an intent filter needs an explicit `android:exported` | Bluetooth detection fails without the grant; the manifest does not build until `exported` is set on the launcher activity and receivers |
+| 33 | `POST_NOTIFICATIONS` runtime permission | Any notification the app posts is dropped until granted |
+
+Also re-check `MediaSessionManager` notification-listener access and reflection on `@hide`
+Bluetooth methods, which later API levels restrict.
+
+---
+
+## 7. Signing and releases
+
+Debug builds are signed with the debug key of the machine that built them. A fresh CI runner
+generates a new debug key on every run, so installing one CI build over another fails with
+"App not installed" (signature mismatch) and you would lose settings by uninstalling first.
+
+To get builds that install over each other, CI signs with one stable key when these repository
+**secrets** exist (nothing is ever committed):
+
+| Secret | Value |
+| :--- | :--- |
+| `SIGNING_KEYSTORE_BASE64` | the keystore file, base64-encoded (`base64 -w0 release.jks`) |
+| `SIGNING_KEYSTORE_PASSWORD` | keystore password |
+| `SIGNING_KEY_ALIAS` | key alias |
+| `SIGNING_KEY_PASSWORD` | key password |
+
+Create the key once and keep it safe; if it is lost, existing installs cannot be updated:
+
+```bash
+keytool -genkeypair -v -keystore release.jks -alias apexdrive -keyalg RSA -keysize 2048 -validity 10000
+```
+
+Without the secrets (forks, pull requests, local builds) the build falls back to the normal debug key.
+Locally you can sign the same way by exporting `SIGNING_KEYSTORE_FILE`, `SIGNING_KEYSTORE_PASSWORD`,
+`SIGNING_KEY_ALIAS` and `SIGNING_KEY_PASSWORD`.
+
+`versionCode` comes from the `VERSION_CODE` environment variable (CI sets it to the run number);
+local builds use 1. A signed release APK is built with `./gradlew assembleRelease` when the signing
+variables are present.
