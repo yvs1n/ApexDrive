@@ -111,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
     private String settingsGroup = "Phone";
     private boolean isRadioPlaying = false;
 
-    private TextView tvNavHeadingBig, tvNavCoordinates, tvNavAltitude, tvNavAccuracy, tvNavTripDist, tvNavTripDuration;
+    private TextView tvNavHeadingBig, tvNavAccuracy, tvNavTripDist, tvNavTripDuration;
 
     private Notifier notifier;
     private final DrivingState drivingState = new DrivingState();
@@ -718,24 +718,16 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupMapsWidgets() {
         tvNavHeadingBig = viewMaps.findViewById(R.id.tvNavHeadingBig);
-        tvNavCoordinates = viewMaps.findViewById(R.id.tvNavCoordinates);
-        tvNavAltitude = viewMaps.findViewById(R.id.tvNavAltitude);
         tvNavAccuracy = viewMaps.findViewById(R.id.tvNavAccuracy);
         tvNavTripDist = viewMaps.findViewById(R.id.tvNavTripDist);
         tvNavTripDuration = viewMaps.findViewById(R.id.tvNavTripDuration);
 
-        if (tvNavCoordinates != null) {
-            tvNavCoordinates.setOnClickListener(v -> checkAndOpenLocationSettings());
-        }
         if (tvNavAccuracy != null) {
             tvNavAccuracy.setOnClickListener(v -> checkAndOpenLocationSettings());
         }
 
-        Button btnNavCarPlay = viewMaps.findViewById(R.id.btnNavCarPlayRoute);
-        if (btnNavCarPlay != null) {
-            btnNavCarPlay.setOnClickListener(v -> launchCarPlay());
-        }
-
+        viewMaps.findViewById(R.id.btnNavHome).setOnClickListener(v -> launchPoiSearch("Home"));
+        viewMaps.findViewById(R.id.btnNavWork).setOnClickListener(v -> launchPoiSearch("Work"));
         viewMaps.findViewById(R.id.btnNavFuel).setOnClickListener(v -> launchPoiSearch("gas station"));
         viewMaps.findViewById(R.id.btnNavParking).setOnClickListener(v -> launchPoiSearch("parking"));
         viewMaps.findViewById(R.id.btnNavCoffee).setOnClickListener(v -> launchPoiSearch("coffee"));
@@ -743,16 +735,17 @@ public class MainActivity extends AppCompatActivity {
 
         btnOpenOsmAnd = viewMaps.findViewById(R.id.btnOpenOsmAnd);
         if (btnOpenOsmAnd != null) {
-            String mapName = prefHelper.getMapName();
-            if (mapName != null && !mapName.isEmpty()) {
-                btnOpenOsmAnd.setText("Launch " + mapName);
-            }
             btnOpenOsmAnd.setOnClickListener(v -> launchOfflineMap());
+        }
+        TextView mapBadge = viewMaps.findViewById(R.id.tvMapStatusBadge);
+        if (mapBadge != null) {
+            String mapName = prefHelper.getMapName();
+            mapBadge.setText(mapName != null && !mapName.isEmpty() ? mapName : "No map app chosen");
         }
 
         btnChooseMapApp = viewMaps.findViewById(R.id.btnChooseMapApp);
         if (btnChooseMapApp != null) {
-            btnChooseMapApp.setOnClickListener(v -> showMapPicker());
+            btnChooseMapApp.setOnClickListener(v -> { if (!lockedWhileDriving()) showMapPicker(); });
         }
     }
 
@@ -1266,7 +1259,7 @@ public class MainActivity extends AppCompatActivity {
             if (tvTripDistance != null) tvTripDistance.setText(distText);
             if (tvTripTime != null) tvTripTime.setText("0 min");
             if (tvNavTripDist != null) tvNavTripDist.setText(distText);
-            if (tvNavTripDuration != null) tvNavTripDuration.setText("Duration 0 min");
+            if (tvNavTripDuration != null) tvNavTripDuration.setText("0 min");
             notifier.show(Notifier.Kind.OK, "Trip reset");
         }
     }
@@ -1511,9 +1504,8 @@ public class MainActivity extends AppCompatActivity {
         if (btnSelectMapApp != null) {
             btnSelectMapApp.setText(name);
         }
-        if (btnOpenOsmAnd != null) {
-            btnOpenOsmAnd.setText("Launch " + name);
-        }
+        TextView mapBadge = viewMaps != null ? viewMaps.findViewById(R.id.tvMapStatusBadge) : null;
+        if (mapBadge != null) mapBadge.setText(name);
         notifier.show(Notifier.Kind.OK, "Map app set", name);
     }
 
@@ -1737,17 +1729,10 @@ public class MainActivity extends AppCompatActivity {
                                 Math.abs(latitude), latitude >= 0 ? "N" : "S",
                                 Math.abs(longitude), longitude >= 0 ? "E" : "W", altitudeMeters, accuracyMeters));
                     }
-                    if (tvNavCoordinates != null) {
-                        tvNavCoordinates.setText(String.format(Locale.US, "%.4f° N, %.4f° E", latitude, longitude));
-                    }
-                    if (tvNavAltitude != null) {
-                        String currentSpeed = (tvSpeed != null) ? tvSpeed.getText().toString() : "0";
-                        String currentUnit = (tvSpeedUnit != null) ? tvSpeedUnit.getText().toString() : "KM/H";
-                        tvNavAltitude.setText(String.format(Locale.US, "Alt: %.0f m  ·  Speed: %s %s",
-                                altitudeMeters, currentSpeed, currentUnit));
-                    }
                     if (tvNavAccuracy != null) {
-                        tvNavAccuracy.setText(String.format(Locale.US, "● 3D Fix · ±%.1fm", accuracyMeters));
+                        tvNavAccuracy.setText(accuracyMeters <= 10 ? "GPS good" : accuracyMeters <= 30 ? "GPS weak" : "GPS poor");
+                        if (viewMaps != null) setDot(viewMaps.findViewById(R.id.ivNavGpsDot),
+                                accuracyMeters <= 30 ? R.color.ad_ok : R.color.ad_caution);
                     }
                     if (thermometerWatcher != null && Math.abs(latitude) > 0.01 && Math.abs(longitude) > 0.01) {
                         thermometerWatcher.onLocationUpdated(latitude, longitude);
@@ -1777,14 +1762,20 @@ public class MainActivity extends AppCompatActivity {
                         tvNavTripDist.setText(distText);
                     }
                     if (tvNavTripDuration != null) {
-                        tvNavTripDuration.setText(String.format(Locale.US, "Duration %d min", elapsedMinutes));
+                        tvNavTripDuration.setText(String.format(Locale.US, "%d min", elapsedMinutes));
                     }
                 });
             }
 
             @Override
             public void onGpsStatusChanged(boolean hasFix, int satelliteCount) {
-                runOnUiThread(() -> setDot(findViewById(R.id.ivGpsDot), hasFix ? R.color.ad_ok : R.color.ad_label_3));
+                runOnUiThread(() -> {
+                    setDot(findViewById(R.id.ivGpsDot), hasFix ? R.color.ad_ok : R.color.ad_label_3);
+                    if (!hasFix && tvNavAccuracy != null) {
+                        tvNavAccuracy.setText("GPS none");
+                        if (viewMaps != null) setDot(viewMaps.findViewById(R.id.ivNavGpsDot), R.color.ad_label_3);
+                    }
+                });
             }
         });
         gpsManager.start();
