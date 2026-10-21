@@ -1,26 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Matte Automotive Base Surfaces -->
-    <color name="cockpit_surface_base">#0C0D10</color>
-    <color name="cockpit_surface_panel">#13151A</color>
-    <color name="cockpit_surface_elevated">#1A1D24</color>
-    <color name="cockpit_surface_border">#232730</color>
-    <color name="cockpit_surface_border_subtle">#1C2027</color>
+    <!-- Legacy names kept as aliases of the design tokens (colors_ad.xml) so existing layouts follow Day/Night.
+         Remove once no layout or class refers to them. -->
+    <color name="cockpit_surface_base">@color/ad_canvas</color>
+    <color name="cockpit_surface_panel">@color/ad_surface_1</color>
+    <color name="cockpit_surface_elevated">@color/ad_surface_2</color>
+    <color name="cockpit_surface_border">@color/ad_separator</color>
+    <color name="cockpit_surface_border_subtle">@color/ad_separator</color>
 
-    <!-- Typography -->
-    <color name="cockpit_text_primary">#ECEEF2</color>
-    <color name="cockpit_text_secondary">#8B92A0</color>
-    <color name="cockpit_text_tertiary">#525866</color>
+    <color name="cockpit_text_primary">@color/ad_label_1</color>
+    <color name="cockpit_text_secondary">@color/ad_label_2</color>
+    <color name="cockpit_text_tertiary">@color/ad_label_3</color>
 
-    <!-- Gauges & Accents -->
-    <color name="accent_amber">#E5A93C</color> <!-- Default Warm Amber (Porsche/BMW) -->
-    <color name="accent_hyundai_blue">#3B82F6</color> <!-- Cobalt Racing Blue (Hyundai N-Line) -->
-    <color name="accent_sport_red">#EF4444</color> <!-- Crimson Sport -->
-    <color name="accent_emerald">#10B981</color> <!-- Emerald Green -->
-    <color name="accent_platinum">#E2E8F0</color> <!-- Platinum White -->
+    <!-- Accent swatches. The default follows the design-system accent. -->
+    <color name="accent_amber">@color/ad_accent</color>
+    <color name="accent_hyundai_blue">#3B82F6</color>
+    <color name="accent_sport_red">#EF4444</color>
+    <color name="accent_emerald">#10B981</color>
+    <color name="accent_platinum">#E2E8F0</color>
 
-    <!-- Status Colors -->
-    <color name="status_active">#22C55E</color>
-    <color name="status_inactive">#6B7280</color>
-    <color name="status_error">#EF4444</color>
+    <color name="status_active">@color/ad_ok</color>
+    <color name="status_inactive">@color/ad_label_3</color>
+    <color name="status_error">@color/ad_alert</color>
 </resources>
