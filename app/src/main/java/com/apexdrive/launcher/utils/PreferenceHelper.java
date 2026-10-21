@@ -77,7 +77,8 @@ public class PreferenceHelper {
     private static final String KEY_MANUAL_TEMP_CALIBRATION = "manual_temp_calibration";
 
     public float getSavedTempCelsius() {
-        return prefs.getFloat(KEY_SAVED_TEMP_C, 32.0f);
+        // NaN = nothing saved. A placeholder value would be shown as a real reading (P-33).
+        return prefs.getFloat(KEY_SAVED_TEMP_C, Float.NaN);
     }
 
     public void setSavedTempCelsius(float temp) {
@@ -85,7 +86,7 @@ public class PreferenceHelper {
     }
 
     public String getSavedCondition() {
-        return prefs.getString(KEY_SAVED_CONDITION, "OUTSIDE");
+        return prefs.getString(KEY_SAVED_CONDITION, "MANUAL");
     }
 
     public void setSavedCondition(String condition) {
