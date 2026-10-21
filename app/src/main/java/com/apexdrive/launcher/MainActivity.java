@@ -45,6 +45,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
 
 import com.apexdrive.launcher.adapters.AppsGridAdapter;
@@ -126,6 +127,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES); // until Day/Night auto lands
         super.onCreate(savedInstanceState);
         makeFullScreen();
 
@@ -143,7 +145,6 @@ public class MainActivity extends AppCompatActivity {
         initMediaReceiver();
 
         showView(viewDash, railBtnDash);
-        applyAccentColor(prefHelper.getAccentColor());
 
         // Instant Cockpit Display: Hide startup loader immediately so interface is ready without delay
         if (layoutStartupLoader != null) {
@@ -280,7 +281,7 @@ public class MainActivity extends AppCompatActivity {
         Button btnSystemRecents = dialogView.findViewById(R.id.btnSystemRecents);
         Button btnDismissSwitcher = dialogView.findViewById(R.id.btnDismissSwitcher);
 
-        int accentColor = prefHelper.getAccentColor();
+        int accentColor = accent();
         if (ivSwitcherIcon != null) {
             ivSwitcherIcon.setColorFilter(accentColor, PorterDuff.Mode.SRC_IN);
         }
@@ -781,7 +782,7 @@ public class MainActivity extends AppCompatActivity {
 
         btnSrcRadio.setOnClickListener(v -> {
             tvActive.setText("FM RADIO TUNER (SI473X IC)");
-            btnSrcRadio.setTextColor(prefHelper.getAccentColor());
+            btnSrcRadio.setTextColor(accent());
             btnSrcSpotify.setTextColor(textPrimary);
             btnSrcBluetooth.setTextColor(textPrimary);
             btnSrcUsb.setTextColor(textPrimary);
@@ -836,7 +837,7 @@ public class MainActivity extends AppCompatActivity {
 
         viewAudio.findViewById(R.id.btnSrcSpotify).setOnClickListener(v -> {
             tvActive.setText("SPOTIFY AUDIO STREAM");
-            btnSrcSpotify.setTextColor(prefHelper.getAccentColor());
+            btnSrcSpotify.setTextColor(accent());
             btnSrcRadio.setTextColor(textPrimary);
             btnSrcBluetooth.setTextColor(textPrimary);
             btnSrcUsb.setTextColor(textPrimary);
@@ -854,7 +855,7 @@ public class MainActivity extends AppCompatActivity {
 
         viewAudio.findViewById(R.id.btnSrcBluetooth).setOnClickListener(v -> {
             tvActive.setText("BLUETOOTH AUDIO STREAM");
-            btnSrcBluetooth.setTextColor(prefHelper.getAccentColor());
+            btnSrcBluetooth.setTextColor(accent());
             btnSrcRadio.setTextColor(textPrimary);
             btnSrcSpotify.setTextColor(textPrimary);
             btnSrcUsb.setTextColor(textPrimary);
@@ -868,7 +869,7 @@ public class MainActivity extends AppCompatActivity {
 
         viewAudio.findViewById(R.id.btnSrcUsb).setOnClickListener(v -> {
             tvActive.setText("USB MASS STORAGE");
-            btnSrcUsb.setTextColor(prefHelper.getAccentColor());
+            btnSrcUsb.setTextColor(accent());
             btnSrcRadio.setTextColor(textPrimary);
             btnSrcSpotify.setTextColor(textPrimary);
             btnSrcBluetooth.setTextColor(textPrimary);
@@ -973,11 +974,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupSetupWidgets() {
-        viewSetup.findViewById(R.id.btnColorAmber).setOnClickListener(v -> applyAccentColor(PreferenceHelper.COLOR_AMBER));
-        viewSetup.findViewById(R.id.btnColorBlue).setOnClickListener(v -> applyAccentColor(PreferenceHelper.COLOR_BLUE));
-        viewSetup.findViewById(R.id.btnColorRed).setOnClickListener(v -> applyAccentColor(PreferenceHelper.COLOR_RED));
-        viewSetup.findViewById(R.id.btnColorGreen).setOnClickListener(v -> applyAccentColor(PreferenceHelper.COLOR_GREEN));
-        viewSetup.findViewById(R.id.btnColorWhite).setOnClickListener(v -> applyAccentColor(PreferenceHelper.COLOR_WHITE));
 
         btnSelectDriverPhone = viewSetup.findViewById(R.id.btnSelectDriverPhone);
         if (btnSelectDriverPhone != null) {
@@ -1398,76 +1394,9 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception ignored) {}
     }
 
-    private void applyAccentColor(int color) {
-        prefHelper.setAccentColor(color);
-
-        // Header & Bluetooth
-        if (tvStartupSubtitle != null) tvStartupSubtitle.setTextColor(color);
-        if (pbStartup != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            pbStartup.setIndeterminateTintList(ColorStateList.valueOf(color));
-        }
-        if (ivHeaderRecentsIcon != null) ivHeaderRecentsIcon.setColorFilter(color, PorterDuff.Mode.SRC_IN);
-        if (tvHeaderRecentsText != null) tvHeaderRecentsText.setTextColor(color);
-        if (tvHeaderBluetooth != null) tvHeaderBluetooth.setTextColor(color);
-        if (ivHeaderBtIcon != null) ivHeaderBtIcon.setColorFilter(color, PorterDuff.Mode.SRC_IN);
-        if (tvWeatherIcon != null) tvWeatherIcon.setTextColor(color);
-
-        // Dashboard View
-        if (viewDash != null) {
-            TextView speedUnit = viewDash.findViewById(R.id.tvSpeedUnit);
-            if (speedUnit != null) speedUnit.setTextColor(color);
-
-            TextView carPlayProtocol = viewDash.findViewById(R.id.tvCarPlayProtocol);
-            if (carPlayProtocol != null) carPlayProtocol.setTextColor(color);
-
-            Button playPause = viewDash.findViewById(R.id.btnMediaPlayPause);
-            if (playPause != null) playPause.setTextColor(color);
-
-            TextView universalHeader = viewDash.findViewById(R.id.tvHeaderUniversalAudio);
-            if (universalHeader != null) universalHeader.setTextColor(color);
-        }
-
-        if (viewCarPlay != null) {
-            Button btnLaunchFull = viewCarPlay.findViewById(R.id.btnLaunchCarPlayFull);
-            if (btnLaunchFull != null) btnLaunchFull.setTextColor(color);
-        }
-
-        if (viewMaps != null) {
-            TextView navHeading = viewMaps.findViewById(R.id.tvNavHeadingBig);
-            if (navHeading != null) navHeading.setTextColor(color);
-            if (btnOpenOsmAnd != null) btnOpenOsmAnd.setTextColor(color);
-        }
-
-        if (viewAudio != null) {
-            Button btnRadio = viewAudio.findViewById(R.id.btnSrcRadio);
-            if (btnRadio != null) btnRadio.setTextColor(color);
-
-            Button btnRadioPlay = viewAudio.findViewById(R.id.btnRadioPlay);
-            if (btnRadioPlay != null) btnRadioPlay.setTextColor(color);
-
-            TextView presetBadge = viewAudio.findViewById(R.id.tvAudioPresetBadge);
-            if (presetBadge != null) presetBadge.setTextColor(color);
-
-            TextView freqUnit = viewAudio.findViewById(R.id.tvRadioFreqUnit);
-            if (freqUnit != null) freqUnit.setTextColor(color);
-        }
-
-        if (viewApps != null) {
-            TextView appsTitle = viewApps.findViewById(R.id.tvInstalledAppsTitle);
-            if (appsTitle != null) appsTitle.setTextColor(color);
-        }
-
-        if (viewSetup != null) {
-            if (btnSelectCarPlayApp != null) btnSelectCarPlayApp.setTextColor(color);
-            if (btnSelectRadioApp != null) btnSelectRadioApp.setTextColor(color);
-            if (btnSelectMapApp != null) btnSelectMapApp.setTextColor(color);
-            if (btnSelectDriverPhone != null) btnSelectDriverPhone.setTextColor(color);
-
-            Button btnFactory = viewSetup.findViewById(R.id.btnShortcutFactorySettings);
-            if (btnFactory != null) btnFactory.setTextColor(color);
-        }
-
-        updateRailAppearance(currentActiveRailBtn);
+    /** The single design-system accent (Day and Night variants come from resources). */
+    private int accent() {
+        return ContextCompat.getColor(this, R.color.ad_accent_text);
     }
 
     private void initNavigation() {
@@ -1484,45 +1413,20 @@ public class MainActivity extends AppCompatActivity {
         viewContainer.removeAllViews();
         viewContainer.addView(targetView);
         updateRailAppearance(activeRailBtn);
-        applyAccentColor(prefHelper.getAccentColor());
     }
 
     private void updateRailAppearance(View activeRailBtn) {
-        int textSec = ContextCompat.getColor(this, R.color.cockpit_text_secondary);
-        int accent = prefHelper.getAccentColor();
-
-        tvDashLabel.setTextColor(textSec);
-        tvCarPlayLabel.setTextColor(textSec);
-        tvMapsLabel.setTextColor(textSec);
-        tvAudioLabel.setTextColor(textSec);
-        tvAppsLabel.setTextColor(textSec);
-        tvSetupLabel.setTextColor(textSec);
-
-        ivDashIcon.setColorFilter(textSec, PorterDuff.Mode.SRC_IN);
-        ivCarPlayIcon.setColorFilter(textSec, PorterDuff.Mode.SRC_IN);
-        ivMapsIcon.setColorFilter(textSec, PorterDuff.Mode.SRC_IN);
-        ivAudioIcon.setColorFilter(textSec, PorterDuff.Mode.SRC_IN);
-        ivAppsIcon.setColorFilter(textSec, PorterDuff.Mode.SRC_IN);
-        ivSetupIcon.setColorFilter(textSec, PorterDuff.Mode.SRC_IN);
-
-        if (activeRailBtn == railBtnDash) {
-            tvDashLabel.setTextColor(accent);
-            ivDashIcon.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
-        } else if (activeRailBtn == railBtnCarPlay) {
-            tvCarPlayLabel.setTextColor(accent);
-            ivCarPlayIcon.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
-        } else if (activeRailBtn == railBtnMaps) {
-            tvMapsLabel.setTextColor(accent);
-            ivMapsIcon.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
-        } else if (activeRailBtn == railBtnAudio) {
-            tvAudioLabel.setTextColor(accent);
-            ivAudioIcon.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
-        } else if (activeRailBtn == railBtnApps) {
-            tvAppsLabel.setTextColor(accent);
-            ivAppsIcon.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
-        } else if (activeRailBtn == railBtnSetup) {
-            tvSetupLabel.setTextColor(accent);
-            ivSetupIcon.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
+        int inactive = ContextCompat.getColor(this, R.color.ad_label_3);
+        int active = accent();
+        View[] buttons = {railBtnDash, railBtnCarPlay, railBtnMaps, railBtnAudio, railBtnApps, railBtnSetup};
+        ImageView[] icons = {ivDashIcon, ivCarPlayIcon, ivMapsIcon, ivAudioIcon, ivAppsIcon, ivSetupIcon};
+        TextView[] labels = {tvDashLabel, tvCarPlayLabel, tvMapsLabel, tvAudioLabel, tvAppsLabel, tvSetupLabel};
+        for (int i = 0; i < buttons.length; i++) {
+            boolean on = buttons[i] == activeRailBtn;
+            int color = on ? active : inactive;
+            buttons[i].setSelected(on);
+            icons[i].setColorFilter(color, PorterDuff.Mode.SRC_IN);
+            labels[i].setTextColor(color);
         }
     }
 
@@ -1621,9 +1525,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateConnectedPhoneUi(String deviceName, String details) {
-        int accent = prefHelper.getAccentColor();
+        int accent = accent();
         if (tvHeaderBluetooth != null) {
-            tvHeaderBluetooth.setText(deviceName != null ? deviceName.toUpperCase() : "CARPLAY ACTIVE");
+            tvHeaderBluetooth.setText(deviceName != null ? deviceName : "Phone connected");
             tvHeaderBluetooth.setTextColor(accent);
         }
         if (ivHeaderBtIcon != null) {
@@ -1655,7 +1559,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (savedName != null) {
             if (tvHeaderBluetooth != null) {
-                tvHeaderBluetooth.setText(savedName.toUpperCase());
+                tvHeaderBluetooth.setText(savedName);
                 tvHeaderBluetooth.setTextColor(textSec);
             }
             if (ivHeaderBtIcon != null) {
@@ -1673,7 +1577,7 @@ public class MainActivity extends AppCompatActivity {
             }
         } else {
             if (tvHeaderBluetooth != null) {
-                tvHeaderBluetooth.setText("TAP TO CONNECT");
+                tvHeaderBluetooth.setText("Not connected");
                 tvHeaderBluetooth.setTextColor(textSec);
             }
             if (ivHeaderBtIcon != null) {
@@ -1712,10 +1616,10 @@ public class MainActivity extends AppCompatActivity {
     private void initCarThermometer() {
         thermometerWatcher = new CarThermometerWatcher(this, (tempFormatted, tempCelsius, condition) -> runOnUiThread(() -> {
             if (tvWeatherText != null) {
-                tvWeatherText.setText(tempFormatted != null ? tempFormatted.toUpperCase() : "32°C · OUTSIDE");
+                tvWeatherText.setText(tempFormatted != null ? tempFormatted : "--");
             }
             if (tvWeatherIcon != null) {
-                tvWeatherIcon.setText(condition != null && !condition.isEmpty() ? condition.toUpperCase() : "TEMP");
+                tvWeatherIcon.setText(condition != null ? condition : "");
             }
         }));
         thermometerWatcher.setUseFahrenheit(prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH));
@@ -1737,7 +1641,7 @@ public class MainActivity extends AppCompatActivity {
 
         TextView title = new TextView(this);
         title.setText("VEHICLE THERMOMETER CALIBRATION");
-        title.setTextColor(prefHelper.getAccentColor());
+        title.setTextColor(accent());
         title.setTextSize(13);
         title.setTypeface(null, Typeface.BOLD);
         title.setLetterSpacing(0.08f);
@@ -1807,7 +1711,7 @@ public class MainActivity extends AppCompatActivity {
         Button btnSave = new Button(this);
         btnSave.setText("MATCH & LOCK TEMPERATURE");
         btnSave.setTextSize(11);
-        btnSave.setTextColor(prefHelper.getAccentColor());
+        btnSave.setTextColor(accent());
         btnSave.setBackgroundResource(R.drawable.bg_elevated_btn);
         LinearLayout.LayoutParams lpSave = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 110);
         lpSave.setMargins(0, 12, 0, 0);
@@ -1894,7 +1798,7 @@ public class MainActivity extends AppCompatActivity {
         Button btnPair = dialogView.findViewById(R.id.btnPairNewDevice);
         Button btnSkip = dialogView.findViewById(R.id.btnSkipSelector);
 
-        int accentColor = prefHelper.getAccentColor();
+        int accentColor = accent();
         if (btnSkip != null) btnSkip.setTextColor(accentColor);
         if (tvCountdown != null) tvCountdown.setTextColor(accentColor);
         if (tvDeviceLoadingText != null) tvDeviceLoadingText.setTextColor(accentColor);
@@ -2106,7 +2010,7 @@ public class MainActivity extends AppCompatActivity {
                 prefHelper.setSelectedDriverDevice(device.getAddress());
 
                 tvStatus.setText("CONNECTING TO " + name.toUpperCase() + "...");
-                tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.accent_amber));
+                tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.ad_accent_text));
                 tvName.setTextColor(accentColor);
                 btnConnect.setText("CONNECTING...");
                 btnConnect.setTextColor(accentColor);
@@ -2166,7 +2070,7 @@ public class MainActivity extends AppCompatActivity {
 
                                 if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
                                     tvStatus.setText("CONNECTED IN CAR? TAP TO LAUNCH ANYWAY");
-                                    tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.accent_amber));
+                                    tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.ad_accent_text));
                                     btnConnect.setText("LAUNCH ANYWAY");
                                     btnConnect.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
 

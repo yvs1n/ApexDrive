@@ -30,8 +30,8 @@
             android:layout_marginBottom="12dp"
             android:background="@color/cockpit_surface_border_subtle" />
 
-        <!-- Accent Color Swatch Buttons -->
-        <LinearLayout
+        <!-- Accent swatches are retired; the design system has one accent. -->
+        <LinearLayout android:visibility="gone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"

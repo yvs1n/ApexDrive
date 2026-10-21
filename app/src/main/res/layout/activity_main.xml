@@ -11,362 +11,300 @@
         android:orientation="vertical"
         android:background="@color/cockpit_surface_base">
 
-    <!-- Top Swiss Cockpit Header (Translucent Smoked Glass) -->
+    <!-- Status bar -->
     <LinearLayout
         android:id="@+id/headerBar"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
+        android:layout_height="@dimen/ad_status_bar_height"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="@drawable/bg_panel"
-        android:paddingStart="14dp"
-        android:paddingEnd="14dp">
+        android:background="@drawable/ad_bg_statusbar"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
 
-        <!-- Task Switcher / Recent Background Apps (Top Left) -->
         <LinearLayout
             android:id="@+id/btnHeaderRecents"
             android:layout_width="wrap_content"
-            android:layout_height="38dp"
+            android:layout_height="44dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:background="@drawable/bg_elevated_btn"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="16dp"
             android:layout_marginEnd="16dp"
             android:clickable="true"
             android:focusable="true">
 
             <ImageView
                 android:id="@+id/ivHeaderRecentsIcon"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@drawable/ic_nav_recents"
-                android:contentDescription="Task Switcher" />
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_sym_history"
+                android:importantForAccessibility="no" />
 
             <TextView
                 android:id="@+id/tvHeaderRecentsText"
+                style="@style/TextAppearance.ApexDrive.Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:text="RECENTS"
-                android:textColor="@color/cockpit_text_primary"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.08" />
+                android:text="Recents"
+                android:textColor="@color/ad_label_1" />
         </LinearLayout>
 
-        <!-- Swiss High-Contrast Clock (Bold Grotesque Numerals) -->
         <TextView
             android:id="@+id/tvClock"
+            style="@style/TextAppearance.ApexDrive.Glance"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="12:45"
-            android:textColor="@color/cockpit_text_primary"
-            android:textSize="22sp"
-            android:fontFamily="sans-serif-black" />
+            android:text="12:45" />
 
-        <!-- Santa Fe Model Pill -->
         <TextView
             android:id="@+id/tvVehicleModel"
+            style="@style/TextAppearance.ApexDrive.Caption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:text="SANTA FE · IX45"
-            android:textColor="@color/cockpit_text_secondary"
-            android:textSize="11sp"
-            android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.08" />
+            android:text="Santa Fe" />
 
         <View
             android:layout_width="0dp"
             android:layout_height="1dp"
             android:layout_weight="1" />
 
-        <!-- Weather Status Pill (Top Bar) -->
         <LinearLayout
             android:id="@+id/pillHeaderWeather"
             android:layout_width="wrap_content"
-            android:layout_height="38dp"
+            android:layout_height="44dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:background="@drawable/bg_card_inner"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
             android:clickable="true"
             android:focusable="true">
-
             <TextView
                 android:id="@+id/tvWeatherIcon"
+                style="@style/TextAppearance.ApexDrive.Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="TEMP"
-                android:textColor="@color/accent_amber"
-                android:textSize="10sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.08" />
+                android:layout_marginStart="16dp" />
 
             <TextView
                 android:id="@+id/tvWeatherText"
+                style="@style/TextAppearance.ApexDrive.Label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:text="26°C · OUTSIDE"
-                android:textColor="@color/cockpit_text_primary"
-                android:textSize="12sp"
-                android:fontFamily="sans-serif-bold"
-                android:letterSpacing="0.04" />
+                android:layout_marginEnd="16dp"
+                android:text="--" />
         </LinearLayout>
 
-        <!-- Bluetooth Connected Device Header Pill (Clickable) -->
         <LinearLayout
             android:id="@+id/pillHeaderBluetooth"
             android:layout_width="wrap_content"
-            android:layout_height="38dp"
+            android:layout_height="44dp"
             android:layout_marginStart="12dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:background="@drawable/bg_card_inner"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
             android:clickable="true"
             android:focusable="true">
-
             <ImageView
                 android:id="@+id/ivHeaderBtIcon"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@drawable/ic_nav_bluetooth"
-                android:contentDescription="Bluetooth" />
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginStart="12dp"
+                android:src="@drawable/ic_sym_bluetooth"
+                android:importantForAccessibility="no" />
 
             <TextView
                 android:id="@+id/tvHeaderBluetooth"
+                style="@style/TextAppearance.ApexDrive.Label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:text="NOT CONNECTED"
-                android:textColor="@color/cockpit_text_secondary"
-                android:textSize="12sp"
-                android:fontFamily="sans-serif-bold"
-                android:letterSpacing="0.04" />
+                android:layout_marginEnd="16dp"
+                android:text="Not connected" />
         </LinearLayout>
-
     </LinearLayout>
 
-    <!-- Cockpit Body: Driver Rail (Left) + Content Stage (Right) -->
+    <!-- Body: rail and content stage -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="horizontal">
 
-        <!-- Left Driver Navigation Rail (Swiss Grid & Big Fingers Friendly) -->
         <LinearLayout
             android:id="@+id/driverRail"
-            android:layout_width="92dp"
+            android:layout_width="@dimen/ad_rail_glass_width"
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:gravity="center_horizontal"
-            android:background="@drawable/bg_panel"
-            android:paddingTop="6dp"
-            android:paddingBottom="6dp">
+            android:background="@drawable/ad_bg_rail"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp">
 
-            <!-- 1. DASHBOARD -->
             <LinearLayout
                 android:id="@+id/railBtnDash"
                 android:layout_width="80dp"
-                android:layout_height="64dp"
+                android:layout_height="76dp"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:background="@drawable/bg_elevated_btn"
+                android:background="@drawable/ad_bg_rail_item"
                 android:clickable="true"
                 android:focusable="true">
 
                 <ImageView
                     android:id="@+id/ivDashIcon"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_nav_dash"
-                    android:contentDescription="Dash" />
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_sym_home"
+                    android:importantForAccessibility="no" />
 
                 <TextView
                     android:id="@+id/tvDashLabel"
+                    style="@style/TextAppearance.ApexDrive.Caption"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="DASH"
-                    android:textColor="@color/accent_amber"
-                    android:textSize="12sp"
-                    android:fontFamily="sans-serif-black"
-                    android:letterSpacing="0.08" />
+                    android:layout_marginTop="2dp"
+                    android:text="Home" />
             </LinearLayout>
-
-            <!-- 2. CARPLAY -->
             <LinearLayout
                 android:id="@+id/railBtnCarPlay"
                 android:layout_width="80dp"
-                android:layout_height="64dp"
-                android:layout_marginTop="6dp"
+                android:layout_height="76dp"
+                android:layout_marginTop="8dp"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:background="@drawable/bg_elevated_btn"
+                android:background="@drawable/ad_bg_rail_item"
                 android:clickable="true"
                 android:focusable="true">
 
                 <ImageView
                     android:id="@+id/ivCarPlayIcon"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_nav_carplay"
-                    android:contentDescription="CarPlay" />
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_sym_phone"
+                    android:importantForAccessibility="no" />
 
                 <TextView
                     android:id="@+id/tvCarPlayLabel"
+                    style="@style/TextAppearance.ApexDrive.Caption"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="PHONE"
-                    android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="12sp"
-                    android:fontFamily="sans-serif-black"
-                    android:letterSpacing="0.08" />
+                    android:layout_marginTop="2dp"
+                    android:text="Phone" />
             </LinearLayout>
-
-            <!-- 3. MAPS -->
             <LinearLayout
                 android:id="@+id/railBtnMaps"
                 android:layout_width="80dp"
-                android:layout_height="64dp"
-                android:layout_marginTop="6dp"
+                android:layout_height="76dp"
+                android:layout_marginTop="8dp"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:background="@drawable/bg_elevated_btn"
+                android:background="@drawable/ad_bg_rail_item"
                 android:clickable="true"
                 android:focusable="true">
 
                 <ImageView
                     android:id="@+id/ivMapsIcon"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_nav_maps"
-                    android:contentDescription="Maps" />
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_sym_map"
+                    android:importantForAccessibility="no" />
 
                 <TextView
                     android:id="@+id/tvMapsLabel"
+                    style="@style/TextAppearance.ApexDrive.Caption"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="MAPS"
-                    android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="12sp"
-                    android:fontFamily="sans-serif-black"
-                    android:letterSpacing="0.08" />
+                    android:layout_marginTop="2dp"
+                    android:text="Maps" />
             </LinearLayout>
-
-            <!-- 4. AUDIO -->
             <LinearLayout
                 android:id="@+id/railBtnAudio"
                 android:layout_width="80dp"
-                android:layout_height="64dp"
-                android:layout_marginTop="6dp"
+                android:layout_height="76dp"
+                android:layout_marginTop="8dp"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:background="@drawable/bg_elevated_btn"
+                android:background="@drawable/ad_bg_rail_item"
                 android:clickable="true"
                 android:focusable="true">
 
                 <ImageView
                     android:id="@+id/ivAudioIcon"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_nav_audio"
-                    android:contentDescription="Audio" />
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_sym_music_note"
+                    android:importantForAccessibility="no" />
 
                 <TextView
                     android:id="@+id/tvAudioLabel"
+                    style="@style/TextAppearance.ApexDrive.Caption"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="AUDIO"
-                    android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="12sp"
-                    android:fontFamily="sans-serif-black"
-                    android:letterSpacing="0.08" />
+                    android:layout_marginTop="2dp"
+                    android:text="Audio" />
             </LinearLayout>
-
-            <!-- 5. APPS -->
             <LinearLayout
                 android:id="@+id/railBtnApps"
                 android:layout_width="80dp"
-                android:layout_height="64dp"
-                android:layout_marginTop="6dp"
+                android:layout_height="76dp"
+                android:layout_marginTop="8dp"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:background="@drawable/bg_elevated_btn"
+                android:background="@drawable/ad_bg_rail_item"
                 android:clickable="true"
                 android:focusable="true">
 
                 <ImageView
                     android:id="@+id/ivAppsIcon"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_nav_apps"
-                    android:contentDescription="Apps" />
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_sym_apps"
+                    android:importantForAccessibility="no" />
 
                 <TextView
                     android:id="@+id/tvAppsLabel"
+                    style="@style/TextAppearance.ApexDrive.Caption"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="APPS"
-                    android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="12sp"
-                    android:fontFamily="sans-serif-black"
-                    android:letterSpacing="0.08" />
+                    android:layout_marginTop="2dp"
+                    android:text="Apps" />
             </LinearLayout>
 
-            <!-- Flexible Spacer -->
             <View
                 android:layout_width="1dp"
                 android:layout_height="0dp"
                 android:layout_weight="1" />
 
-            <!-- 6. SETUP -->
             <LinearLayout
                 android:id="@+id/railBtnSetup"
                 android:layout_width="80dp"
-                android:layout_height="64dp"
+                android:layout_height="76dp"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:background="@drawable/bg_elevated_btn"
+                android:background="@drawable/ad_bg_rail_item"
                 android:clickable="true"
                 android:focusable="true">
 
                 <ImageView
                     android:id="@+id/ivSetupIcon"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_nav_setup"
-                    android:contentDescription="Setup" />
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_sym_settings"
+                    android:importantForAccessibility="no" />
 
                 <TextView
                     android:id="@+id/tvSetupLabel"
+                    style="@style/TextAppearance.ApexDrive.Caption"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="SETUP"
-                    android:textColor="@color/cockpit_text_secondary"
-                    android:textSize="12sp"
-                    android:fontFamily="sans-serif-black"
-                    android:letterSpacing="0.08" />
+                    android:layout_marginTop="2dp"
+                    android:text="Settings" />
             </LinearLayout>
-
         </LinearLayout>
-
-        <!-- Divider line -->
-        <View
-            android:layout_width="1dp"
-            android:layout_height="match_parent"
-            android:background="@color/cockpit_surface_border_subtle" />
 
         <!-- Dynamic Main View Stage -->
         <FrameLayout
@@ -416,7 +354,8 @@
             android:layout_width="38dp"
             android:layout_height="38dp"
             android:layout_marginTop="22dp"
-            android:indeterminate="true" />
+            android:indeterminate="true"
+            android:indeterminateTint="@color/ad_accent" />
 
         <TextView
             android:id="@+id/tvStartupStatus"
