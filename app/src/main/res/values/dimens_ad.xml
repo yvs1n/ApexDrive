@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Design system sizes. Text uses sp; on this mdpi head unit 1sp = 1px at font scale 1.0. -->
+<resources>
+    <dimen name="ad_text_speed">120sp</dimen>
+    <dimen name="ad_text_display">64sp</dimen>
+    <dimen name="ad_text_title">34sp</dimen>
+    <dimen name="ad_text_glance">28sp</dimen>
+    <dimen name="ad_text_label">22sp</dimen>
+    <dimen name="ad_text_body">22sp</dimen>
+    <dimen name="ad_text_caption">20sp</dimen>
+    <dimen name="ad_target">64dp</dimen>
+    <dimen name="ad_target_gap">24dp</dimen>
+    <dimen name="ad_row_height">72dp</dimen>
+    <dimen name="ad_rail_width">112dp</dimen>
+    <dimen name="ad_rail_glass_width">96dp</dimen>
+    <dimen name="ad_status_bar_height">52dp</dimen>
+    <dimen name="ad_shell_inset">8dp</dimen>
+    <dimen name="ad_tile_gap">24dp</dimen>
+    <dimen name="ad_tile_padding">16dp</dimen>
+    <dimen name="ad_icon">32dp</dimen>
+    <dimen name="ad_icon_large">40dp</dimen>
+    <dimen name="ad_icon_inline">26dp</dimen>
+    <dimen name="ad_radius_sheet">32dp</dimen>
+    <dimen name="ad_radius_tile">28dp</dimen>
+    <dimen name="ad_radius_inner">12dp</dimen>
+    <dimen name="ad_radius_control">16dp</dimen>
+    <dimen name="ad_space_4">4dp</dimen>
+    <dimen name="ad_space_8">8dp</dimen>
+    <dimen name="ad_space_12">12dp</dimen>
+    <dimen name="ad_space_16">16dp</dimen>
+    <dimen name="ad_space_24">24dp</dimen>
+    <dimen name="ad_space_32">32dp</dimen>
+    <dimen name="ad_space_48">48dp</dimen>
+</resources>
