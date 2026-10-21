@@ -40,7 +40,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -54,6 +53,7 @@ import com.apexdrive.launcher.services.BluetoothWatcher;
 import com.apexdrive.launcher.services.CarThermometerWatcher;
 import com.apexdrive.launcher.services.GpsTelemetryManager;
 import com.apexdrive.launcher.services.MediaSyncService;
+import com.apexdrive.launcher.utils.Notifier;
 import com.apexdrive.launcher.utils.PreferenceHelper;
 
 import java.lang.reflect.Method;
@@ -113,6 +113,7 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView tvNavHeadingBig, tvNavCoordinates, tvNavAltitude, tvNavAccuracy, tvNavTripDist, tvNavTripDuration;
 
+    private Notifier notifier;
     private final Handler clockHandler = new Handler(Looper.getMainLooper());
     private BroadcastReceiver mediaReceiver;
 
@@ -130,6 +131,7 @@ public class MainActivity extends AppCompatActivity {
 
         prefHelper = new PreferenceHelper(this);
         setContentView(R.layout.activity_main);
+        notifier = new Notifier(this);
 
         initViews();
         initNavigation();
@@ -380,7 +382,6 @@ public class MainActivity extends AppCompatActivity {
                         } catch (Exception ignored) {}
                         prefHelper.removeRecentApp(pkg);
                         llTasksList.removeView(cardView);
-                        Toast.makeText(this, label + " closed · Memory released", Toast.LENGTH_SHORT).show();
                         if (llTasksList.getChildCount() == 0) {
                             if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.VISIBLE);
                             if (tvRecentsBadge != null) tvRecentsBadge.setText("OPTIMIZED");
@@ -427,7 +428,7 @@ public class MainActivity extends AppCompatActivity {
                     if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.VISIBLE);
                     if (tvRecentsBadge != null) tvRecentsBadge.setText("RAM OPTIMIZED");
                     btnCloseAllTasks.setEnabled(false);
-                    Toast.makeText(this, "All background tasks closed · Head unit RAM freed", Toast.LENGTH_SHORT).show();
+                    notifier.show(Notifier.Kind.OK, "Background apps closed");
                 });
             }
         }
@@ -595,7 +596,7 @@ public class MainActivity extends AppCompatActivity {
 
         btnMediaPlayPause.setOnLongClickListener(v -> {
             MediaSyncService.pauseAllMedia(this);
-            Toast.makeText(this, "Paused all media", Toast.LENGTH_SHORT).show();
+            notifier.show(Notifier.Kind.INFO, "Media paused");
             return true;
         });
 
@@ -654,13 +655,13 @@ public class MainActivity extends AppCompatActivity {
         try {
             LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
             if (lm != null && !lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                Toast.makeText(this, "GPS is off · Opening Location settings", Toast.LENGTH_SHORT).show();
+                notifier.show(Notifier.Kind.CAUTION, "GPS is off", "Opening location settings");
                 startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } else {
-                Toast.makeText(this, "GPS Telemetry Active · Real-time 20Hz", Toast.LENGTH_SHORT).show();
+                notifier.show(Notifier.Kind.OK, "GPS is on");
             }
         } catch (Exception e) {
-            Toast.makeText(this, "Cannot open Location settings", Toast.LENGTH_SHORT).show();
+            notifier.show(Notifier.Kind.ALERT, "Can't open location settings");
         }
     }
 
@@ -710,7 +711,7 @@ public class MainActivity extends AppCompatActivity {
                     try {
                         startActivity(new Intent(Intent.ACTION_VIEW).setType("*/*").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                     } catch (Exception e) {
-                        Toast.makeText(this, "Please open your car's File Manager app from APPS screen", Toast.LENGTH_LONG).show();
+                        notifier.show(Notifier.Kind.INFO, "Open your car's file manager from Apps");
                     }
                 })
                 .setNeutralButton("CHOOSE MAP APP", (dialog, which) -> showMapPicker())
@@ -787,7 +788,7 @@ public class MainActivity extends AppCompatActivity {
             if (tvPreset != null) {
                 tvPreset.setText(isRadioPlaying ? "ACTIVE TUNER" : "STANDBY · PRESS PLAY");
             }
-            Toast.makeText(this, "FM Radio Tuner selected · Press PLAY to listen", Toast.LENGTH_SHORT).show();
+            notifier.show(Notifier.Kind.INFO, "Radio selected", "Press play to listen");
         });
 
         if (btnRadioPlay != null) {
@@ -807,7 +808,7 @@ public class MainActivity extends AppCompatActivity {
                     if (tvTrackArtist != null) tvTrackArtist.setText("Radio Tuner Broadcast");
                     if (btnMediaPlayPause != null) btnMediaPlayPause.setText("PAUSE");
 
-                    Toast.makeText(this, "Radio Tuner Playing · " + tvFreq.getText() + " MHz", Toast.LENGTH_SHORT).show();
+                    notifier.show(Notifier.Kind.INFO, "Radio playing", tvFreq.getText() + " MHz");
                 } else {
                     isRadioPlaying = false;
                     btnRadioPlay.setText("PLAY RADIO");
@@ -817,7 +818,7 @@ public class MainActivity extends AppCompatActivity {
                     sendRadioHardwarePauseBroadcasts();
                     MediaSyncService.pauseAllMedia(this);
                     if (btnMediaPlayPause != null) btnMediaPlayPause.setText("PLAY");
-                    Toast.makeText(this, "Radio Tuner Paused", Toast.LENGTH_SHORT).show();
+                    notifier.show(Notifier.Kind.INFO, "Radio paused");
                 }
             });
 
@@ -844,9 +845,9 @@ public class MainActivity extends AppCompatActivity {
                     Intent musicIntent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_MUSIC);
                     musicIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(musicIntent);
-                    Toast.makeText(this, "Spotify not installed · Opened media player", Toast.LENGTH_SHORT).show();
+                    notifier.show(Notifier.Kind.CAUTION, "Spotify isn't installed", "Opened the media player");
                 } catch (Exception e) {
-                    Toast.makeText(this, "Spotify is not installed. Tap APPS in rail to open installed audio players.", Toast.LENGTH_LONG).show();
+                    notifier.show(Notifier.Kind.CAUTION, "Spotify isn't installed", "Open Apps to choose an audio player");
                 }
             }
         });
@@ -858,10 +859,10 @@ public class MainActivity extends AppCompatActivity {
             btnSrcSpotify.setTextColor(textPrimary);
             btnSrcUsb.setTextColor(textPrimary);
             if (btWatcher != null && btWatcher.getConnectedDevice() == null) {
-                Toast.makeText(this, "No phone connected · Tap to pair or connect", Toast.LENGTH_SHORT).show();
+                notifier.show(Notifier.Kind.CAUTION, "No phone connected", "Pair a phone to stream audio");
                 showDeviceSelectorDialog(false);
             } else {
-                Toast.makeText(this, "Streaming via Bluetooth A2DP", Toast.LENGTH_SHORT).show();
+                notifier.show(Notifier.Kind.INFO, "Bluetooth audio");
             }
         });
 
@@ -879,9 +880,9 @@ public class MainActivity extends AppCompatActivity {
                 Intent musicIntent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_MUSIC);
                 musicIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(musicIntent);
-                Toast.makeText(this, "USB player app not found · Opened default music app", Toast.LENGTH_SHORT).show();
+                notifier.show(Notifier.Kind.CAUTION, "USB player not found", "Opened the default music app");
             } catch (Exception e) {
-                Toast.makeText(this, "No USB music player found", Toast.LENGTH_SHORT).show();
+                notifier.show(Notifier.Kind.CAUTION, "No USB music player found");
             }
         });
 
@@ -955,7 +956,7 @@ public class MainActivity extends AppCompatActivity {
         if (app == null) return;
         boolean launched = launchApp(app);
         if (!launched) {
-            Toast.makeText(this, "Cannot launch " + app.getLabel().toUpperCase() + ". App may be disabled or uninstalled.", Toast.LENGTH_LONG).show();
+            notifier.show(Notifier.Kind.ALERT, "Can't open " + app.getLabel(), "The app may be disabled or uninstalled");
             loadInstalledAppsAsync();
         }
     }
@@ -1009,7 +1010,7 @@ public class MainActivity extends AppCompatActivity {
                 if (gpsManager != null) {
                     gpsManager.start();
                 }
-                Toast.makeText(this, "GPS Stream refreshed at 20Hz", Toast.LENGTH_SHORT).show();
+                notifier.show(Notifier.Kind.INFO, "GPS restarted");
             });
         }
 
@@ -1033,7 +1034,7 @@ public class MainActivity extends AppCompatActivity {
         if (thermometerWatcher != null) {
             thermometerWatcher.setUseFahrenheit(next.equals(PreferenceHelper.UNIT_MPH));
         }
-        Toast.makeText(this, "Speedometer set to " + next, Toast.LENGTH_SHORT).show();
+        notifier.show(Notifier.Kind.INFO, "Speedometer set to " + next);
     }
 
     private void resetTrip() {
@@ -1045,7 +1046,7 @@ public class MainActivity extends AppCompatActivity {
             if (tvTripTime != null) tvTripTime.setText("TIME: 0 MIN · RESET");
             if (tvNavTripDist != null) tvNavTripDist.setText(distText);
             if (tvNavTripDuration != null) tvNavTripDuration.setText("DURATION: 0 MIN");
-            Toast.makeText(this, "Trip distance & time reset", Toast.LENGTH_SHORT).show();
+            notifier.show(Notifier.Kind.OK, "Trip reset");
         }
     }
 
@@ -1082,7 +1083,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             startActivity(new Intent(Settings.ACTION_SOUND_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } catch (Exception e) {
-            Toast.makeText(this, "Equalizer app not found", Toast.LENGTH_SHORT).show();
+            notifier.show(Notifier.Kind.CAUTION, "No equalizer app found");
         }
     }
 
@@ -1108,7 +1109,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } catch (Exception e) {
-            Toast.makeText(this, "Opening Bluetooth settings", Toast.LENGTH_SHORT).show();
+            notifier.show(Notifier.Kind.INFO, "Opening Bluetooth settings");
         }
     }
 
@@ -1158,7 +1159,7 @@ public class MainActivity extends AppCompatActivity {
         if (tvCarPlayProtocol != null) {
             tvCarPlayProtocol.setText(name.toUpperCase());
         }
-        Toast.makeText(this, "CarPlay set to: " + name, Toast.LENGTH_SHORT).show();
+        notifier.show(Notifier.Kind.OK, "CarPlay app set", name);
     }
 
     private void showRadioPicker() {
@@ -1210,7 +1211,7 @@ public class MainActivity extends AppCompatActivity {
         if (btnSelectRadioApp != null) {
             btnSelectRadioApp.setText(name);
         }
-        Toast.makeText(this, "Radio Tuner set to: " + name, Toast.LENGTH_SHORT).show();
+        notifier.show(Notifier.Kind.OK, "Radio app set", name);
     }
 
     private void launchRadioApp() {
@@ -1231,7 +1232,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         if (!launched) {
-            Toast.makeText(this, "Radio app not found. Select your car's tuner app in Setup.", Toast.LENGTH_LONG).show();
+            notifier.show(Notifier.Kind.CAUTION, "No radio app found", "Choose your car's tuner app in Settings");
             showRadioPicker();
         }
     }
@@ -1292,7 +1293,7 @@ public class MainActivity extends AppCompatActivity {
         if (btnOpenOsmAnd != null) {
             btnOpenOsmAnd.setText("LAUNCH " + name.toUpperCase());
         }
-        Toast.makeText(this, "Map Engine set to: " + name, Toast.LENGTH_SHORT).show();
+        notifier.show(Notifier.Kind.OK, "Map app set", name);
     }
 
     private String findInstalledRadioPackage() {
@@ -1827,7 +1828,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 thermometerWatcher.triggerImmediateLocationWeatherSync();
             }
-            Toast.makeText(this, "Auto GPS weather enabled · Updating for vehicle location...", Toast.LENGTH_SHORT).show();
+            notifier.show(Notifier.Kind.INFO, "Weather uses GPS location", "Updating for the vehicle's position");
             dialog.dismiss();
         });
 
@@ -1836,7 +1837,7 @@ public class MainActivity extends AppCompatActivity {
             float target = tempHolder[0];
             float offset = target - raw;
             thermometerWatcher.setTempOffset(offset);
-            Toast.makeText(this, String.format(Locale.US, "Calibrated: offset set to %+.1f°C (Matches car dashboard)", offset), Toast.LENGTH_SHORT).show();
+            notifier.show(Notifier.Kind.OK, "Temperature calibrated", String.format(Locale.US, "Offset %+.1f°C", offset));
             dialog.dismiss();
         });
 
@@ -2092,7 +2093,7 @@ public class MainActivity extends AppCompatActivity {
                     prefHelper.setSelectedDriverDevice(device.getAddress());
                     isCarPlayConnected = true;
                     updateConnectedPhoneUi(name, "CONNECTED · CARPLAY READY");
-                    Toast.makeText(MainActivity.this, name + " is connected. Starting CarPlay...", Toast.LENGTH_SHORT).show();
+                    notifier.show(Notifier.Kind.OK, name + " connected", "Starting CarPlay");
                     if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
                         deviceSelectorDialog.dismiss();
                     }
@@ -2119,7 +2120,7 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 updateConnectedPhoneUi(name, "CONNECTING BLUETOOTH...");
-                Toast.makeText(MainActivity.this, "Initiating Bluetooth connection to " + name + "...", Toast.LENGTH_SHORT).show();
+                notifier.show(Notifier.Kind.INFO, "Connecting to " + name);
 
                 if (btWatcher != null) {
                     btWatcher.connectToDevice(device, new BluetoothWatcher.DeviceConnectionCallback() {
@@ -2147,7 +2148,7 @@ public class MainActivity extends AppCompatActivity {
                                 }
 
                                 updateConnectedPhoneUi(name, "CONNECTED · CARPLAY READY");
-                                Toast.makeText(MainActivity.this, "Connected to " + name + "! Starting CarPlay...", Toast.LENGTH_SHORT).show();
+                                notifier.show(Notifier.Kind.OK, "Connected to " + name, "Starting CarPlay");
 
                                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
                                     if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
@@ -2191,15 +2192,13 @@ public class MainActivity extends AppCompatActivity {
                                     }
                                 }
 
-                                Toast.makeText(MainActivity.this,
-                                        "If " + name + " is connected in car, tap 'LAUNCH ANYWAY' or open Car Bluetooth",
-                                        Toast.LENGTH_LONG).show();
+                                notifier.show(Notifier.Kind.CAUTION, "Couldn't confirm " + name, "If it's connected in the car, tap Launch anyway or open car Bluetooth");
                             });
                         }
                     });
                 } else {
                     isBtConnecting = false;
-                    Toast.makeText(MainActivity.this, "Bluetooth service unavailable", Toast.LENGTH_SHORT).show();
+                    notifier.show(Notifier.Kind.ALERT, "Bluetooth is unavailable");
                 }
             };
 
