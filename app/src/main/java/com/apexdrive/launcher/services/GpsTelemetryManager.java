@@ -18,6 +18,7 @@ import android.os.SystemClock;
 
 import androidx.core.content.ContextCompat;
 
+import com.apexdrive.launcher.utils.PreferenceHelper;
 import com.apexdrive.launcher.utils.TripAccumulator;
 import com.apexdrive.launcher.utils.UnitMath;
 
@@ -59,6 +60,8 @@ public class GpsTelemetryManager implements LocationListener {
     /** No fix for this long means the receiver is searching again. */
     private static final long FIX_LOST_MS = 8_000L;
     private static final long GPS_INTERVAL_MS = 1000L;
+    /** Trip is written to preferences at most this often, and on stop. */
+    private static final long TRIP_SAVE_INTERVAL_MS = 5_000L;
 
     private final Context context;
     private final LocationManager locationManager;
@@ -72,7 +75,9 @@ public class GpsTelemetryManager implements LocationListener {
 
     private Location lastLocation = null;   // last accepted GPS fix
     private Location prevFix = null;        // baseline for the next trip segment
-    private final TripAccumulator trip = new TripAccumulator();
+    private final PreferenceHelper prefHelper;
+    private final TripAccumulator trip;
+    private long lastTripSaveMs = 0L;
     private float lastBearing = 0.0f;
     private float lastSpeedMps = 0.0f;
 
@@ -90,6 +95,9 @@ public class GpsTelemetryManager implements LocationListener {
     public GpsTelemetryManager(Context context) {
         this.context = context.getApplicationContext();
         this.locationManager = (LocationManager) this.context.getSystemService(Context.LOCATION_SERVICE);
+        // Trip survives process death and recreate() (P-20).
+        this.prefHelper = new PreferenceHelper(this.context);
+        this.trip = new TripAccumulator(prefHelper.getTripDistanceMeters(), prefHelper.getTripMovingMillis());
     }
 
     public void setTelemetryListener(TelemetryListener listener) {
@@ -131,6 +139,7 @@ public class GpsTelemetryManager implements LocationListener {
 
     public void resetTrip() {
         trip.reset();
+        saveTrip();
         prevFix = null;
         publishTrip();
     }
@@ -163,6 +172,7 @@ public class GpsTelemetryManager implements LocationListener {
                     LocationManager.GPS_PROVIDER, GPS_INTERVAL_MS, 0.0f, this, Looper.getMainLooper());
             started = true;
             registerSatelliteStatus();
+            publishTrip(); // show the restored trip before the first fix
             setState(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
                     ? GpsState.SEARCHING : GpsState.PROVIDER_OFF);
         } catch (SecurityException e) {
@@ -184,6 +194,7 @@ public class GpsTelemetryManager implements LocationListener {
         }
         started = false;
         prevFix = null; // do not bridge the time while updates were off
+        saveTrip();
     }
 
     @SuppressLint("MissingPermission")
@@ -296,6 +307,11 @@ public class GpsTelemetryManager implements LocationListener {
         if (prevFix != null) {
             long dtMs = (location.getElapsedRealtimeNanos() - prevFix.getElapsedRealtimeNanos()) / 1_000_000L;
             trip.addSegment(prevFix.distanceTo(location), dtMs, speedMps);
+            long nowMs = SystemClock.elapsedRealtime();
+            if (nowMs - lastTripSaveMs >= TRIP_SAVE_INTERVAL_MS) {
+                lastTripSaveMs = nowMs;
+                saveTrip();
+            }
         }
         prevFix = location;
         lastLocation = location;
@@ -312,6 +328,10 @@ public class GpsTelemetryManager implements LocationListener {
                 l.hasAltitude() ? l.getAltitude() : Double.NaN,
                 l.hasAccuracy() ? l.getAccuracy() : Float.NaN);
         publishTrip();
+    }
+
+    private void saveTrip() {
+        prefHelper.setTrip(trip.getDistanceMeters(), trip.getMovingMillis());
     }
 
     private void publishTrip() {
