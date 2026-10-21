@@ -31,8 +31,8 @@
             android:layout_height="wrap_content"
             android:text="Yassin's iPhone"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="15sp"
-            android:fontFamily="sans-serif-black" />
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_semibold" />
 
         <TextView
             android:id="@+id/tvDialogDeviceStatus"
@@ -41,8 +41,8 @@
             android:layout_marginTop="2dp"
             android:text="Paired · Bluetooth &amp; CarPlay Ready"
             android:textColor="@color/cockpit_text_secondary"
-            android:textSize="11sp"
-            android:fontFamily="sans-serif" />
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_regular" />
     </LinearLayout>
 
     <!-- Connect Pill -->
@@ -54,9 +54,9 @@
         android:paddingStart="14dp"
         android:paddingEnd="14dp"
         android:gravity="center"
-        android:text="CONNECT"
-        android:textColor="@color/accent_amber"
-        android:textSize="11sp"
-        android:fontFamily="sans-serif-black" />
+        android:text="Connect"
+        android:textColor="@color/ad_accent_text"
+        android:textSize="20sp"
+        android:fontFamily="@font/atkinson_next_semibold" />
 
 </LinearLayout>

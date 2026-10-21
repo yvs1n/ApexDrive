@@ -18,20 +18,19 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="SELECT DRIVER PHONE"
+            android:text="Select driver phone"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="18sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.04" />
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_semibold" />
 
         <TextView
             android:id="@+id/tvCountdownTimer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Auto in 8s"
-            android:textColor="@color/accent_amber"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-bold" />
+            android:textColor="@color/ad_accent_text"
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_semibold" />
     </LinearLayout>
 
     <TextView
@@ -40,8 +39,8 @@
         android:layout_marginTop="4dp"
         android:text="Tap your phone to lock Bluetooth &amp; CarPlay. Prevents hijacking other phones in the car."
         android:textColor="@color/cockpit_text_secondary"
-        android:textSize="12sp"
-        android:fontFamily="sans-serif" />
+        android:textSize="20sp"
+        android:fontFamily="@font/atkinson_next_regular" />
 
     <View
         android:layout_width="match_parent"
@@ -72,11 +71,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="INITIALIZING BLUETOOTH &amp; DETECTING PHONES..."
+            android:text="Initializing Bluetooth &amp; detecting phones..."
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.06" />
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_semibold" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -84,8 +82,8 @@
             android:layout_marginTop="4dp"
             android:text="Waking head unit Bluetooth stack · Detecting paired driver phones"
             android:textColor="@color/cockpit_text_secondary"
-            android:textSize="11sp"
-            android:fontFamily="sans-serif" />
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_regular" />
     </LinearLayout>
 
     <!-- Container for Paired Phone Cards (Big Fingers Friendly) -->
@@ -115,11 +113,11 @@
             android:layout_height="54dp"
             android:layout_weight="1"
             android:background="@drawable/bg_elevated_btn"
-            android:text="PAIR NEW PHONE"
+        android:textAllCaps="false"
+            android:text="Pair new phone"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.08" />
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_semibold" />
 
         <Button
             android:id="@+id/btnSkipSelector"
@@ -128,10 +126,11 @@
             android:layout_weight="1.2"
             android:layout_marginStart="12dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="CONTINUE TO DASHBOARD"
-            android:textColor="@color/accent_amber"
-            android:textSize="13sp"
-            android:fontFamily="sans-serif-black" />
+        android:textAllCaps="false"
+            android:text="Continue to dashboard"
+            android:textColor="@color/ad_accent_text"
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_semibold" />
     </LinearLayout>
 
 </LinearLayout>

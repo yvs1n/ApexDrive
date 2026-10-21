@@ -26,21 +26,19 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:layout_weight="1"
-            android:text="ACTIVE BACKGROUND APPS"
+            android:text="Active background apps"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="17sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.04" />
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_semibold" />
 
         <TextView
             android:id="@+id/tvRecentsBadge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="3 RUNNING"
-            android:textColor="@color/accent_amber"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-bold"
-            android:letterSpacing="0.04" />
+            android:text="3 running"
+            android:textColor="@color/ad_accent_text"
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_semibold" />
     </LinearLayout>
 
     <TextView
@@ -49,8 +47,8 @@
         android:layout_marginTop="4dp"
         android:text="Switch directly to an active task or close background apps to free RAM on the head unit."
         android:textColor="@color/cockpit_text_secondary"
-        android:textSize="12sp"
-        android:fontFamily="sans-serif" />
+        android:textSize="20sp"
+        android:fontFamily="@font/atkinson_next_regular" />
 
     <View
         android:layout_width="match_parent"
@@ -68,8 +66,8 @@
         android:padding="24dp"
         android:text="No active background apps detected.\nAll system resources are optimized."
         android:textColor="@color/cockpit_text_secondary"
-        android:textSize="13sp"
-        android:fontFamily="sans-serif"
+        android:textSize="20sp"
+        android:fontFamily="@font/atkinson_next_regular"
         android:visibility="gone" />
 
     <!-- Scrollable Tasks List (Big Touch Targets) -->
@@ -105,11 +103,11 @@
             android:layout_height="52dp"
             android:layout_weight="1.2"
             android:background="@drawable/bg_elevated_btn"
-            android:text="CLOSE ALL APPS"
+        android:textAllCaps="false"
+            android:text="Close all apps"
             android:textColor="@color/accent_sport_red"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.04" />
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_semibold" />
 
         <Button
             android:id="@+id/btnSystemRecents"
@@ -118,11 +116,11 @@
             android:layout_marginStart="8dp"
             android:layout_weight="1"
             android:background="@drawable/bg_elevated_btn"
-            android:text="SYSTEM UI"
+        android:textAllCaps="false"
+            android:text="System ui"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.04" />
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_semibold" />
 
         <Button
             android:id="@+id/btnDismissSwitcher"
@@ -130,10 +128,11 @@
             android:layout_height="52dp"
             android:layout_marginStart="8dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="RETURN"
+        android:textAllCaps="false"
+            android:text="Return"
             android:textColor="@color/cockpit_text_secondary"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-black"
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_semibold"
             android:paddingStart="16dp"
             android:paddingEnd="16dp" />
     </LinearLayout>
