@@ -620,6 +620,10 @@ public class MainActivity extends AppCompatActivity {
         if (btnLaunch != null) {
             btnLaunch.setOnClickListener(v -> launchCarPlay());
         }
+        View btnChoose = viewCarPlay.findViewById(R.id.btnChoosePhone);
+        if (btnChoose != null) {
+            btnChoose.setOnClickListener(v -> showDeviceSelectorDialog(false));
+        }
     }
 
     private void setupMapsWidgets() {
@@ -1535,24 +1539,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateConnectedPhoneUi(String deviceName, String details) {
-        int accent = accent();
-        if (tvHeaderBluetooth != null) {
-            tvHeaderBluetooth.setText(deviceName != null ? deviceName : "Phone connected");
-            tvHeaderBluetooth.setTextColor(accent);
-        }
-        if (ivHeaderBtIcon != null) {
-            ivHeaderBtIcon.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
-        }
-        if (tvBtDeviceName != null) {
-            tvBtDeviceName.setText(deviceName != null ? deviceName.toUpperCase() : "DRIVER PHONE");
-        }
-        if (tvBtProfileDetail != null) {
-            tvBtProfileDetail.setText(details != null ? details.toUpperCase() : "WIRELESS CARPLAY & AUDIO");
-        }
-        if (tvBtStatusBadge != null) {
-            tvBtStatusBadge.setText("● ACTIVE");
-            tvBtStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.status_active));
-        }
+        String name = deviceName != null ? deviceName : "Phone";
+        showPhoneState(name, details != null ? details : "Connected", "Connected", R.color.ad_ok, true);
     }
 
     private void updateDisconnectedPhoneUi() {
@@ -1560,53 +1548,43 @@ public class MainActivity extends AppCompatActivity {
         String savedName = getDeviceNameFromAddress(savedAddr);
 
         if (isCarPlayConnected && savedName != null) {
-            updateConnectedPhoneUi(savedName, "WIRELESS PROJECTION ACTIVE");
+            updateConnectedPhoneUi(savedName, "Projection active");
             return;
         }
-
-        int textSec = ContextCompat.getColor(this, R.color.cockpit_text_secondary);
-        int textTert = ContextCompat.getColor(this, R.color.cockpit_text_tertiary);
-
         if (savedName != null) {
-            if (tvHeaderBluetooth != null) {
-                tvHeaderBluetooth.setText(savedName);
-                tvHeaderBluetooth.setTextColor(textSec);
-            }
-            if (ivHeaderBtIcon != null) {
-                ivHeaderBtIcon.setColorFilter(textTert, PorterDuff.Mode.SRC_IN);
-            }
-            if (tvBtDeviceName != null) {
-                tvBtDeviceName.setText(savedName.toUpperCase());
-            }
-            if (tvBtProfileDetail != null) {
-                tvBtProfileDetail.setText("CARPLAY READY · TAP TO LAUNCH");
-            }
-            if (tvBtStatusBadge != null) {
-                tvBtStatusBadge.setText("○ READY");
-                tvBtStatusBadge.setTextColor(textSec);
-            }
+            showPhoneState(savedName, "Not connected", "Open CarPlay to start", R.color.ad_label_2, false);
         } else {
-            if (tvHeaderBluetooth != null) {
-                tvHeaderBluetooth.setText("Not connected");
-                tvHeaderBluetooth.setTextColor(textSec);
-            }
-            if (ivHeaderBtIcon != null) {
-                ivHeaderBtIcon.setColorFilter(textTert, PorterDuff.Mode.SRC_IN);
-            }
-            if (tvBtDeviceName != null) {
-                tvBtDeviceName.setText("NO DEVICE CONNECTED");
-            }
-            if (tvBtProfileDetail != null) {
-                tvBtProfileDetail.setText("CARPLAY LINK · READY");
-            }
-            if (tvBtStatusBadge != null) {
-                tvBtStatusBadge.setText("○ STANDBY");
-                tvBtStatusBadge.setTextColor(textSec);
+            showPhoneState("No phone connected", "", "Choose a phone to connect", R.color.ad_label_2, false);
+        }
+    }
+
+    /** Writes one phone state to the status bar chip, the Home tile and the Phone screen. */
+    private void showPhoneState(String name, String detail, String status, int statusColor, boolean connected) {
+        int accent = accent();
+        int inactive = ContextCompat.getColor(this, R.color.ad_label_3);
+        if (tvHeaderBluetooth != null) {
+            tvHeaderBluetooth.setText(connected ? name : "Not connected");
+            tvHeaderBluetooth.setTextColor(connected ? accent : ContextCompat.getColor(this, R.color.ad_label_2));
+        }
+        if (ivHeaderBtIcon != null) {
+            ivHeaderBtIcon.setColorFilter(connected ? accent : inactive, PorterDuff.Mode.SRC_IN);
+        }
+        if (tvBtDeviceName != null) tvBtDeviceName.setText(name);
+        if (tvBtProfileDetail != null) tvBtProfileDetail.setText(detail);
+        if (tvBtStatusBadge != null) {
+            tvBtStatusBadge.setText(status);
+            tvBtStatusBadge.setTextColor(ContextCompat.getColor(this, statusColor));
+        }
+        if (viewCarPlay != null) {
+            TextView device = viewCarPlay.findViewById(R.id.tvConnectDevice);
+            TextView line = viewCarPlay.findViewById(R.id.tvConnectStatus);
+            if (device != null) device.setText(name);
+            if (line != null) {
+                line.setText(detail.isEmpty() ? status : detail + " · " + status);
             }
         }
     }
 
-    @SuppressLint("MissingPermission")
     private String getDeviceNameFromAddress(String address) {
         if (address == null || address.isEmpty()) return null;
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();

@@ -1,198 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Phone: connection status and the two actions that matter. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="@dimen/ad_shell_inset">
 
-    <!-- Top Banner Card -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:background="@drawable/bg_panel"
-        android:padding="20dp">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="@dimen/ad_tile_padding"
+        android:background="@drawable/bg_panel">
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="APPLE CARPLAY CONTROLLER"
-                android:textColor="@color/cockpit_text_primary"
-                android:textSize="18sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.04" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="ZLINK 5.3 HARDWARE PROJECTION · HYUNDAI SANTA FE"
-                android:textColor="@color/cockpit_text_secondary"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-bold"
-                android:letterSpacing="0.04" />
-        </LinearLayout>
-
-        <Button
-            android:id="@+id/btnLaunchCarPlayFull"
+        <TextView
+            style="@style/TextAppearance.ApexDrive.Caption"
             android:layout_width="wrap_content"
-            android:layout_height="52dp"
-            android:background="@drawable/bg_elevated_btn"
-            android:text="LAUNCH FULLSCREEN PROJECTION"
-            android:textColor="@color/cockpit_text_primary"
-            android:textSize="13sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.06"
-            android:paddingStart="26dp"
-            android:paddingEnd="26dp" />
+            android:layout_height="wrap_content"
+            android:text="Phone" />
 
-    </LinearLayout>
+        <TextView
+            android:id="@+id/tvConnectDevice"
+            style="@style/TextAppearance.ApexDrive.Display"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="No phone connected" />
 
-    <!-- Info Cards Row -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginTop="12dp"
-        android:orientation="horizontal">
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:background="@drawable/bg_panel"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="01 · WIRELESS PROJECTION"
-                android:textColor="@color/cockpit_text_primary"
-                android:textSize="13sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.04" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Connects over Bluetooth (SantafemR) and tunnels through a 5GHz Wi-Fi bridge for latency-free touch response."
-                android:textColor="@color/cockpit_text_secondary"
-                android:textSize="12sp"
-                android:lineSpacingExtra="2dp" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="PROTOCOL: ZLINK 5.3 ACTIVE"
-                android:textColor="@color/status_active"
-                android:textSize="10sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.06" />
-        </LinearLayout>
+        <TextView
+            android:id="@+id/tvConnectStatus"
+            style="@style/TextAppearance.ApexDrive.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Choose a phone to connect" />
 
         <View
-            android:layout_width="12dp"
-            android:layout_height="match_parent" />
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
         <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:background="@drawable/bg_panel"
-            android:padding="16dp">
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/ad_target"
+            android:orientation="horizontal">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="02 · WIRED USB LINK"
-                android:textColor="@color/cockpit_text_primary"
-                android:textSize="13sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.04" />
+            <Button
+                android:id="@+id/btnLaunchCarPlayFull"
+                style="@style/TextAppearance.ApexDrive.Label"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/ad_bg_btn_primary"
+                android:textColor="@color/ad_on_accent"
+                android:textAllCaps="false"
+                android:text="Open CarPlay" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Direct USB OTG link via Santa Fe center console or glove box port. Delivers high-bitrate audio and device charging."
-                android:textColor="@color/cockpit_text_secondary"
-                android:textSize="12sp"
-                android:lineSpacingExtra="2dp" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="PORT STATUS: USB 2.0 READY"
-                android:textColor="@color/cockpit_text_secondary"
-                android:textSize="10sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.06" />
+            <Button
+                android:id="@+id/btnChoosePhone"
+                style="@style/TextAppearance.ApexDrive.Label"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="@dimen/ad_target_gap"
+                android:background="@drawable/ad_bg_btn_secondary"
+                android:textAllCaps="false"
+                android:text="Choose phone" />
         </LinearLayout>
-
-        <View
-            android:layout_width="12dp"
-            android:layout_height="match_parent" />
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:background="@drawable/bg_panel"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="03 · DSP AUDIO TUNNEL"
-                android:textColor="@color/cockpit_text_primary"
-                android:textSize="13sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.04" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Audio stream decoded via internal Rohm/SI473X ICs with hardware equalizer presets."
-                android:textColor="@color/cockpit_text_secondary"
-                android:textSize="12sp"
-                android:lineSpacingExtra="2dp" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="AUDIO STREAM: I2S HARDWARE SYNC"
-                android:textColor="@color/status_active"
-                android:textSize="10sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.06" />
-        </LinearLayout>
-
     </LinearLayout>
-
 </LinearLayout>
