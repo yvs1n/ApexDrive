@@ -11,6 +11,7 @@ import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
 import android.os.Build;
+import android.os.SystemClock;
 import android.service.notification.NotificationListenerService;
 import android.view.KeyEvent;
 
@@ -150,129 +151,70 @@ public class MediaSyncService extends NotificationListenerService {
         sendBroadcast(intent);
     }
 
+    /** Pauses playback. One path: the active session, else a single PAUSE key. */
     public static void pauseAllMedia(Context context) {
-        sIsPlaying = false;
-
-        // 1. Active MediaController if available
-        if (sActiveController != null) {
+        MediaController controller = sActiveController;
+        if (controller != null) {
             try {
-                sActiveController.getTransportControls().pause();
+                controller.getTransportControls().pause();
+                return;
             } catch (Exception ignored) {}
         }
-
-        // 2. Dispatch pause media key event to system audio
-        sendMediaKey(context, KeyEvent.KEYCODE_MEDIA_PAUSE);
-
-        // 3. Send explicit pause broadcasts to Zlink & DiPlay
-        try {
-            context.sendBroadcast(new Intent("com.zlink.command").putExtra("action", "pause"));
-            context.sendBroadcast(new Intent("com.shihab.diplay.MEDIA_CONTROL").putExtra("command", "pause"));
-            context.sendBroadcast(new Intent("com.android.music.musicservicecommand").putExtra("command", "pause"));
-        } catch (Exception ignored) {}
-
-        // 4. Send vendor automotive commands
-        try {
-            context.sendBroadcast(new Intent("com.goc.bluetooth.avrcp").putExtra("action", "pause"));
-            context.sendBroadcast(new Intent("action.hct.media.key").putExtra("keycode", KeyEvent.KEYCODE_MEDIA_PAUSE));
-            context.sendBroadcast(new Intent("com.ts.media.key").putExtra("keycode", KeyEvent.KEYCODE_MEDIA_PAUSE));
-        } catch (Exception ignored) {}
-
-        Intent intent = new Intent(ACTION_MEDIA_UPDATED);
-        intent.putExtra(EXTRA_IS_PLAYING, false);
-        context.sendBroadcast(intent);
+        dispatchMediaKey(context, KeyEvent.KEYCODE_MEDIA_PAUSE);
     }
 
+    /**
+     * Toggles playback from the real state (PlaybackState), not from the last tap, and sends
+     * exactly one command. Never PLAY followed by PLAY_PAUSE.
+     */
     public static void togglePlayPause(Context context) {
-        if (sIsPlaying) {
-            pauseAllMedia(context);
-            return;
-        }
-
-        sIsPlaying = true;
-
-        // 1. Active MediaController
-        if (sActiveController != null) {
+        MediaController controller = sActiveController;
+        if (controller != null) {
             try {
-                sActiveController.getTransportControls().play();
+                PlaybackState state = controller.getPlaybackState();
+                boolean playing = state != null && state.getState() == PlaybackState.STATE_PLAYING;
+                if (playing) controller.getTransportControls().pause();
+                else controller.getTransportControls().play();
+                return;
             } catch (Exception ignored) {}
         }
-
-        // 2. Dispatch explicit PLAY key (126) and PLAY_PAUSE toggle (85)
-        sendMediaKey(context, KeyEvent.KEYCODE_MEDIA_PLAY);
-        sendMediaKey(context, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
-
-        // 3. Send explicit play/unpause commands to Zlink & DiPlay
-        try {
-            context.sendBroadcast(new Intent("com.zlink.command").putExtra("action", "play"));
-            context.sendBroadcast(new Intent("com.shihab.diplay.MEDIA_CONTROL").putExtra("command", "play"));
-            context.sendBroadcast(new Intent("com.android.music.musicservicecommand").putExtra("command", "play"));
-        } catch (Exception ignored) {}
-
-        // 4. Send vendor automotive commands
-        try {
-            context.sendBroadcast(new Intent("com.goc.bluetooth.avrcp").putExtra("action", "play"));
-            context.sendBroadcast(new Intent("action.hct.media.key").putExtra("keycode", KeyEvent.KEYCODE_MEDIA_PLAY));
-            context.sendBroadcast(new Intent("com.ts.media.key").putExtra("keycode", KeyEvent.KEYCODE_MEDIA_PLAY));
-        } catch (Exception ignored) {}
-
-        Intent intent = new Intent(ACTION_MEDIA_UPDATED);
-        intent.putExtra(EXTRA_IS_PLAYING, true);
-        context.sendBroadcast(intent);
+        // No session (vendor or Bluetooth source): the toggle key is the only command that
+        // works without knowing the state. Verify in the car how the unit's own player reacts.
+        dispatchMediaKey(context, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
     }
 
+    /**
+     * Sends one transport command: through the active session if there is one, otherwise a
+     * single key down/up pair. Vendor-specific broadcasts are intentionally gone (P-09, P-76).
+     */
     public static void sendMediaKey(Context context, int keyCode) {
+        MediaController controller = sActiveController;
+        if (controller != null) {
+            try {
+                MediaController.TransportControls tc = controller.getTransportControls();
+                switch (keyCode) {
+                    case KeyEvent.KEYCODE_MEDIA_NEXT: tc.skipToNext(); return;
+                    case KeyEvent.KEYCODE_MEDIA_PREVIOUS: tc.skipToPrevious(); return;
+                    case KeyEvent.KEYCODE_MEDIA_PLAY: tc.play(); return;
+                    case KeyEvent.KEYCODE_MEDIA_PAUSE: tc.pause(); return;
+                    case KeyEvent.KEYCODE_MEDIA_STOP: tc.stop(); return;
+                    case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE: togglePlayPause(context); return;
+                    default: break;
+                }
+            } catch (Exception ignored) {}
+        }
+        dispatchMediaKey(context, keyCode);
+    }
+
+    private static void dispatchMediaKey(Context context, int keyCode) {
         AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-        long eventTime = System.currentTimeMillis();
-
-        // 1. AudioManager hardware dispatch
-        if (audioManager != null) {
-            try {
-                audioManager.dispatchMediaKeyEvent(new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, keyCode, 0));
-                audioManager.dispatchMediaKeyEvent(new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_UP, keyCode, 0));
-            } catch (Exception ignored) {}
-        }
-
-        // 2. Standard ACTION_MEDIA_BUTTON broadcasts
+        if (audioManager == null) return;
+        // KeyEvent expects uptimeMillis, not wall-clock time.
+        long now = SystemClock.uptimeMillis();
         try {
-            Intent down = new Intent(Intent.ACTION_MEDIA_BUTTON);
-            down.putExtra(Intent.EXTRA_KEY_EVENT, new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, keyCode, 0));
-            context.sendBroadcast(down);
-
-            Intent up = new Intent(Intent.ACTION_MEDIA_BUTTON);
-            up.putExtra(Intent.EXTRA_KEY_EVENT, new KeyEvent(eventTime, eventTime, KeyEvent.ACTION_UP, keyCode, 0));
-            context.sendBroadcast(up);
+            audioManager.dispatchMediaKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0));
+            audioManager.dispatchMediaKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0));
         } catch (Exception ignored) {}
-
-        // 3. String command mapping for CarPlay bridges (Zlink, DiPlay, GOC)
-        String actionName = null;
-        if (keyCode == KeyEvent.KEYCODE_MEDIA_NEXT) actionName = "next";
-        else if (keyCode == KeyEvent.KEYCODE_MEDIA_PREVIOUS) actionName = "prev";
-        else if (keyCode == KeyEvent.KEYCODE_MEDIA_PLAY) actionName = "play";
-        else if (keyCode == KeyEvent.KEYCODE_MEDIA_PAUSE) actionName = "pause";
-        else if (keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) actionName = "toggle";
-
-        if (actionName != null) {
-            try {
-                context.sendBroadcast(new Intent("com.zlink.command").putExtra("action", actionName));
-                context.sendBroadcast(new Intent("com.shihab.diplay.MEDIA_CONTROL").putExtra("command", actionName));
-                context.sendBroadcast(new Intent("com.goc.bluetooth.avrcp").putExtra("action", actionName));
-            } catch (Exception ignored) {}
-        }
-
-        // 4. Vendor Head Unit key broadcasts
-        try {
-            context.sendBroadcast(new Intent("action.hct.media.key").putExtra("keycode", keyCode));
-            context.sendBroadcast(new Intent("com.ts.media.key").putExtra("keycode", keyCode));
-            context.sendBroadcast(new Intent("com.microntek.media.key").putExtra("keycode", keyCode));
-            context.sendBroadcast(new Intent("com.syu.music.key").putExtra("keycode", keyCode));
-        } catch (Exception ignored) {}
-
-        // 5. System Input Keyevent injection via permissive shell (emulates steering wheel hardware key)
-        new Thread(() -> {
-            try {
-                Runtime.getRuntime().exec("input keyevent " + keyCode);
-            } catch (Exception ignored) {}
-        }).start();
     }
 
     @Override
