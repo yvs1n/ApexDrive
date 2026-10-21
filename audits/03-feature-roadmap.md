@@ -790,4 +790,65 @@ Contributors discover channels on a PC: `adb shell dumpsys activity broadcasts` 
 
 ## Release sequence and summary
 
-_(next commit)_
+### How F-01 to F-03 relate to the other audits
+
+- **Audit 1 §G (vehicle and head-unit assumptions, P-xx TBD).** Audit 1 lists the assumptions as defects (Santa Fe text, `SantafemR`, UAE map text, vendor broadcasts sent to every vendor, probing every vendor's properties). F-01 is the single fix for that whole group: the assumptions become data in a Vehicle Profile and the shotgun becomes a per-head-unit command list. Audit 1 should keep its findings as the defect record and point to F-01 as the remedy; this audit does not repeat them. Reverting any of them without F-01 would leave the launcher correct only for the owner's car.
+- **Audit 2 first-run onboarding.** Order: language/units, then vehicle and head unit (F-02), then driver phone, then apps, then permissions with a reason each. F-07 provides the resumable shell; F-02 fills step 2; F-03 is an optional sub-step of step 2 and a permanent entry in Settings. Audit 2 owns copy, layout and the permission wording (including the Android 13 restricted-settings note for notification access and accessibility).
+- **The design system.** Day/Night (F-06) needs Day tokens, F-02 needs tile and list components, F-17 needs slot layouts; these are requirements on the design-system proposal rather than work inside this audit.
+
+### Release sequence
+
+Releases assume Audit 1's P0/P1 fixes land first or alongside; this audit does not replace them.
+
+| Release | Contents | Why this grouping |
+| --- | --- | --- |
+| **v1.0** | Audit 1 P0/P1 fixes; **F-01, F-02, F-03 (basic: send, confirm, hide), F-07**; F-04 (detection only, auto-launch behind a switch, off); F-05 (art with fallbacks); F-06 (Auto/Day/Night, no illumination signal yet); F-08; F-10; a release workflow with a stable signing key | The car-agnostic core: a stranger with a different car and stereo gets a working launcher. Also gives contributors the profile format, the Test report and a log to attach before the first outside PR |
+| **v1.1** | F-09 (update check); F-04 auto-launch Ask/Auto modes after car testing; F-13, F-14, F-15; F-16 (manual favourites); F-06 illumination option where verified | Daily usefulness that needs only GPS and local storage |
+| **v1.2** | F-11, F-12 (manual threshold and, where legal, regional camera data); F-22; F-27 (Arabic/RTL and string extraction, may start earlier because extraction touches every file) | Features that depend on external apps or accessibility permission, and the language work |
+| **v1.3** | F-23; F-20 (first head units verified); F-17; F-26; F-25 | Per-driver and vehicle data once the profile and favourites exist |
+| **v2.0** | F-19 (OBD-II), F-21, F-18, F-24, F-28 | Hardware-dependent or large; gated on community reports from F-03 |
+
+Rationale for the order: F-27's string extraction is cheap to do early and expensive to do late, so Audit 2 may pull it into v1.0 as an enabling refactor even if translations ship later. F-08 and F-10 are in v1.0 because every later feature adds data worth backing up and every bug report is cheaper with a log.
+
+### Summary table
+
+Value = benefit to a typical driver (H/M/L); effort S ≈ days, M ≈ 1-2 weeks, L ≈ weeks; HW = depends on head-unit behaviour that must be verified in the car.
+
+| ID | Feature | Tier | Value | Effort | HW | Release |
+| --- | --- | --- | --- | --- | --- | --- |
+| F-01 | Vehicle Profile data model (JSON assets) | 1 | H | M | Y | v1.0 |
+| F-02 | First-run vehicle and head-unit selector | 1 | H | M | Y | v1.0 |
+| F-03 | "Test my unit" capability screen | 1 | H | M | Y | v1.0 |
+| F-04 | Reliable phone detection and optional CarPlay auto-launch | 1 | H | M | Y | v1.0 / v1.1 |
+| F-05 | Real now-playing with album art | 1 | H | M | Y | v1.0 |
+| F-06 | Automatic Day/Night | 1 | H | M | Y | v1.0 |
+| F-07 | First-run setup flow (shell) | 1 | M | S-M | N | v1.0 |
+| F-08 | Settings export/import to USB | 1 | M | S-M | Y | v1.0 |
+| F-09 | In-app update check | 1 | M | S-M | Y | v1.1 |
+| F-10 | Crash and log export | 1 | M | S | Y | v1.0 |
+| F-11 | OsmAnd next-turn (AIDL) | 2 | H | M | Y | v1.2 |
+| F-12 | Speed-limit and camera alerts | 2 | M | M | Y | v1.2 |
+| F-13 | Saved destinations | 2 | M | S | Y | v1.1 |
+| F-14 | Where I parked | 2 | M | S | Y | v1.1 |
+| F-15 | Trip computer with history | 2 | M | M | Y | v1.1 |
+| F-16 | Favourite contacts and quick-dial | 2 | H | M | Y | v1.1 |
+| F-17 | Home widgets | 2 | L | L | Y | v1.3 |
+| F-18 | Split view / overlay | 2 | L | L | Y | v2.0 |
+| F-19 | OBD-II over Bluetooth ELM327 | 3 | M | L | Y | v2.0 |
+| F-20 | CAN-bus data from the head unit | 3 | M | L | Y | v1.3 |
+| F-21 | Fuel and maintenance log | 3 | L | M | N | v2.0 |
+| F-22 | Steering-wheel key mapping | 3 | H | L | Y | v1.2 |
+| F-23 | Per-driver profiles tied to phones | 3 | M | M | Y | v1.3 |
+| F-24 | Voice assistant button | 4 | M | S-M | Y | v2.0 |
+| F-25 | Dashcam / reverse-camera shortcuts | 4 | L | S | Y | v1.3 |
+| F-26 | Parked screensaver clock | 4 | L | S | Y | v1.3 |
+| F-27 | Localization incl. Arabic/RTL | 4 | H | M | N | v1.2 (extraction earlier) |
+| F-28 | Optional regional extras | 4 | L | S each | N | v2.0 |
+
+### Open questions
+
+1. Audit 1 section G IDs: references marked `(P-xx TBD)` throughout are to be replaced once audit1 sends them.
+2. Which Hyundai/Kia models and head-unit families are worth shipping in the first catalog beyond the owner's own, and who maintains each (a `maintainers` field per catalog file is suggested).
+3. Whether the project wants camera alerts at all given the legal variation (F-12), or only the manual threshold.
+4. Release signing: who holds the key (F-09, v1.0 release workflow).
+
