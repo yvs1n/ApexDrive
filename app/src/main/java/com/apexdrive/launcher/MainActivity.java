@@ -54,6 +54,7 @@ import com.apexdrive.launcher.services.BluetoothWatcher;
 import com.apexdrive.launcher.services.CarThermometerWatcher;
 import com.apexdrive.launcher.services.GpsTelemetryManager;
 import com.apexdrive.launcher.services.MediaSyncService;
+import com.apexdrive.launcher.utils.DrivingState;
 import com.apexdrive.launcher.utils.Notifier;
 import com.apexdrive.launcher.utils.PreferenceHelper;
 
@@ -115,6 +116,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvNavHeadingBig, tvNavCoordinates, tvNavAltitude, tvNavAccuracy, tvNavTripDist, tvNavTripDuration;
 
     private Notifier notifier;
+    private final DrivingState drivingState = new DrivingState();
     private final Handler clockHandler = new Handler(Looper.getMainLooper());
     private BroadcastReceiver mediaReceiver;
 
@@ -134,6 +136,12 @@ public class MainActivity extends AppCompatActivity {
         prefHelper = new PreferenceHelper(this);
         setContentView(R.layout.activity_main);
         notifier = new Notifier(this);
+        drivingState.setListener(driving -> runOnUiThread(() -> {
+            if (driving && currentActiveRailBtn == railBtnSetup) {
+                showView(viewDash, railBtnDash);
+                notifier.show(Notifier.Kind.INFO, "Settings are available when parked");
+            }
+        }));
 
         initViews();
         initNavigation();
@@ -622,7 +630,7 @@ public class MainActivity extends AppCompatActivity {
         }
         View btnChoose = viewCarPlay.findViewById(R.id.btnChoosePhone);
         if (btnChoose != null) {
-            btnChoose.setOnClickListener(v -> showDeviceSelectorDialog(false));
+            btnChoose.setOnClickListener(v -> { if (!lockedWhileDriving()) showDeviceSelectorDialog(false); });
         }
     }
 
@@ -991,23 +999,23 @@ public class MainActivity extends AppCompatActivity {
 
         btnSelectDriverPhone = viewSetup.findViewById(R.id.btnSelectDriverPhone);
         if (btnSelectDriverPhone != null) {
-            btnSelectDriverPhone.setOnClickListener(v -> showDeviceSelectorDialog(false));
+            btnSelectDriverPhone.setOnClickListener(v -> { if (!lockedWhileDriving()) showDeviceSelectorDialog(false); });
         }
 
         btnSelectCarPlayApp = viewSetup.findViewById(R.id.btnSelectCarPlayApp);
         btnSelectCarPlayApp.setText(prefHelper.getCarPlayName());
-        btnSelectCarPlayApp.setOnClickListener(v -> showCarPlayPicker());
+        btnSelectCarPlayApp.setOnClickListener(v -> { if (!lockedWhileDriving()) showCarPlayPicker(); });
 
         btnSelectRadioApp = viewSetup.findViewById(R.id.btnSelectRadioApp);
         if (btnSelectRadioApp != null) {
             btnSelectRadioApp.setText(prefHelper.getRadioName());
-            btnSelectRadioApp.setOnClickListener(v -> showRadioPicker());
+            btnSelectRadioApp.setOnClickListener(v -> { if (!lockedWhileDriving()) showRadioPicker(); });
         }
 
         btnSelectMapApp = viewSetup.findViewById(R.id.btnSelectMapApp);
         if (btnSelectMapApp != null) {
             btnSelectMapApp.setText(prefHelper.getMapName());
-            btnSelectMapApp.setOnClickListener(v -> showMapPicker());
+            btnSelectMapApp.setOnClickListener(v -> { if (!lockedWhileDriving()) showMapPicker(); });
         }
 
         btnToggleUnit = viewSetup.findViewById(R.id.btnToggleUnit);
@@ -1408,6 +1416,13 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception ignored) {}
     }
 
+    /** True, with a notification, when the action is not allowed while the car is moving. */
+    private boolean lockedWhileDriving() {
+        if (!drivingState.isDriving()) return false;
+        notifier.show(Notifier.Kind.CAUTION, "Available when parked");
+        return true;
+    }
+
     /** The single design-system accent (Day and Night variants come from resources). */
     private int accent() {
         return ContextCompat.getColor(this, R.color.ad_accent_text);
@@ -1419,7 +1434,7 @@ public class MainActivity extends AppCompatActivity {
         railBtnMaps.setOnClickListener(v -> showView(viewMaps, railBtnMaps));
         railBtnAudio.setOnClickListener(v -> showView(viewAudio, railBtnAudio));
         railBtnApps.setOnClickListener(v -> showView(viewApps, railBtnApps));
-        railBtnSetup.setOnClickListener(v -> showView(viewSetup, railBtnSetup));
+        railBtnSetup.setOnClickListener(v -> { if (!lockedWhileDriving()) showView(viewSetup, railBtnSetup); });
     }
 
     private void showView(View targetView, View activeRailBtn) {
@@ -1462,6 +1477,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSpeedUpdated(int speed, String unit) {
                 runOnUiThread(() -> {
+                    boolean mph = prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH);
+                    drivingState.onSpeed(mph ? speed * 1.609344f : speed, android.os.SystemClock.elapsedRealtime());
                     tvSpeed.setText(String.valueOf(speed));
                     tvSpeedUnit.setText(unit.toLowerCase(Locale.US));
                 });
@@ -1760,6 +1777,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showDeviceSelectorDialog(boolean isAutoDismiss) {
+        if (lockedWhileDriving()) return;
         if (isFinishing()) return;
         if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
             deviceSelectorDialog.dismiss();
