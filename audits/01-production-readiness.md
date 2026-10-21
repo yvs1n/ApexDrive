@@ -457,3 +457,136 @@ The repository is built only by GitHub Actions (`.github/workflows/build.yml`). 
 - **What happens:** `compileSdk 33` with `targetSdk 28` is deliberate (it keeps the legacy permission and background rules) but is documented nowhere.
 - **Why it matters:** The next contributor raising `targetSdk` will break the app in ways this audit already lists: background location (29), package visibility (30), `BLUETOOTH_CONNECT` and mandatory explicit `exported` (31), notification permission (33).
 - **Fix:** Add a short "Why targetSdk 28" paragraph to the README with this list.
+
+---
+
+## G. Vehicle and head-unit assumptions
+
+The app was built for one car (a Hyundai Santa Fe, the code and docs say "IX45" and "2015", while the CAN profile string says "13 All new Santafe" `[inferred]` the same generation) on one head unit (Allwinner T3L with the Zlink 5.3 CarPlay box and a Topway-style vendor stack `[inferred]` from the `com.ts.*` names). Almost nothing is labelled as an assumption; it is compiled into layouts and Java literals. This section lists all of it, then proposes one fix direction.
+
+Audit 3 plans a first-run car make/model selector. That selector should set a **vehicle profile** (labels, CAN decoding), and a separate **head-unit profile** should hold the vendor stack (broadcasts, Settings keys, packages). They change for different reasons and should not share a file.
+
+### G.1 Car-specific hardcoded values
+
+| Value | Where | Finding |
+|---|---|---|
+| `SANTA FE · IX45` header pill | `activity_main.xml:68-74` (id `tvVehicleModel`) | P-72 |
+| `HYUNDAI SANTA FE · IX45 COCKPIT` splash text | `activity_main.xml:408` | P-72 |
+| `ZLINK 5.3 HARDWARE PROJECTION · HYUNDAI SANTA FE` | `view_carplay.xml:36` | P-72 |
+| `Direct USB OTG link via Santa Fe center console or glove box port` | `view_carplay.xml:131` | P-72 |
+| `Connects over Bluetooth (SantafemR)` | `view_carplay.xml:86` | P-72, P-73 |
+| `SANTAFEMR` default device name | `view_dashboard.xml:153`, `strings.xml:14` (unused) | P-72, P-73 |
+| `Pair via SantafemR (PIN 0000)` | `BluetoothWatcher.java:731` | P-72, P-73 |
+| `Calibrate to match your Hyundai instrument cluster` | `MainActivity.java:1746` | P-72 |
+| `accent_hyundai_blue` colour name ("Hyundai N-Line") | `colors.xml:17` | P-72 |
+| Factory PINs `123456` and `7890`, `CANbus: 03: Simple Soft (XP)`, `Profile: 61: Hyundai Kia / 01: 13 All new Santafe` | `MainActivity.java:1055` | P-74 |
+| `02 · FACTORY SETTINGS (PIN 123456)` button | `view_setup.xml:281` | P-74 |
+| Same PINs, decoder and profile, plus "2015 Hyundai Santa Fe" | `README.md:2`, `:40-76` | P-74 |
+| `Yassin's iPhone` sample device name | `item_device_card.xml:32` | P-73 |
+| `c:\Users\yassi\Documents\Android Launcher` | `README.md:25`; `file:///c:/Users/yassi/...` links at `AGENT_HANDOFF.md:77`, `:92`, `:97`, `:136-140` | P-73 |
+| `Santa Fe` x5 in the preview mock | `launcher_preview.html` | P-68, P-72 |
+| Protocol and hardware claims: `ZLINK 5.3`, `USB 2.0`, `I2S`, `Rohm/SI473X ICs`, `Rohm37XXX` | `view_carplay.xml:99`, `:144`, `:176`, `:189`; `view_audio.xml:95`; `anti-slop/audit-001-2026-10-10.md:32` | P-29, P-31 |
+| OsmAnd 4.5.10 and the UAE map file `United-arab-emirates_asia.obf` | `MainActivity.java:697-701` | P-75 |
+| Default map `net.osmand.plus` / `OsmAnd Offline Maps`; default CarPlay `com.zjinnova.zlink` / `Zlink 5.3` | `PreferenceHelper.java:26-27`, `:144`, `:152`; `view_setup.xml:103`, `:163` | P-75 |
+| `RADARS · ROAD BUMPS · OFFLINE LANES` (OsmAnd's Gulf data) | `view_maps.xml:281` | P-30, P-75 |
+| FM band 87.5 to 108.0 MHz | `MainActivity.java:891`, `:912`, `:1352` | P-75 |
+| 1024x600 layout assumption | `AGENT_HANDOFF.md:11`; sizes in `view_apps.xml:28`, `view_audio.xml:10`; dialog width `MainActivity.java:449-450` | P-79 |
+
+**P-72 · High · `activity_main.xml:68-74`, `:408`; `view_carplay.xml:36`, `:86`, `:131`; `BluetoothWatcher.java:731`; `MainActivity.java:1746`**
+- **What happens:** A Hyundai Santa Fe identity is shown in the header of every screen and in four other places, whatever car the unit is in. See the table above.
+- **Why it matters:** A different driver sees another car's name on the first line of their dash, which makes the app unusable as a shared open-source launcher.
+- **Fix:** Move the label to the vehicle profile; with no profile, show nothing in the header. Replace "Santa Fe", "Hyundai" and "SantafemR" in descriptions with neutral text or a profile field.
+
+**P-73 · High · `item_device_card.xml:32`, `README.md:25`, `AGENT_HANDOFF.md:77`, `:92`, `:97`, `:136-140`, `strings.xml:14`, `view_dashboard.xml:153`, `view_carplay.xml:86`, `BluetoothWatcher.java:731`**
+- **What happens:** The repository contains a person's first name (`Yassin's iPhone`), a Windows user-profile path (`c:\Users\yassi\...`, nine links), and the head unit's own Bluetooth name as default UI text. `[inferred]` `SantafemR` is the name phones see when pairing with the unit: the code tells the user to "Pair via SantafemR (PIN 0000)", so it is not a phone name.
+- **Why it matters:** Personal data in a public repository that will gain contributors. The sample name is only visible in the layout editor and in the preview mock, but it ships in the APK resources. The Bluetooth PIN `0000` is also the vendor default, not a universal value.
+- **Fix:** Replace the sample with a neutral string (`Phone`). Delete or relativise the paths and links. Make the unit name a profile or detected value (`BluetoothAdapter.getName()` when available). Git history keeps the old text; deciding whether to rewrite history is the owner's call, and I do not recommend it for a handful of strings.
+
+**P-74 · High · `MainActivity.java:1052-1070`, `view_setup.xml:274-281`, `README.md:66-76`**
+- **What happens:** `FACTORY SETTINGS` shows "Factory PIN: 123456 / Alternative PIN: 7890" and a CAN decoder (`03: Simple Soft (XP)`) and car profile (`61: Hyundai Kia / 01: 13 All new Santafe`) as if they were facts about every unit, and the button label repeats the PIN. The README repeats it as setup instructions for "your Santa Fe".
+- **Why it matters:** On another unit those numbers are wrong at best and, at worst, steer a user toward the wrong decoder setting (the decoder and the car profile determine how CAN frames are interpreted). Vendor factory codes differ between head-unit makers and firmware.
+- **Fix:** Move this to an optional `factoryHint` text in the profile; default to none. Keep the intent targets (`com.ts.factory`, `com.microntek.factorysettings`, `com.syu.settings`, `:1057-1062`) in the profile too, because they are vendor packages (P-78).
+
+**P-75 · Med · `MainActivity.java:695-701`, `:891`, `:912`, `:1352`, `:633-636`, `:1565`, `:1529`; `PreferenceHelper.java:44`, `:144`, `:152`; `view_maps.xml:281`; layouts and Java literals**
+- **What happens:** Region and language choices are baked in: the missing-OsmAnd dialog names a UAE map file; the FM band is 87.5 to 108.0 MHz at 0.1 steps (Japan uses 76 to 95, and some regions step 0.05); POI searches use English words; the default unit is km/h; the clock is 12-hour (P-17) and coordinates assume N/E (P-18). Of 20 entries in `strings.xml` only `app_name` is used; every other label is a literal in a layout or in Java, so nothing is translatable and `supportsRtl="true"` (`AndroidManifest.xml:29`) is untested.
+- **Why it matters:** The launcher cannot be used outside the author's region without editing code.
+- **Fix:** Region data (FM band, step, units, map guidance) goes into the vehicle profile; user-visible text moves to `strings.xml`. Do the string move mechanically, one screen per commit, so Audit 2's layout changes do not conflict.
+
+### G.2 Head-unit vendor assumptions
+
+The launcher talks to the head unit's vendor stack by **broadcasting to every vendor's guessed action name** and **listening to every vendor's guessed action**, in code that swallows all failures (P-55). Eight vendor families appear in the strings: `ts` (Topway), `microntek`, `syu` (FYT/Joying), `allwinner`, `goc`, `hct`, `zlink` (`com.zjinnova.*`) and `diplay` (`com.shihab.diplay`), plus `ecar`, `forfan`, `manstep` (AutoKit), `hiworld` and `raise`.
+
+| Direction | What is sent or listened for | Where |
+|---|---|---|
+| **Bluetooth connect (send)** | 11 actions: `com.allwinner.bt.connect`, `com.allwinner.bluetooth.connect`, `com.goc.bluetooth.connect`, `com.android.ecar.bluetooth.connect`, `com.syu.bt.connect`, `action.hct.bt.connect`, `com.ts.bt.connect`, `com.microntek.bt.connect`, `cn.manstep.phonemirrorbox.bt.connect`, `com.zjinnova.zlink.bt.connect`, `com.forfan.bt.connect`; each with `address`, `mac`, `name`, `dev_name`, `device` extras; sent twice per attempt | `BluetoothWatcher.java:591-613`, `:479`, `:572` |
+| **Bluetooth state (listen)** | 16 vendor actions registered; 10 are matched as "connected" and 7 as "disconnected", and one of those 7 (`com.allwinner.bluetooth.disconnected`) is never registered, so it can never fire | `BluetoothWatcher.java:103-124`, `:165-180` |
+| **Bluetooth state (read)** | Properties `sys.bt.connected`, `persist.sys.bt.connected`, `vendor.bt.connected`, `ts.bt.state`, `goc.bt.connected`, `sys.fyt.bluetooth`, `bt.connected.name`, `bt.connected.mac`; Settings.System keys `bluetooth_state`, `bt_device_name`, `bt_connected_dev_name`, `current_connect_bt_addr`, `current_connect_bt_name` | `BluetoothWatcher.java:389-412`, `:420-448` |
+| **Media metadata (listen)** | 9 vendor actions: `com.goc.bluetooth.track`, `com.goc.bluetooth.avrcp`, `com.microntek.bt.music`, `com.ts.bt.track`, `action.hct.bt.track`, `com.zlink.metadata`, `com.zlink.music_info`, `com.shihab.diplay.METADATA`, `com.shihab.diplay.PLAY_STATE`; the same list registered twice (service and activity), with differing extras keys `track/title/song/name`, `artist/singer/album` | `MediaSyncService.java:107-121`, `MainActivity.java:2273-2287` |
+| **Media control (send)** | `com.zlink.command`, `com.shihab.diplay.MEDIA_CONTROL`, `com.goc.bluetooth.avrcp`, `action.hct.media.key`, `com.ts.media.key`, `com.microntek.media.key`, `com.syu.music.key`, `com.android.music.musicservicecommand`, plus `input keyevent` | `MediaSyncService.java:168-177`, `:206-216`, `:256-267`, `:273` |
+| **Radio (send)** | 14 start actions (`com.ts.radio.*`, `com.allwinner.radio.*`, `com.microntek.radio.*`, `com.syu.radio.*`, `action.hct.media.key`, `com.android.fm.play`, `com.android.radio.PLAY`), 10 stop actions, 4 tune actions per press; `com.microntek.radio.power` sent in both start and stop | `MainActivity.java:1350-1398`, `:900-904`, `:921-925` |
+| **System recents (send)** | `action.hct.recents`, `com.syu.recents`, `com.ts.recents`, `com.microntek.recents`, two AOSP names; `com.microntek.kill` | `MainActivity.java:495-502`, `:379` |
+| **Outside temperature (listen)** | 11 actions (`com.canbus.temperature`, `com.microntek.canbus.*`, `com.ts.can.temperature`, `action.hct.canbus.temp`, `com.syu.canbus`, `com.hiworld.canbus.carinfo`, `com.raise.canbus`, `com.android.settings.CANBUS_CAR_INFO`, `android.intent.action.AIR_CONDITION_CHANGED`, `com.android.ecar.cannews`, `com.microntek.canbus.display`); extras `out_temp`, `temperature`, `ext_temp`, `ambient_temp`, `temp`, `celsius`, `car_temp`; Settings keys `can_temperature`, `out_temperature`, `car_out_temp`, `canbus_temp`, `exterior_temp`, `mcu_out_temp`; properties `persist.sys.can.temp`, `sys.car.temp`, `sys.car.outtemp`, `persist.fyt.temp`, `sys.canbus.out_temp` | `CarThermometerWatcher.java:125-136`, `:302`, `:332-339`, `:352-358` |
+| **Packages launched** | CarPlay bridges (5 in the picker, 8 in the launch fallback), BT managers (10), radio apps (6 in the picker, 23 in the detector), factory settings (4), equaliser (4), USB music (5), file managers (6) | `MainActivity.java:1120-1133`, `:2320-2329`, `:1093-1104`, `:1169-1184`, `:1300-1323`, `:1057-1062`, `:1073-1078`, `:874`, `:703-706` |
+| **CarPlay launch** | Explicit action `zjinnova.android.intent.action.ZLINK_MAIN` with extras `page=LINK`, `feature=carplay` | `MainActivity.java:2308-2312` |
+
+**P-76 · High · `BluetoothWatcher.java:586-616`, `MediaSyncService.java:153-276`, `MainActivity.java:1350-1398`, `:495-507`, `:379`** `[verify in car]`
+- **What happens:** Every control action (connect, media key, radio, recents, kill) is sent to all vendor namespaces at once with `sendBroadcast`, wrapped in `catch (Exception ignored)`. `sendBroadcast` does not throw when nobody listens, so the `catch` is dead and the only visible outcome is whatever a matching receiver does.
+- **Why it matters:**
+  - On the author's unit most of these names match nothing and cost CPU and Binder traffic (P-52).
+  - On another vendor's unit, an action name that coincidentally matches does something unreviewed. `com.microntek.radio.power` is named like a toggle and is sent when the user presses pause (`:1391`).
+  - The BT connect burst leaks the phone's MAC and name to any app (P-39).
+  - There is no way for a contributor to know which names were ever observed to work.
+- **Fix:** See **G.3**. In short: a **per-unit profile** that names exactly the actions, extras, Settings keys and packages that were observed on that unit, a Generic profile that sends nothing vendor-specific, and the same tables used for both sending and listening.
+
+**P-77 · Med · `BluetoothWatcher.java:389-412`, `CarThermometerWatcher.java:332-358`** `[verify in car]`
+- **What happens:** The property and `Settings.System` key names come from no documented source in the repo. Reads of missing keys return null or "", which is harmless, but a key that exists on another unit with a different meaning (for example `bluetooth_state`) flips the detection logic (P-04).
+- **Why it matters:** The same name can mean different things on different firmware; a wrong "true" is displayed as fact.
+- **Fix:** Profile entries carry the key, the meaning and the unit (for example `{ "key": "can_temperature", "unit": "C" }`), and a `verifiedOn` list (model, firmware, date, contributor).
+
+**P-78 · Med · `MainActivity.java:1093-1104`, `:874`, `:1073-1078`, `:703-706`**
+- **What happens:** Several lists are plainly mis-assigned: the Bluetooth manager list begins with `com.allwinner.bluetooth` and then includes `com.allwinner.radio` (a radio app) at `:1095` and `cn.manstep.phonemirrorbox` (the AutoKit CarPlay app) at `:1102`; the USB player list ends with `com.android.musicfx` (an audio-effects package, `:874`); the equaliser list contains `com.android.sound` (`:1077`); the factory list falls back to `com.android.settings`.
+- **Why it matters:** The BT button can open the radio or the CarPlay app; evidence that these lists were assembled by copy, not tested.
+- **Fix:** Resolve by intent first: `ACTION_BLUETOOTH_SETTINGS`, `Intent.makeMainSelectorActivity(ACTION_MAIN, CATEGORY_APP_MUSIC)`, `AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL`; fall back to profile packages only if the intent does not resolve.
+
+**P-79 · Med · `res/` (only `layout/`, `drawable/`, `values/`), `MainActivity.java:449-450`, `view_apps.xml:28`, `view_audio.xml:10`, `AndroidManifest.xml:42-43`**
+- **What happens:** The UI is one fixed landscape layout set tuned for 1024x600 at mdpi. There are no `layout-sw*`, `layout-land`, `-hdpi` or `-xhdpi` variants, widths are fixed in dp (`260dp`, `220dp`, `58dp` buttons), the dialog has a 540 px minimum width, and orientation is locked to landscape. `AGENT_HANDOFF.md:11` mentions 1280x720 as a second target, but nothing in the repo covers it.
+- **Why it matters:** Common head-unit panels include 800x480, 1280x720 and 1920x720; a layout that fits one panel can clip or leave dead space on the others. `[verify in car]` nothing here was run on any panel other than the author's.
+- **Fix:** Test the six screens on 800x480, 1280x720 and 1920x720 (Android Studio can emulate those sizes; a physical unit is not needed for layout). Convert hard sizes to weights or `dimens.xml` per size class. Audit 2 owns the design.
+
+**P-80 · High · `AndroidManifest.xml:46-50`, `README.md:50-52`, `AGENT_HANDOFF.md:74-76`**
+- **What happens:** The app only works as intended on an Android head unit whose firmware lets the user choose a different HOME app and whose Bluetooth, CAN and radio are reachable through the Android-level calls the app tries. The handoff itself says Bluetooth on these units runs on an MCU over UART and the standard Android API may report nothing. There is no capability check: the app does not tell the user whether HOME replacement worked, whether Bluetooth is reachable, whether a GPS exists, or which vendor stack was recognised.
+- **Why it matters:** On a unit with a locked launcher or a different stack the symptoms are the ones listed in section A (permanent "connected", dead controls), and the user cannot tell why. It is also not an Android Automotive OS (AAOS) app; the README never says so.
+- **Fix:** A first-run capability probe that reports in plain language: `HOME` role resolved, Bluetooth adapter and bonded devices visible, location provider present, notification access (P-14), vendor stack recognised or "generic". Store the result in the diagnostics log (P-55). State in the README that it targets aftermarket Android head units, not AAOS and not phones.
+
+**P-81 · Med · repository-wide** `[inferred]`
+- **What happens:** The evidence is that **only one Allwinner T3L unit in one car was used**. The README and handoff describe "your Santa Fe" and that unit's CAN settings; the commit messages speak of "1024x600 tuning"; the audit calls the hardware claims accurate "for the Allwinner T3L Santa Fe" (`anti-slop/audit-001-2026-10-10.md:32`); and the vendor lists read like a union of namespaces seen in other Chinese head-unit apps rather than a record of what each unit sent. The only paths with specific, first-hand detail are the Zlink intent (`zjinnova.android.intent.action.ZLINK_MAIN`, `page=LINK`, `feature=carplay`), the DiPlay package and actions, the `com.ts.*` / `com.allwinner.*` radio actions and the Simple Soft (XP) CAN decoder.
+- **Why it matters:** Every other vendor name in the tables above is unverified, and so is behaviour on any other unit, car or panel.
+- **Fix:** Label unverified entries as such (`verifiedOn: []`), and make "tested on" a column in the profile file. No contribution adds a vendor entry without a model, firmware version and the log line that proved it.
+
+### G.3 Fix direction: a per-unit profile instead of send-to-everyone
+
+**Principle:** never send a vendor broadcast, read a vendor key, or launch a vendor package unless the active profile names it.
+
+1. **Add the types, change no behaviour.** `HeadUnitProfile` (vendor stack) and `VehicleProfile` (labels, CAN meaning, region data), loaded from `assets/profiles/*.json` with a plain-Java parser (`org.json` is in the framework, so no dependency is needed). Unit-test the loader on the JVM (P-69).
+2. **Ship two profiles.** `generic.json`: standard Android only (profile proxies, `AudioManager`, `MediaSession`, standard intents), no vendor strings. `allwinner-t3l-zlink.json`: **exactly what is hard-coded today**, copied verbatim, with `verifiedOn` empty except for the entries that are known to work (P-81). Existing installs select the second one on upgrade, so nothing changes for the author.
+3. **Route every call site through the profile.** The eleven call sites in the table above call `profile.bt.connectActions`, `profile.media.controlActions` and so on, targeted with `setPackage` where the profile names a package (P-39, P-40, P-52). Listening registers only the profile's actions (P-41).
+4. **Select and detect.** Pick by user choice in the first-run selector (Audit 3) with a suggested default from `Build.MANUFACTURER`, `Build.MODEL`, `Build.HARDWARE` and installed vendor packages. Never auto-send on a guess.
+5. **Make contributions cheap.** A Setup screen "Learn this unit" that listens to *all* broadcasts for 60 s while the user pairs a phone, plays a track and turns on the radio, then writes a candidate profile and the diagnostics log to a file. A contributor can then send a profile plus the log line for each entry instead of editing Java.
+
+Sketch of the shape (illustrative, not a final schema):
+
+```json
+{
+  "id": "allwinner-t3l-zlink",
+  "label": "Allwinner T3L + Zlink",
+  "verifiedOn": [{ "model": "...", "firmware": "...", "date": "...", "by": "..." }],
+  "bluetooth": {
+    "connectedActions": ["com.ts.bt.connected"],
+    "connectAction":   { "action": "com.ts.bt.connect", "package": "com.ts.bt" },
+    "stateSettings":   [{ "key": "current_connect_bt_addr", "means": "connectedMac" }]
+  },
+  "media":   { "controlAction": { "action": "com.ts.media.key", "extra": "keycode" } },
+  "radio":   { "package": "com.ts.radio", "bandMhz": [87.5, 108.0], "stepMhz": 0.1 },
+  "packages": { "carplay": ["com.zjinnova.zlink"], "factory": ["com.ts.factory"] }
+}
+```
