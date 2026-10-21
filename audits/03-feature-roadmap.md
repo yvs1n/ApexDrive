@@ -252,7 +252,7 @@ Output: "Copy report" writes a JSON/Markdown report to USB (F-08 writer) with mo
 
 **How it works.**
 
-1. **Detection signals** (merged into one state `NOT_CONNECTED / CONNECTING / CONNECTED_VERIFIED / CONNECTED_UNVERIFIED`), exactly the existing multi-channel idea, but driven by the profile instead of fixed lists: `BluetoothA2dp`/`BluetoothHeadset` profile proxies (`BluetoothAdapter.getProfileProxy`, API 11+), `BluetoothDevice.ACTION_ACL_CONNECTED` / `ACTION_ACL_DISCONNECTED` (API 1), `AudioManager.isBluetoothA2dpOn()`/`isBluetoothScoOn()`, and the head-unit's `settingsKeys`/`systemProps` from the profile. Only the channels listed for the selected head unit are polled, which also reduces boot-time work. The existing bugs in this engine (boot race, false "connected", duplicate load) are Audit 1's (P-04 false positives, P-06 dead auto-connect); this feature depends on them being fixed and does not duplicate them.
+1. **Detection signals** (merged into one state `NOT_CONNECTED / CONNECTING / CONNECTED_VERIFIED / CONNECTED_UNVERIFIED`), exactly the existing multi-channel idea, but driven by the profile instead of fixed lists: `BluetoothA2dp`/`BluetoothHeadset` profile proxies (`BluetoothAdapter.getProfileProxy`, API 11+), `BluetoothDevice.ACTION_ACL_CONNECTED` / `ACTION_ACL_DISCONNECTED` (API 1), `AudioManager.isBluetoothA2dpOn()`/`isBluetoothScoOn()`, and the head-unit's `settingsKeys`/`systemProps` from the profile. Only the channels listed for the selected head unit are polled, which also reduces boot-time work. The existing bugs in this engine (boot race, false "connected", duplicate load) are Audit 1's (P-04 false positives, P-05 proxies not created when Bluetooth is off at start, P-06 dead auto-connect, P-07 silent enable/createBond, P-46 main-thread polling, P-59 hidden-API reflection); this feature depends on them being fixed and does not duplicate them.
 2. **Driver phone.** The selected driver device (`KEY_SELECTED_DRIVER_DEVICE`, set in the driver-phone step of the first-run flow) is the identity everything keys on. A connection by a different paired device is shown as "Other device" and never auto-launches.
 3. **Auto-launch policy** (Settings > Phone/Connect, **off by default**): `Off` / `Ask` (a 10-second banner "Open CarPlay? [Open] [Dismiss]") / `Auto`. `Auto` requires: the driver enabled it; the connected device is the selected driver phone; detection is `CONNECTED_VERIFIED`, or `CONNECTED_UNVERIFIED` only with an explicit sub-toggle; the connection has been stable for N seconds (default 5, so a flapping link does not launch); it has not already launched in this ignition cycle (a cool-down of several minutes, because the launcher cannot reliably know about ignition); the CarPlay app is not already foreground (`ActivityManager.getRunningTasks` is deprecated from API 21 and returns only own tasks, so use the CarPlay launch result and a "launched at" timestamp instead); and the user has not tapped anything in the first ~3 seconds after the connect event (a tap means "I'm doing something else").
 4. **Launch.** The profile's `carplayLaunch` action list, falling back to the installed package from the profile's `defaultApps.carplay` via `PackageManager.getLaunchIntentForPackage`. The existing explicit ZLink intent (`zjinnova.android.intent.action.ZLINK_MAIN` with `page`/`feature`) is data in the T3L entry, not code.
@@ -260,7 +260,7 @@ Output: "Copy report" writes a JSON/Markdown report to USB (F-08 writer) with mo
 
 **Effort.** M. The engine exists; the work is the state machine, the policy and the per-device scoping.
 
-**Dependencies.** Audit 1 findings P-04 (false positives) and P-06 (dead auto-connect) must be fixed first; F-01 (profile channels and launch lists); the driver-phone step of the first-run flow (Audit 2); F-23 (per-driver) later reuses the per-device key.
+**Dependencies.** Audit 1 P-04, P-05, P-06 and P-59 (and P-57 for ACC sleep/wake, which decides the cold-boot ordering) must be fixed first; F-01 (profile channels and launch lists); the driver-phone step of the first-run flow (Audit 2); F-23 (per-driver) later reuses the per-device key.
 
 **Risks.**
 - Surprising the driver: launching an app they did not ask for is intrusive. Mitigation: off by default, visible Ask mode, once per cycle.
@@ -291,7 +291,7 @@ Today `MediaSyncService` (a `NotificationListenerService`, needed so `MediaSessi
 
 **Effort.** M. Art decode and holder are small; the fallback chain and race handling (art arriving after metadata, session changes) are the care points.
 
-**Dependencies.** Audit 1 P-14 (notification access UI) and any MediaSyncService lifecycle findings. F-01 for the vendor action list. Notification access granted (the permissions step).
+**Dependencies.** Audit 1 P-13 (album art), P-14 (notification access UI), P-11 and P-12 (duplicate callbacks, placeholder overwrite), P-58 (listener lifecycle) and P-40 (metadata broadcast spoofing, another reason to move the data path in-process). F-01 for the vendor action list. Notification access granted (the permissions step).
 
 **Risks.**
 - Memory pressure on a 1 GB unit: bounded by one 256 KB bitmap and off-main-thread decode.
@@ -503,7 +503,7 @@ Reverse geocoding (`android.location.Geocoder`) needs a backend service that hea
 
 **Effort.** S.
 
-**Dependencies.** GPS lifecycle fixes (Audit 1 GPS findings; P-38 location consent), F-13, optionally F-01 ignition action.
+**Dependencies.** GPS lifecycle fixes (Audit 1 GPS findings; P-38 location consent; P-57 ACC sleep/wake), F-13, optionally F-01 ignition action.
 
 **Risks.** Flash wear from frequent writes (use `apply()` at a modest interval and write only when the position changed); a GPS fix that was stale when ACC went off (store accuracy and age and show "approximate").
 
@@ -847,7 +847,7 @@ Value = benefit to a typical driver (H/M/L); effort S ≈ days, M ≈ 1-2 weeks,
 
 ### Open questions
 
-1. Audit 1 IDs for GPS lifecycle, release signing and MediaSyncService lifecycle are not cited by number because audit1 sent only section G and related IDs; add them if they exist.
+1. Audit 1 IDs for GPS lifecycle and release signing are not cited because audit1's final list (81 findings) has no dedicated finding for them; add them if they appear.
 2. Which Hyundai/Kia models and head-unit families are worth shipping in the first catalog beyond the owner's own, and who maintains each (a `maintainers` field per catalog file is suggested).
 3. Whether the project wants camera alerts at all given the legal variation (F-12), or only the manual threshold.
 4. Release signing: who holds the key (F-09, v1.0 release workflow).
