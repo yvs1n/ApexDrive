@@ -17,11 +17,10 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="INSTALLED VEHICLE APPS"
+            android:text="Installed vehicle apps"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="13sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.04" />
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_semibold" />
 
         <EditText
             android:id="@+id/etSearchApps"
@@ -31,7 +30,7 @@
             android:hint="Search apps..."
             android:textColorHint="@color/cockpit_text_secondary"
             android:textColor="@color/cockpit_text_primary"
-            android:textSize="13sp"
+            android:textSize="20sp"
             android:paddingStart="14dp"
             android:paddingEnd="14dp"
             android:maxLines="1"
