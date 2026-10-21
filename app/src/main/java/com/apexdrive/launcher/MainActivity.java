@@ -1273,10 +1273,16 @@ public class MainActivity extends AppCompatActivity {
         for (String pkg : btPackages) {
             if (launchAppPackage(pkg)) return;
         }
+        // Android's Bluetooth settings page crashes ("Settings keeps stopping") on a unit
+        // without a Bluetooth adapter, so check first.
+        if (BluetoothAdapter.getDefaultAdapter() == null) {
+            notifier.show(Notifier.Kind.ALERT, "No Bluetooth on this head unit", "Phone settings need Bluetooth");
+            return;
+        }
         try {
             startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } catch (Exception e) {
-            notifier.show(Notifier.Kind.INFO, "Opening Bluetooth settings");
+            notifier.show(Notifier.Kind.ALERT, "Can't open Bluetooth settings", "Open them from the head unit's own menu");
         }
     }
 
