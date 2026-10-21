@@ -2,13 +2,21 @@ name: Build ApexDrive APK
 
 on:
   push:
-    branches: [ "**" ]
+    branches: [ "main" ]
+  pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
     name: Build Android APK
     runs-on: ubuntu-latest
+
+    env:
+      # Newer than every earlier run, so head-unit installers accept the update.
+      VERSION_CODE: ${{ github.run_number }}
 
     steps:
       - name: Checkout Source Code
@@ -32,12 +40,34 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: '8.2'
           cache-disabled: true
 
-      - name: Assemble Debug APK
+      # Secrets are not available to pull requests from forks. Without them the
+      # build is signed with the default debug key (see README, "Signing").
+      - name: Prepare signing key (if secrets are set)
+        env:
+          KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          gradle assembleDebug --stacktrace 2>&1 | tee build.log || (echo "=== GRADLE FAILURE ===" && tail -n 120 build.log && exit 1)
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            {
+              echo "SIGNING_KEYSTORE_FILE=$RUNNER_TEMP/release.jks"
+              echo "SIGNING_KEYSTORE_PASSWORD=$SIGNING_KEYSTORE_PASSWORD"
+              echo "SIGNING_KEY_ALIAS=$SIGNING_KEY_ALIAS"
+              echo "SIGNING_KEY_PASSWORD=$SIGNING_KEY_PASSWORD"
+            } >> "$GITHUB_ENV"
+            echo "Using stable signing key."
+          else
+            echo "No signing secrets; using the debug key."
+          fi
+
+      - name: Lint, unit tests and debug APK
+        shell: bash
+        run: |
+          ./gradlew lintDebug testDebugUnitTest assembleDebug --stacktrace 2>&1 | tee build.log || (echo "=== GRADLE FAILURE ===" && tail -n 120 build.log && exit 1)
 
       - name: Upload ApexDrive APK
         if: success()
@@ -45,6 +75,18 @@ jobs:
         with:
           name: ApexDrive-APK
           path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      - name: Upload Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            app/build/reports/lint-results-debug.html
+            app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Upload Build Failure Log
         if: failure()
@@ -52,3 +94,4 @@ jobs:
         with:
           name: build-failure-log
           path: build.log
+          retention-days: 14
