@@ -30,7 +30,102 @@ Each finding is one block:
 
 **What is already fine.** No analytics, ad or crash-reporting SDK, no WebView, no `exec` with user-controlled input, no secrets in the tree, `MediaSyncService` is correctly protected by `BIND_NOTIFICATION_LISTENER_SERVICE`, `BootReceiver` correctly does not call `startActivity`, and `onBackPressed` correctly never leaves the launcher.
 
-<!-- SUMMARY -->
+## Summary
+
+81 findings: 0 Critical, 19 High, 48 Med, 14 Low. None is rated Critical because the app has no remote attack surface and holds no credentials; the worst failure modes (P-54 crash loop as HOME, P-04 and P-03 wrong connection state, P-37 and P-38 data leaving the car) are rated High.
+
+The five themes that matter most:
+
+1. **The launcher asserts state it cannot know.** Bluetooth "connected", "CarPlay connected", radio "ACTIVE", "RAM freed", "20Hz", satellites and temperature are guessed or static (P-03, P-04, P-29 to P-35).
+2. **Controls fire many commands at once.** Media keys and vendor broadcasts go to everything, silently (P-09, P-10, P-52, P-76).
+3. **Data leaves the car without consent.** Cleartext IP lookup and 11 m location to two third parties, with no off switch (P-37, P-38, P-39, P-40).
+4. **It is one car and one head unit.** Identity, PINs, region and vendor names are compiled in (P-72 to P-81).
+5. **A contributor cannot build, sign, test or update it.** No wrapper, per-build signing keys, no license or .gitignore, no tests (P-62 to P-69).
+
+| ID | Severity | Sec | Finding | First location |
+|---|---|---|---|---|
+| P-01 | High | A | Chosen CarPlay app ignored; Zlink always launched first | `MainActivity.java:2308-2317` |
+| P-02 | Med | A | Fallback saves wrong name "TLink 5.3" | `MainActivity.java:2331-2335` |
+| P-03 | High | A | "CarPlay connected" forced true | `MainActivity.java:2299` |
+| P-04 | High | A | Bluetooth "connected" false positives | `BluetoothWatcher.java:369-372` |
+| P-05 | Med | A | BT profile proxies never created if BT off at start | `BluetoothWatcher.java:190-195` |
+| P-06 | Med | A | Auto-connect saved phone is dead code | `MainActivity.java:1930-1959` |
+| P-07 | Med | A | Silent adapter.enable() and createBond | `MainActivity.java:1904-1909` |
+| P-08 | Low | A | Connect burst sent twice, proxy leak | `BluetoothWatcher.java:479` |
+| P-09 | High | A | Media keys sent 5 ways (double skip) | `MediaSyncService.java:223-276` |
+| P-10 | High | A | Play then play/pause toggles back | `MediaSyncService.java:196-202` |
+| P-11 | Med | A | Duplicate media callbacks, wrong controller | `MediaSyncService.java:55-71` |
+| P-12 | Med | A | Placeholder text overwrites real metadata | `MediaSyncService.java:128-151` |
+| P-13 | Med | A | Album art unused (README promises it) | `MediaSyncService.java:134-135` |
+| P-14 | Med | A | No UI for notification access | `MainActivity.java:2294` |
+| P-15 | High | A | force-stop/kill cannot work; CLOSE ALL kills active apps | `MainActivity.java:296-308` |
+| P-16 | Med | A | System recents via exec, dead fallbacks | `MainActivity.java:470-475` |
+| P-17 | Med | A | Clock 12h only, stale time zone | `MainActivity.java:1529-1536` |
+| P-18 | Low | A | Coordinates always "N, E" | `MainActivity.java:1565` |
+| P-19 | Med | A | GPS mixes network fixes into speed and trip | `GpsTelemetryManager.java:62-78` |
+| P-20 | Med | A | Trip loses distance, not persisted | `GpsTelemetryManager.java:25-27` |
+| P-21 | Med | A | Speed unit also switches temperature unit | `MainActivity.java:1033-1034` |
+| P-22 | Med | A | Calibration offset ignored by CAN/sensor paths | `CarThermometerWatcher.java:245-247` |
+| P-23 | Med | A | Temperature unit and key heuristics wrong | `CarThermometerWatcher.java:302` |
+| P-24 | Med | A | Weather retry blocked after failure; stale shown as live | `CarThermometerWatcher.java:215` |
+| P-25 | Med | A | App list never refreshes after install | `MainActivity.java:941` |
+| P-26 | Low | A | Picker truncates labels; dead click listener | `MainActivity.java:1146` |
+| P-27 | Med | A | Radio tune/power broadcasts mis-gated | `MainActivity.java:899-905` |
+| P-28 | Low | A | REST AREA button searches "coffee" | `view_maps.xml:226` |
+| P-29 | High | B | Static green "PHONE LINK ACTIVE / ZLINK ACTIVE / USB READY" | `view_dashboard.xml:76` |
+| P-30 | Med | B | Static map badge and "LIVE 20Hz" | `view_maps.xml:281` |
+| P-31 | Med | B | Static radio chip/preset; optimistic radio state | `view_audio.xml:95` |
+| P-32 | Med | B | Fabricated satellites, fix type, accuracy, altitude | `GpsTelemetryManager.java:106` |
+| P-33 | Med | B | Fabricated start temperature (26 vs 32) | `activity_main.xml:113` |
+| P-34 | Med | B | Hardcoded BT profile detail and default device | `BluetoothWatcher.java:768` |
+| P-35 | Med | B | "Memory released / RAM freed" claims | `MainActivity.java:383` |
+| P-36 | Med | B | "Prevents hijacking other phones" has no enforcement | `dialog_device_selector.xml:41` |
+| P-37 | High | C | Cleartext ip-api.com request before consent | `CarThermometerWatcher.java:186` |
+| P-38 | High | C | Precise location to third parties, no opt-out | `CarThermometerWatcher.java:221-222` |
+| P-39 | Med | C | Phone MAC/name broadcast to 11 implicit actions | `BluetoothWatcher.java:586-616` |
+| P-40 | Med | C | Track metadata broadcast and spoofable receiver | `MediaSyncService.java:21` |
+| P-41 | Low | C | Vendor/CAN inputs accepted from any app | `CarThermometerWatcher.java:125-136` |
+| P-42 | Med | C | Unused permissions, exported no-op BootReceiver | `AndroidManifest.xml:19-22` |
+| P-43 | Low | C | allowBackup=true | `AndroidManifest.xml:25` |
+| P-44 | Med | C | Permission prompt at launch, no denial handling | `MainActivity.java:137` |
+| P-45 | High | D | GPS at 50 ms, never stopped | `GpsTelemetryManager.java:63-78` |
+| P-46 | Med | D | Bluetooth poll every 3 s on main thread | `BluetoothWatcher.java:618-627` |
+| P-47 | Low | D | Clock updates every second | `MainActivity.java:1528-1537` |
+| P-48 | Med | D | getprop processes every 15 s | `CarThermometerWatcher.java:350-372` |
+| P-49 | Med | D | App list loaded on UI thread for pickers | `MainActivity.java:1116` |
+| P-50 | Low | D | Accent colour reapplied on every navigation | `MainActivity.java:1481-1487` |
+| P-51 | Med | D | All screens inflated eagerly; icon memory | `MainActivity.java:234-247` |
+| P-52 | Med | D | Broadcast fan-out and thread per key press | `MediaSyncService.java:153-276` |
+| P-53 | Low | D | Uncached reflection, unmanaged threads | `BluetoothWatcher.java:317` |
+| P-54 | High | E | No crash-loop guard for a HOME app | `MainActivity.java:127-150` |
+| P-55 | Med | E | Swallowed exceptions, no logging | `catch (Exception|Throwable)` |
+| P-56 | Med | E | No permission/GPS-off/no-fix states | `MainActivity.java:653-665` |
+| P-57 | Med | E | ACC sleep/wake not handled | `MainActivity.java:2450-2456` |
+| P-58 | Med | E | MediaSyncService listener lifecycle | `MediaSyncService.java:41-53` |
+| P-59 | Med | E | Hidden-API reflection, unit-specific | `BluetoothWatcher.java:317` |
+| P-60 | Low | E | Leaked dialog windows, unguarded startActivity | `MainActivity.java:268-271` |
+| P-61 | Low | E | Thermometer fields not thread-safe | `CarThermometerWatcher.java:41-46` |
+| P-62 | High | F | No gradlew/wrapper jar; Gradle version mismatch | `gradle/wrapper/gradle-wrapper.properties:4` |
+| P-63 | High | F | CI debug key differs per build (update fails) | `.github/workflows/build.yml:38-47` |
+| P-64 | Med | F | No release path, versionCode 1, no proguard file | `app/build.gradle:13-14` |
+| P-65 | Med | F | CI: no PR trigger, lint or tests | `.github/workflows/build.yml:3-6` |
+| P-66 | High | F | No .gitignore, LICENSE, CONTRIBUTING | `` |
+| P-67 | Low | F | Unused dependencies and ViewBinding | `app/build.gradle:31-33` |
+| P-68 | Med | F | Docs drifted from code | `AGENT_HANDOFF.md` |
+| P-69 | Med | F | Zero tests | `src/test` |
+| P-70 | Low | F | MainActivity is 2,476 lines | `MainActivity.java` |
+| P-71 | Low | F | targetSdk 28 undocumented | `app/build.gradle:7` |
+| P-72 | High | G | Santa Fe / IX45 identity in UI | `activity_main.xml:68-74` |
+| P-73 | High | G | Personal data in repo | `item_device_card.xml:32` |
+| P-74 | High | G | Factory PIN and CAN decoder shown as fact | `MainActivity.java:1052-1070` |
+| P-75 | Med | G | Region/language hardcoded | `MainActivity.java:695-701` |
+| P-76 | High | G | Vendor broadcast shotgun | `BluetoothWatcher.java:586-616` |
+| P-77 | Med | G | Guessed vendor Settings/property keys | `BluetoothWatcher.java:389-412` |
+| P-78 | Med | G | Mis-assigned package lists | `MainActivity.java:1093-1104` |
+| P-79 | Med | G | 1024x600-only layouts | `res/` |
+| P-80 | High | G | Requires replaceable HOME; no capability probe | `AndroidManifest.xml:46-50` |
+| P-81 | Med | G | Evidence of single-unit testing | `` |
+
 
 ---
 
@@ -498,7 +593,7 @@ Audit 3 plans a first-run car make/model selector. That selector should set a **
 - **Fix:** Move the label to the vehicle profile; with no profile, show nothing in the header. Replace "Santa Fe", "Hyundai" and "SantafemR" in descriptions with neutral text or a profile field.
 
 **P-73 · High · `item_device_card.xml:32`, `README.md:25`, `AGENT_HANDOFF.md:77`, `:92`, `:97`, `:136-140`, `strings.xml:14`, `view_dashboard.xml:153`, `view_carplay.xml:86`, `BluetoothWatcher.java:731`**
-- **What happens:** The repository contains a person's first name (`Yassin's iPhone`), a Windows user-profile path (`c:\Users\yassi\...`, nine links), and the head unit's own Bluetooth name as default UI text. `[inferred]` `SantafemR` is the name phones see when pairing with the unit: the code tells the user to "Pair via SantafemR (PIN 0000)", so it is not a phone name.
+- **What happens:** The repository contains a person's first name (`Yassin's iPhone`), a Windows user-profile path (`c:\Users\yassi\...` in the README, plus eight `file:///` links in the handoff), and the head unit's own Bluetooth name as default UI text. `[inferred]` `SantafemR` is the name phones see when pairing with the unit: the code tells the user to "Pair via SantafemR (PIN 0000)", so it is not a phone name.
 - **Why it matters:** Personal data in a public repository that will gain contributors. The sample name is only visible in the layout editor and in the preview mock, but it ships in the APK resources. The Bluetooth PIN `0000` is also the vendor default, not a universal value.
 - **Fix:** Replace the sample with a neutral string (`Phone`). Delete or relativise the paths and links. Make the unit name a profile or detected value (`BluetoothAdapter.getName()` when available). Git history keeps the old text; deciding whether to rewrite history is the owner's call, and I do not recommend it for a handful of strings.
 
@@ -590,3 +685,55 @@ Sketch of the shape (illustrative, not a final schema):
   "packages": { "carplay": ["com.zjinnova.zlink"], "factory": ["com.ts.factory"] }
 }
 ```
+
+---
+
+## H. Ship checklist
+
+Priorities mean: **P0** blocks making the repository public for contributors or handing the APK to anyone but the author; **P1** blocks calling it a release; **P2** is hardening and polish. Tick boxes as fixes land. Order inside each group is the suggested order of work. Items marked (car) need the unit to confirm.
+
+### P0 Before other people use or contribute
+
+- [ ] **Repo hygiene and legal:** `.gitignore`, `LICENSE`, `CONTRIBUTING.md` (P-66); remove personal data and car identity from the tree (P-73, P-72); correct the docs that point to nonexistent files and commands (P-68).
+- [ ] **Reproducible, updatable build:** commit the Gradle wrapper and use it in CI (P-62); one stable signing key so builds install over each other (P-63); add `pull_request` to CI (P-65).
+- [ ] **Stop data leaving the car silently:** remove the cleartext IP lookup and `usesCleartextTraffic` (P-37); consent screen plus off switch plus 2-decimal rounding for weather (P-38).
+- [ ] **Stop asserting what is not known:** remove forced "CarPlay connected" (P-03); remove static green status labels (P-29, P-30, P-31); remove "Memory released / RAM freed" and the `am force-stop` calls (P-15, P-35); remove the "prevents hijacking" claim (P-36).
+- [ ] **Do not brick the unit:** document recovery and add the crash-loop guard (P-54).
+- [ ] **Wrong media behaviour:** one media-key path, and no PLAY-then-TOGGLE (P-09, P-10) (car).
+- [ ] **Do not present one car's factory data as fact:** remove or make optional the PIN / CAN decoder dialog and README section (P-74).
+
+### P1 Before a first tagged release
+
+- [ ] **Bluetooth truth:** per-device evidence only, handle `STATE_ON`, diagnostics line for which signal fired (P-04, P-05) (car); decide on auto-connect or delete it (P-06); no silent `enable()` / `createBond()` (P-07).
+- [ ] **Per-unit profile** (G.3): types + Generic profile + `allwinner-t3l-zlink` profile, then route every vendor call through it (P-76, P-77, P-78, P-81, P-41, P-39, P-52).
+- [ ] **Launch correctness:** honour the chosen CarPlay app and label it correctly (P-01, P-02); capability probe on first run (P-80).
+- [ ] **Telemetry correctness:** GPS provider only, 1 s rate, stop on pause (P-19, P-45); persist trip (P-20); real satellite and fix state or none (P-32); hemisphere labels (P-18); 24 h clock and time zone (P-17).
+- [ ] **Temperature:** one source priority, offset applied once, no placeholder start value, separate unit setting (P-21, P-22, P-23, P-24, P-33).
+- [ ] **Media metadata:** single callback, playing session, no placeholder overwrite, notification-access row, in-process observer and album art (P-11, P-12, P-13, P-14, P-40, P-58).
+- [ ] **Manifest and privacy:** remove unused permissions and `BootReceiver`, `allowBackup=false` (P-42, P-43); permission request in context with a denial state (P-44, P-56).
+- [ ] **Release path:** `versionCode` from CI, `proguard-rules.pro`, signed release build, GitHub Release (P-64); remove unused dependencies (P-67); first JVM unit tests (P-69).
+- [ ] **Robustness:** logging and an in-app diagnostics view (P-55); wake/sleep refresh (P-57) (car); pickers and radio detection off the UI thread (P-49); app list refresh on package change (P-25).
+- [ ] **Layouts on other panels:** 800x480, 1280x720, 1920x720 (P-79) (Audit 2 owns the design).
+- [ ] **Region and strings:** move region data to the vehicle profile and text to `strings.xml` (P-75).
+
+### P2 Hardening and polish
+
+- [ ] Event-driven Bluetooth with a slow fallback poll; cache reflection; executor instead of bare threads (P-46, P-53).
+- [ ] Minute-tick clock; accent applied only on change; lazy screen inflation and icon cache; `getprop` removal (P-47, P-50, P-51, P-48).
+- [ ] Hidden-API helper with logged outcomes (P-59); dialog tracking and guarded `startActivity` (P-60); thread-safe thermometer fields (P-61).
+- [ ] Remaining small bugs: duplicate connect burst and proxy leak, picker labels, radio tune gating, POI label, Recents via exec, unit coupling (P-08, P-26, P-27, P-28, P-16, P-21).
+- [ ] Split `MainActivity` (P-70); document `targetSdk 28` and the upgrade list (P-71).
+
+### What to verify in the car, in one trip
+
+Bring a laptop with `adb` over Wi-Fi and this list. Record each answer next to its P-id in the profile's `verifiedOn`.
+
+1. **Bluetooth (P-04, P-05, P-34):** with the phone off, paired-not-connected, and connected, what do `bluetooth_state`, `bt_device_name`, `current_connect_bt_addr` and `AudioManager.isBluetoothA2dpOn()` return? Does `BluetoothA2dp.getConnectedDevices()` ever list the phone?
+2. **Media keys (P-09, P-10):** one tap on NEXT in Spotify and in the unit's own player: how many tracks skip? One tap on PLAY: does it end up paused?
+3. **Radio (P-27, P-31):** which of the `com.ts.*` / `com.allwinner.*` / `com.microntek.*` actions actually start the tuner (`adb logcat -b events` plus `dumpsys activity broadcasts`)? Does the `power` action toggle?
+4. **Temperature (P-22, P-23):** which of the 11 CAN actions or Settings keys the unit sends, with which extra name and unit.
+5. **Notification access (P-14):** is the "Notification access" settings page present on this firmware?
+6. **Task switcher (P-15, P-16):** does `getRunningAppProcesses()` list other apps, and does `input keyevent 187` do anything from the app uid?
+7. **Wake (P-57):** after ACC off and on without reboot, which broadcast is delivered?
+8. **Signing (P-63):** install two CI builds in a row; does the second install over the first?
+9. **Performance (section D):** `dumpsys meminfo` and `gfxinfo` on the dash, then with the navigation app in front for 10 minutes.
