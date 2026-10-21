@@ -53,6 +53,7 @@ import com.apexdrive.launcher.models.AppInfo;
 import com.apexdrive.launcher.services.BluetoothWatcher;
 import com.apexdrive.launcher.services.CarThermometerWatcher;
 import com.apexdrive.launcher.services.GpsTelemetryManager;
+import com.apexdrive.launcher.services.MediaStateHolder;
 import com.apexdrive.launcher.services.MediaSyncService;
 import com.apexdrive.launcher.utils.PreferenceHelper;
 
@@ -2293,7 +2294,24 @@ public class MainActivity extends AppCompatActivity {
         try {
             startService(new Intent(this, MediaSyncService.class));
         } catch (Exception ignored) {}
+
+        // In-process now-playing updates (the MEDIA_UPDATED broadcast is gone).
+        MediaStateHolder.getInstance().addListener(mediaStateListener);
     }
+
+    private final MediaStateHolder.Listener mediaStateListener = s -> {
+        if (tvTrackTitle != null && s.title != null) tvTrackTitle.setText(s.title);
+        if (tvTrackArtist != null && s.artist != null) tvTrackArtist.setText(s.artist);
+        if (btnMediaPlayPause != null && s.hasTrack()) {
+            btnMediaPlayPause.setText(s.playing ? "PAUSE" : "PLAY");
+        }
+        if (s.playing && s.hasTrack() && !s.title.startsWith("FM ")) {
+            isCarPlayConnected = true;
+            String saved = prefHelper.getSelectedDriverDevice();
+            String savedName = getDeviceNameFromAddress(saved);
+            updateConnectedPhoneUi(savedName != null ? savedName : "CARPLAY", "WIRELESS PROJECTION ACTIVE");
+        }
+    };
 
     private void launchCarPlay() {
         isCarPlayConnected = true;
@@ -2467,6 +2485,7 @@ public class MainActivity extends AppCompatActivity {
         if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
             deviceSelectorDialog.dismiss();
         }
+        MediaStateHolder.getInstance().removeListener(mediaStateListener);
         if (mediaReceiver != null) {
             try {
                 unregisterReceiver(mediaReceiver);
