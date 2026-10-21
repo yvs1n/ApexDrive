@@ -77,7 +77,8 @@ public class PreferenceHelper {
     private static final String KEY_MANUAL_TEMP_CALIBRATION = "manual_temp_calibration";
 
     public float getSavedTempCelsius() {
-        return prefs.getFloat(KEY_SAVED_TEMP_C, 32.0f);
+        // NaN = nothing saved. A placeholder value would be shown as a real reading (P-33).
+        return prefs.getFloat(KEY_SAVED_TEMP_C, Float.NaN);
     }
 
     public void setSavedTempCelsius(float temp) {
@@ -85,7 +86,7 @@ public class PreferenceHelper {
     }
 
     public String getSavedCondition() {
-        return prefs.getString(KEY_SAVED_CONDITION, "OUTSIDE");
+        return prefs.getString(KEY_SAVED_CONDITION, "MANUAL");
     }
 
     public void setSavedCondition(String condition) {
@@ -203,5 +204,70 @@ public class PreferenceHelper {
 
     public void clearRecentApps() {
         prefs.edit().remove(KEY_RECENT_APPS).apply();
+    }
+
+    // --- Online weather consent (P-38). Default OFF: no network call is made until set. ---
+    private static final String KEY_ONLINE_WEATHER_ALLOWED = "online_weather_allowed";
+
+    public boolean isOnlineWeatherAllowed() {
+        return prefs.getBoolean(KEY_ONLINE_WEATHER_ALLOWED, false);
+    }
+
+    public void setOnlineWeatherAllowed(boolean allowed) {
+        prefs.edit().putBoolean(KEY_ONLINE_WEATHER_ALLOWED, allowed).apply();
+    }
+
+    // --- Coarse saved location for weather (rounded to 2 decimals, about 1 km) ---
+    private static final String KEY_WEATHER_LAT = "weather_lat";
+    private static final String KEY_WEATHER_LON = "weather_lon";
+
+    public boolean hasSavedWeatherLocation() {
+        return prefs.contains(KEY_WEATHER_LAT) && prefs.contains(KEY_WEATHER_LON);
+    }
+
+    public double getSavedWeatherLat() {
+        return prefs.getFloat(KEY_WEATHER_LAT, 0f);
+    }
+
+    public double getSavedWeatherLon() {
+        return prefs.getFloat(KEY_WEATHER_LON, 0f);
+    }
+
+    public void setSavedWeatherLocation(double lat, double lon) {
+        prefs.edit().putFloat(KEY_WEATHER_LAT, (float) lat).putFloat(KEY_WEATHER_LON, (float) lon).apply();
+    }
+
+    // --- Temperature unit, independent of the speed unit (P-21) ---
+    private static final String KEY_TEMP_FAHRENHEIT = "temp_fahrenheit";
+
+    public boolean isTempFahrenheitSet() {
+        return prefs.contains(KEY_TEMP_FAHRENHEIT);
+    }
+
+    public boolean isTempFahrenheit() {
+        return prefs.getBoolean(KEY_TEMP_FAHRENHEIT, false);
+    }
+
+    public void setTempFahrenheit(boolean fahrenheit) {
+        prefs.edit().putBoolean(KEY_TEMP_FAHRENHEIT, fahrenheit).apply();
+    }
+
+    // --- Persisted trip A (P-20) ---
+    private static final String KEY_TRIP_DISTANCE_M = "trip_distance_m";
+    private static final String KEY_TRIP_MOVING_MS = "trip_moving_ms";
+
+    public double getTripDistanceMeters() {
+        return Double.longBitsToDouble(prefs.getLong(KEY_TRIP_DISTANCE_M, Double.doubleToLongBits(0.0)));
+    }
+
+    public long getTripMovingMillis() {
+        return prefs.getLong(KEY_TRIP_MOVING_MS, 0L);
+    }
+
+    public void setTrip(double distanceMeters, long movingMillis) {
+        prefs.edit()
+                .putLong(KEY_TRIP_DISTANCE_M, Double.doubleToLongBits(distanceMeters))
+                .putLong(KEY_TRIP_MOVING_MS, movingMillis)
+                .apply();
     }
 }
