@@ -308,7 +308,7 @@ Threat model: the unit is a shared, always-on Android device with a data connect
 Target: Allwinner T3L (quad Cortex-A7 class), 2 GB RAM, Mali-400 GPU, 1024x600. **Nothing here was measured**; the findings are costs visible in the code. Before and after each fix, capture on the unit over `adb` (Wi-Fi): `dumpsys meminfo com.apexdrive.launcher`, `dumpsys gfxinfo com.apexdrive.launcher framestats`, `top -m 5 -n 1` while on the dash, and a 10-minute `simpleperf` or systrace trace with the app in the background. Battery is a secondary concern in a car; CPU heat, jank in the foreground navigation app, and Binder/broadcast traffic are the real costs.
 
 **P-45 · High · `GpsTelemetryManager.java:63-78`, `MainActivity.java:2451-2456`, `:2458-2475`**
-- **What happens:** GPS is requested at `minTime=50 ms, minDistance=0` and the network provider at 500 ms. Every fix runs five listener callbacks, each wrapped in `runOnUiThread` (already on the main thread because no looper is given), with four `String.format` calls and a dozen `setText` calls (`MainActivity.java:1544-1601`). `onResume` calls `gpsManager.start()` again (`:2454`), and nothing stops GPS until `onDestroy` (`:2462`). The launcher is the HOME app, so it sits behind the navigation app almost all the time.
+- **What happens:** GPS is requested at `minTime=50 ms, minDistance=0` and the network provider at 500 ms. Every fix runs five listener callbacks, each wrapped in `runOnUiThread` (already on the main thread because no looper is given), with several `String.format` calls and about a dozen `setText` calls (`MainActivity.java:1544-1601`). `onResume` calls `gpsManager.start()` again (`:2454`), and nothing stops GPS until `onDestroy` (`:2462`). The launcher is the HOME app, so it sits behind the navigation app almost all the time.
 - **Why it matters:** Continuous main-thread work and location wakeups for views nobody can see, on a SoC that is also decoding the navigation app and the CarPlay stream.
 - **Fix:** Request `GPS_PROVIDER` at 1000 ms and stop updates in `onPause` (or `onStop`); only push to the UI when the displayed value changes. If the Maps screen needs more, request faster rates only while it is visible.
 
@@ -333,7 +333,7 @@ Target: Allwinner T3L (quad Cortex-A7 class), 2 GB RAM, Mali-400 GPU, 1024x600. 
 - **Fix:** Keep one cached, labels-only list built off the UI thread and refreshed by the package receiver (P-25). Load icons lazily for the Apps grid only.
 
 **P-50 · Low · `MainActivity.java:1481-1487`, `:1400-1470`**
-- **What happens:** `showView()` calls `applyAccentColor()` on every navigation tap. That writes the preference (`prefHelper.setAccentColor`, `:1401`), does 12 `findViewById` calls and about 40 `setTextColor` / `setColorFilter` calls, then runs `updateRailAppearance()` a second time (`:1469`, `:1485`).
+- **What happens:** `showView()` calls `applyAccentColor()` on every navigation tap. That writes the preference (`prefHelper.setAccentColor`, `:1401`), does 12 `findViewById` calls and a few dozen `setTextColor` / `setColorFilter` calls, then runs `updateRailAppearance()` a second time (`:1469`, `:1485`).
 - **Why it matters:** Avoidable work in the one interaction that must feel instant.
 - **Fix:** Apply the accent when the colour changes and when a view is first attached; cache the view references.
 
@@ -351,3 +351,47 @@ Target: Allwinner T3L (quad Cortex-A7 class), 2 GB RAM, Mali-400 GPU, 1024x600. 
 - **What happens:** `getMethod(...)` is repeated on every call, and each background job is a bare `new Thread` with no pool, naming or cancellation. HTTP connections are never `disconnect()`ed and responses are read with no size cap.
 - **Why it matters:** Minor CPU churn, leaked threads after `stop()`, and a late result can post to a stopped watcher (`:256`, `:284`).
 - **Fix:** Cache `Method`s in static fields, use one single-thread `ExecutorService` per component and shut it down in `stop()`, and call `disconnect()` in `finally`.
+
+---
+
+## E. Lifecycle and robustness
+
+**P-54 · High · `MainActivity.java:127-150`, whole app (no `UncaughtExceptionHandler`)**
+- **What happens:** The app is the HOME activity. If `onCreate` throws (an unguarded `findViewById` such as `:568-569`, `:836`, `:1003`, an inflation `OutOfMemoryError` on a loaded 2 GB unit, a missing resource after a bad update), Android restarts HOME immediately and the unit enters a crash loop with no UI. The git history mentions "global error handling" (`287286f`), but there is no `setDefaultUncaughtExceptionHandler` anywhere in the tree.
+- **Why it matters:** For a head unit, a launcher crash loop means no navigation, no radio and no way to reach Settings without `adb` or a factory reset. This is the single worst failure mode of a HOME app.
+- **Fix:** (1) Document recovery in the README: keep the stock launcher installed, how to clear the default (`Settings > Apps > ApexDrive > Clear defaults`) and the `adb` commands. (2) Add a crash-loop guard: record crash timestamps in `SharedPreferences`; if the app crashed more than twice in 60 s, start the stock HOME activity (query `ACTION_MAIN/CATEGORY_HOME` and skip this package) and show a one-line explanation. (3) Null-check or `@NonNull` the `findViewById` results that are used without guards.
+
+**P-55 · Med · 85 `catch (Exception|Throwable)` sites, 76 lines naming `ignored`; only log call is `BootReceiver.java:17`**
+- **What happens:** Almost every platform call is wrapped in `catch (Exception ignored)`. `sendBroadcast` does not throw for missing receivers, so those catches protect nothing, and the real failures (`SecurityException`, `ActivityNotFoundException`, reflection errors) are swallowed with no `Log` line. Across all Java files there is one `Log.d`.
+- **Why it matters:** The design relies on silent failure (the "shotgun" in P-76), so nothing can be diagnosed from a car. A bug report cannot say which signal fired or which call failed.
+- **Fix:** Log every catch with a tag at `Log.w` minimum, distinguishing `SecurityException` from `ActivityNotFoundException`. Add a Setup toggle for a rolling in-app diagnostics log (last 200 lines) the user can show or export, and use it for the "which signal fired" lines in P-04.
+
+**P-56 · Med · `MainActivity.java:653-665`, `:2443-2448`, `view_maps.xml:85`, `GpsTelemetryManager.java:62`, `:71`**
+- **What happens:** If location permission is denied or the GPS provider is off, `requestLocationUpdates` throws `SecurityException` (caught, `printStackTrace`) or is skipped silently. The only prompt is a toast after tapping the speed readout (`:653-660`). The UI stays on "Searching Satellite Coordinates...".
+- **Why it matters:** No way to tell "no signal yet" from "you denied permission" from "GPS disabled in the vendor settings".
+- **Fix:** Expose explicit states (`NO_PERMISSION`, `PROVIDER_OFF`, `SEARCHING`, `FIX`) from `GpsTelemetryManager` and render each. Same pattern for network (P-24) and notification access (P-14).
+
+**P-57 · Med · `MainActivity.java:2450-2456`, `BootReceiver.java:12-19`** `[verify in car]`
+- **What happens:** Cold boot is handled by the HOME intent. Waking from ACC-off sleep without a reboot is handled only by whatever `onResume` and the 3 s Bluetooth poll happen to do. No `ACTION_SCREEN_ON`, `ACTION_USER_PRESENT` or vendor "ACC on" action is registered, and `BOOT_COMPLETED` does not fire on a sleep/wake cycle on most units.
+- **Why it matters:** After a stop at the shops, the dash may show state from before sleep (stale trip, phone "connected", old weather) until something else triggers a refresh.
+- **Fix:** On `ACTION_SCREEN_ON` / `ACTION_USER_PRESENT`, refresh Bluetooth and weather and re-check GPS. Add the unit's own wake action to the profile (P-76) once it is known by observation.
+
+**P-58 · Med · `MediaSyncService.java:41-53`, `:278-286`**
+- **What happens:** The `OnActiveSessionsChangedListener` is added with a lambda (`:45-46`) and never removed; `onDestroy` removes only the vendor receiver. There is no `onListenerConnected` / `onListenerDisconnected` override, so when the system unbinds the listener (for example after the grant is revoked, or on a rebind) it is never re-requested. State sits in `static` fields (`:26-27`) that survive the service.
+- **Why it matters:** Stale controller after a restart of the media app, and duplicate listeners over time (compounds P-11).
+- **Fix:** Register in `onListenerConnected`, unregister in `onListenerDisconnected` and `onDestroy`, call `requestRebind(componentName)` (API 24+; guard for 21 to 23), and clear the statics.
+
+**P-59 · Med · `BluetoothWatcher.java:317`, `:453`, `:464`, `:486`, `:543`, `:552`** `[verify in car]`
+- **What happens:** `BluetoothDevice.isConnected()`, `BluetoothDevice.connect()`, `BluetoothAdapter.getConnectionState()`, the profile proxies' `connect(BluetoothDevice)` and `SystemProperties.get` are reached by reflection. Android 9+ applies non-SDK interface restrictions to apps regardless of `targetSdk`; behaviour differs by Android version and by vendor ROM, and each failure is swallowed (P-55).
+- **Why it matters:** "Works on the author's unit" does not predict other units, and it can stop working with no visible error after a ROM update.
+- **Fix:** Keep reflection behind one `HiddenApi` helper that logs outcome once per session, and record the Android version and result in the diagnostics log so a reader can see which units rely on which path.
+
+**P-60 · Low · `MainActivity.java:268-271`, `:695-718`, `:1819`, `:1017-1018`, `:1066`, `:2467-2469`**
+- **What happens:** Only `deviceSelectorDialog` is dismissed in `onDestroy`; the task switcher, OsmAnd, calibration and CarPlay-not-found dialogs are not tracked, so `recreate()` or a Home press can leak a window. Two `startActivity` calls have no `try/catch` (`:1017-1018` Android Settings, `:1066` fallback); on a stripped ROM without a Settings activity they crash.
+- **Why it matters:** Logcat "WindowLeaked" noise, and a crash path in a HOME app (P-54).
+- **Fix:** Keep one `currentDialog` reference and dismiss it in `onPause`; wrap the two calls.
+
+**P-61 · Low · `CarThermometerWatcher.java:41-46`, `:245-250`, `:202`**
+- **What happens:** `currentTempC`, `rawTempC`, `currentCondition` and `currentCity` are written from worker threads and read from the main thread without `volatile` or synchronisation.
+- **Why it matters:** Visibility bugs are unlikely to bite, but the code is one refactor away from showing a half-updated pair.
+- **Fix:** Post results to the main thread through one method that sets all fields together (the `pollHandler.post` at `:256` already exists; do the field writes inside it).
