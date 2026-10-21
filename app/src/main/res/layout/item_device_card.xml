@@ -1,62 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Phone row in the "Choose a phone" sheet: surface-1 row, icon, name and state, trailing action. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="64dp"
-    android:layout_marginBottom="8dp"
-    android:orientation="horizontal"
-    android:gravity="center_vertical"
-    android:background="@drawable/bg_card_inner"
-    android:paddingStart="16dp"
-    android:paddingEnd="16dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.ApexDrive.Row"
+    android:layout_marginBottom="12dp"
+    android:background="@drawable/ad_bg_row_raised"
     android:clickable="true"
     android:focusable="true">
 
-    <!-- Bluetooth Vector Icon -->
     <ImageView
-        android:layout_width="22dp"
-        android:layout_height="22dp"
-        android:src="@drawable/ic_nav_bluetooth"
-        android:contentDescription="Bluetooth" />
+        android:id="@+id/ivDialogDeviceIcon"
+        style="@style/Widget.ApexDrive.RowIcon"
+        android:src="@drawable/ic_sym_smartphone" />
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="14dp"
         android:layout_weight="1"
         android:orientation="vertical">
 
         <TextView
             android:id="@+id/tvDialogDeviceName"
-            android:layout_width="wrap_content"
+            style="@style/Widget.ApexDrive.RowTitle"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Yassin's iPhone"
-            android:textColor="@color/cockpit_text_primary"
-            android:textSize="20sp"
             android:fontFamily="@font/atkinson_next_semibold" />
 
         <TextView
             android:id="@+id/tvDialogDeviceStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="Paired · Bluetooth &amp; CarPlay Ready"
-            android:textColor="@color/cockpit_text_secondary"
-            android:textSize="20sp"
-            android:fontFamily="@font/atkinson_next_regular" />
+            style="@style/Widget.ApexDrive.RowDetail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
     </LinearLayout>
 
-    <!-- Connect Pill -->
-    <TextView
+    <ImageView
+        android:id="@+id/ivDialogConnected"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="16dp"
+        android:src="@drawable/ic_sym_check_circle"
+        app:tint="@color/ad_ok"
+        android:visibility="gone"
+        android:importantForAccessibility="no" />
+
+    <Button
         android:id="@+id/btnConnectPill"
+        style="@style/Widget.ApexDrive.Button"
         android:layout_width="wrap_content"
-        android:layout_height="36dp"
-        android:background="@drawable/bg_elevated_btn"
-        android:paddingStart="14dp"
-        android:paddingEnd="14dp"
-        android:gravity="center"
-        android:text="Connect"
-        android:textColor="@color/ad_accent_text"
-        android:textSize="20sp"
-        android:fontFamily="@font/atkinson_next_semibold" />
+        android:layout_height="48dp"
+        android:minHeight="48dp"
+        android:layout_marginStart="16dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:text="Connect" />
 
 </LinearLayout>

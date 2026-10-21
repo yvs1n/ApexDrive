@@ -1953,26 +1953,23 @@ public class MainActivity extends AppCompatActivity {
 
         if (deviceSelectorDialog.getWindow() != null) {
             deviceSelectorDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+            deviceSelectorDialog.getWindow().setDimAmount(0.5f);
         }
 
-        TextView tvCountdown = dialogView.findViewById(R.id.tvCountdownTimer);
         LinearLayout deviceContainer = dialogView.findViewById(R.id.deviceListContainer);
         View layoutDeviceLoading = dialogView.findViewById(R.id.layoutDeviceLoading);
         ProgressBar pbDeviceLoading = dialogView.findViewById(R.id.pbDeviceLoading);
         TextView tvDeviceLoadingText = dialogView.findViewById(R.id.tvDeviceLoadingText);
         Button btnPair = dialogView.findViewById(R.id.btnPairNewDevice);
-        Button btnSkip = dialogView.findViewById(R.id.btnSkipSelector);
+        View btnSkip = dialogView.findViewById(R.id.btnSkipSelector);
 
         int accentColor = accent();
-        if (btnSkip != null) btnSkip.setTextColor(accentColor);
-        if (tvCountdown != null) tvCountdown.setTextColor(accentColor);
-        if (tvDeviceLoadingText != null) tvDeviceLoadingText.setTextColor(accentColor);
         if (pbDeviceLoading != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             pbDeviceLoading.setIndeterminateTintList(ColorStateList.valueOf(accentColor));
         }
 
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-        populateDeviceListWithLoader(dialogView, tvCountdown, deviceContainer, layoutDeviceLoading, adapter, accentColor, 0);
+        populateDeviceListWithLoader(dialogView, deviceContainer, layoutDeviceLoading, adapter, accentColor, 0);
 
         if (btnPair != null) {
             btnPair.setOnClickListener(v -> {
@@ -1989,8 +1986,6 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        if (tvCountdown != null) tvCountdown.setVisibility(View.GONE);
-
         deviceSelectorDialog.setOnDismissListener(dialog -> {
             cleanupDialogBtReceivers();
             if (isBtConnecting && btWatcher != null) {
@@ -2002,13 +1997,13 @@ public class MainActivity extends AppCompatActivity {
         deviceSelectorDialog.show();
     }
 
-    private void populateDeviceListWithLoader(View dialogView, TextView tvCountdown, LinearLayout deviceContainer, View layoutDeviceLoading, BluetoothAdapter adapter, int accentColor, int attempt) {
+    private void populateDeviceListWithLoader(View dialogView, LinearLayout deviceContainer, View layoutDeviceLoading, BluetoothAdapter adapter, int accentColor, int attempt) {
         @SuppressLint("MissingPermission")
         java.util.Set<BluetoothDevice> pairedDevices = (adapter != null && adapter.isEnabled()) ? adapter.getBondedDevices() : null;
 
         if (pairedDevices != null && !pairedDevices.isEmpty()) {
             if (layoutDeviceLoading != null) layoutDeviceLoading.setVisibility(View.GONE);
-            renderDeviceCards(pairedDevices, deviceContainer, tvCountdown, accentColor);
+            renderDeviceCards(pairedDevices, deviceContainer, accentColor);
             return;
         }
 
@@ -2031,7 +2026,7 @@ public class MainActivity extends AppCompatActivity {
                             if (devices != null && !devices.isEmpty()) {
                                 cleanupDialogBtReceivers();
                                 if (layoutDeviceLoading != null) layoutDeviceLoading.setVisibility(View.GONE);
-                                renderDeviceCards(devices, deviceContainer, tvCountdown, accentColor);
+                                renderDeviceCards(devices, deviceContainer, accentColor);
                             }
                         }
                     }
@@ -2045,7 +2040,7 @@ public class MainActivity extends AppCompatActivity {
             dialogPollRunnable = () -> {
                 if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
                     BluetoothAdapter currAdapter = BluetoothAdapter.getDefaultAdapter();
-                    populateDeviceListWithLoader(dialogView, tvCountdown, deviceContainer, layoutDeviceLoading, currAdapter, accentColor, attempt + 1);
+                    populateDeviceListWithLoader(dialogView, deviceContainer, layoutDeviceLoading, currAdapter, accentColor, attempt + 1);
                 }
             };
             dialogPollHandler.postDelayed(dialogPollRunnable, 600);
@@ -2060,8 +2055,8 @@ public class MainActivity extends AppCompatActivity {
                 tvEmpty.setText(btNow != null && !btNow.isEnabled()
                         ? "Bluetooth is off. Turn it on in Phone settings, then try again."
                         : "No paired phones. Pair a phone to use it here.");
-                tvEmpty.setTextColor(ContextCompat.getColor(this, R.color.cockpit_text_secondary));
-                tvEmpty.setTextSize(13);
+                tvEmpty.setTextColor(ContextCompat.getColor(this, R.color.ad_label_2));
+                tvEmpty.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, getResources().getDimension(R.dimen.ad_text_label));
                 tvEmpty.setPadding(16, 24, 16, 24);
                 tvEmpty.setGravity(android.view.Gravity.CENTER);
                 deviceContainer.addView(tvEmpty);
@@ -2070,7 +2065,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @SuppressLint("MissingPermission")
-    private void renderDeviceCards(java.util.Set<BluetoothDevice> pairedDevices, LinearLayout deviceContainer, TextView tvCountdown, int accentColor) {
+    private void renderDeviceCards(java.util.Set<BluetoothDevice> pairedDevices, LinearLayout deviceContainer, int accentColor) {
         if (deviceContainer == null) return;
         deviceContainer.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(this);
@@ -2081,6 +2076,9 @@ public class MainActivity extends AppCompatActivity {
             TextView tvName = card.findViewById(R.id.tvDialogDeviceName);
             TextView tvStatus = card.findViewById(R.id.tvDialogDeviceStatus);
             TextView btnConnect = card.findViewById(R.id.btnConnectPill);
+            View ivConnected = card.findViewById(R.id.ivDialogConnected);
+            ImageView ivIcon = card.findViewById(R.id.ivDialogDeviceIcon);
+            int label2 = ContextCompat.getColor(MainActivity.this, R.color.ad_label_2);
 
             @SuppressLint("MissingPermission")
             String name = (device.getName() != null && !device.getName().isEmpty()) ? device.getName() : "Phone (" + device.getAddress() + ")";
@@ -2088,22 +2086,18 @@ public class MainActivity extends AppCompatActivity {
 
             boolean isActuallyConnected = (btWatcher != null && btWatcher.isDeviceCurrentlyConnected(device));
             boolean isSavedDriver = (savedAddr != null && savedAddr.equalsIgnoreCase(device.getAddress()));
-            if (isActuallyConnected || (isCarPlayConnected && isSavedDriver)) {
+            String lower = name.toLowerCase(Locale.US);
+            if (ivIcon != null && (lower.contains("iphone") || lower.contains("ipad"))) {
+                ivIcon.setImageResource(R.drawable.ic_sym_phone_iphone);
+            }
+            tvStatus.setTextColor(label2);
+            if (isActuallyConnected) {
                 tvStatus.setText("Connected");
-                tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
-                tvName.setTextColor(accentColor);
-                btnConnect.setText("Launch");
-                btnConnect.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
-            } else if (isSavedDriver) {
-                tvStatus.setText("Default phone");
-                tvStatus.setTextColor(accentColor);
-                btnConnect.setText("Connect");
-                btnConnect.setTextColor(accentColor);
+                btnConnect.setVisibility(View.GONE);
+                if (ivConnected != null) ivConnected.setVisibility(View.VISIBLE);
             } else {
-                tvStatus.setText("Paired");
-                tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.cockpit_text_secondary));
+                tvStatus.setText(isSavedDriver ? "Your phone" : "Paired");
                 btnConnect.setText("Connect");
-                btnConnect.setTextColor(accentColor);
             }
 
             View.OnClickListener selectListener = v -> {
@@ -2129,10 +2123,7 @@ public class MainActivity extends AppCompatActivity {
                 prefHelper.setSelectedDriverDevice(device.getAddress());
 
                 tvStatus.setText("Connecting…");
-                tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.ad_accent_text));
-                tvName.setTextColor(accentColor);
                 btnConnect.setText("Connecting…");
-                btnConnect.setTextColor(accentColor);
 
                 // Disable all cards while connection is in progress so driver doesn't spam
                 for (int i = 0; i < deviceContainer.getChildCount(); i++) {
@@ -2164,10 +2155,9 @@ public class MainActivity extends AppCompatActivity {
                                 prefHelper.setSelectedDriverDevice(device.getAddress());
 
                                 if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
-                                    tvStatus.setText("Connected, starting CarPlay");
-                                    tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
-                                    btnConnect.setText("Connected");
-                                    btnConnect.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
+                                    tvStatus.setText("Connected, opening CarPlay");
+                                    btnConnect.setVisibility(View.GONE);
+                                    if (ivConnected != null) ivConnected.setVisibility(View.VISIBLE);
                                 }
 
                                 updateConnectedPhoneUi(name, "Connected");
@@ -2188,10 +2178,8 @@ public class MainActivity extends AppCompatActivity {
                                 isBtConnecting = false;
 
                                 if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
-                                    tvStatus.setText("Connected in the car? Launch anyway");
-                                    tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.ad_accent_text));
-                                    btnConnect.setText("Launch anyway");
-                                    btnConnect.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
+                                    tvStatus.setText("Couldn't confirm. Already connected?");
+                                    btnConnect.setText("Open CarPlay");
 
                                     View.OnClickListener launchAnywayListener = fl -> {
                                         prefHelper.setSelectedDriverDevice(device.getAddress());
@@ -2213,7 +2201,7 @@ public class MainActivity extends AppCompatActivity {
                                     }
                                 }
 
-                                notifier.show(Notifier.Kind.CAUTION, "Couldn't confirm " + name, "If it's connected in the car, tap Launch anyway or open car Bluetooth");
+                                notifier.show(Notifier.Kind.CAUTION, "Couldn't confirm " + name, "If it's connected, tap Open CarPlay, or check Phone settings");
                             });
                         }
                     });
