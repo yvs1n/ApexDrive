@@ -21,7 +21,6 @@ import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -78,7 +77,6 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothWatcher btWatcher;
     private CarThermometerWatcher thermometerWatcher;
 
-    private CountDownTimer deviceSelectorTimer;
     private AlertDialog deviceSelectorDialog;
     private boolean isBtConnecting = false;
     private boolean isCarPlayConnected = false;
@@ -1934,10 +1932,6 @@ public class MainActivity extends AppCompatActivity {
         if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
             deviceSelectorDialog.dismiss();
         }
-        if (deviceSelectorTimer != null) {
-            deviceSelectorTimer.cancel();
-            deviceSelectorTimer = null;
-        }
         cleanupDialogBtReceivers();
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -1966,18 +1960,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-        if (adapter != null && !adapter.isEnabled()) {
-            try {
-                adapter.enable();
-            } catch (Exception ignored) {}
-        }
-
         populateDeviceListWithLoader(dialogView, tvCountdown, deviceContainer, layoutDeviceLoading, adapter, accentColor, 0);
 
         if (btnPair != null) {
             btnPair.setOnClickListener(v -> {
                 cleanupDialogBtReceivers();
-                if (deviceSelectorTimer != null) deviceSelectorTimer.cancel();
                 if (deviceSelectorDialog != null) deviceSelectorDialog.dismiss();
                 openBluetoothManager();
             });
@@ -1986,51 +1973,14 @@ public class MainActivity extends AppCompatActivity {
         if (btnSkip != null) {
             btnSkip.setOnClickListener(v -> {
                 cleanupDialogBtReceivers();
-                if (deviceSelectorTimer != null) deviceSelectorTimer.cancel();
                 if (deviceSelectorDialog != null) deviceSelectorDialog.dismiss();
             });
         }
 
-        if (isAutoDismiss) {
-            deviceSelectorTimer = new CountDownTimer(8000, 1000) {
-                @Override
-                public void onTick(long millisUntilFinished) {
-                    long seconds = (millisUntilFinished / 1000) + 1;
-                    if (tvCountdown != null) {
-                        tvCountdown.setText("Auto in " + seconds + "s");
-                    }
-                }
-
-                @Override
-                public void onFinish() {
-                    cleanupDialogBtReceivers();
-                    if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
-                        deviceSelectorDialog.dismiss();
-                    }
-                    String saved = prefHelper.getSelectedDriverDevice();
-                    if (saved != null && !saved.isEmpty() && btWatcher != null) {
-                        BluetoothAdapter a = BluetoothAdapter.getDefaultAdapter();
-                        if (a != null && a.isEnabled()) {
-                            try {
-                                BluetoothDevice dev = a.getRemoteDevice(saved);
-                                if (dev != null) {
-                                    btWatcher.signalConnect(dev);
-                                }
-                            } catch (Exception ignored) {}
-                        }
-                    }
-                }
-            }.start();
-        } else {
-            if (tvCountdown != null) tvCountdown.setVisibility(View.GONE);
-        }
+        if (tvCountdown != null) tvCountdown.setVisibility(View.GONE);
 
         deviceSelectorDialog.setOnDismissListener(dialog -> {
             cleanupDialogBtReceivers();
-            if (deviceSelectorTimer != null) {
-                deviceSelectorTimer.cancel();
-                deviceSelectorTimer = null;
-            }
             if (isBtConnecting && btWatcher != null) {
                 btWatcher.cancelPendingConnection();
                 isBtConnecting = false;
@@ -2094,7 +2044,10 @@ public class MainActivity extends AppCompatActivity {
             if (deviceContainer != null) {
                 deviceContainer.removeAllViews();
                 TextView tvEmpty = new TextView(this);
-                tvEmpty.setText("No paired phones detected in range.\nTap \"Pair New Phone\" to link your phone via Bluetooth.");
+                BluetoothAdapter btNow = BluetoothAdapter.getDefaultAdapter();
+                tvEmpty.setText(btNow != null && !btNow.isEnabled()
+                        ? "Bluetooth is off. Turn it on in Phone settings, then try again."
+                        : "No paired phones. Pair a phone to use it here.");
                 tvEmpty.setTextColor(ContextCompat.getColor(this, R.color.cockpit_text_secondary));
                 tvEmpty.setTextSize(13);
                 tvEmpty.setPadding(16, 24, 16, 24);
@@ -2145,17 +2098,12 @@ public class MainActivity extends AppCompatActivity {
                 if (isBtConnecting) return;
 
                 cleanupDialogBtReceivers();
-                if (deviceSelectorTimer != null) {
-                    deviceSelectorTimer.cancel();
-                    deviceSelectorTimer = null;
-                    if (tvCountdown != null) tvCountdown.setVisibility(View.GONE);
-                }
 
                 // If this device is ALREADY verified as connected (via A2DP, Adapter, Audio routing, or vendor BT)
                 if (btWatcher != null && btWatcher.isDeviceCurrentlyConnected(device)) {
                     prefHelper.setSelectedDriverDevice(device.getAddress());
                     isCarPlayConnected = true;
-                    updateConnectedPhoneUi(name, "CONNECTED · CARPLAY READY");
+                    updateConnectedPhoneUi(name, "Connected");
                     notifier.show(Notifier.Kind.OK, name + " connected", "Starting CarPlay");
                     if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
                         deviceSelectorDialog.dismiss();
@@ -2168,10 +2116,10 @@ public class MainActivity extends AppCompatActivity {
                 isBtConnecting = true;
                 prefHelper.setSelectedDriverDevice(device.getAddress());
 
-                tvStatus.setText("Connecting to " + name + "...");
+                tvStatus.setText("Connecting…");
                 tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.ad_accent_text));
                 tvName.setTextColor(accentColor);
-                btnConnect.setText("Connecting...");
+                btnConnect.setText("Connecting…");
                 btnConnect.setTextColor(accentColor);
 
                 // Disable all cards while connection is in progress so driver doesn't spam
@@ -2182,7 +2130,7 @@ public class MainActivity extends AppCompatActivity {
                     if (b != null) b.setEnabled(false);
                 }
 
-                updateConnectedPhoneUi(name, "CONNECTING BLUETOOTH...");
+                updateConnectedPhoneUi(name, "Connecting");
                 notifier.show(Notifier.Kind.INFO, "Connecting to " + name);
 
                 if (btWatcher != null) {
@@ -2191,7 +2139,7 @@ public class MainActivity extends AppCompatActivity {
                         public void onConnecting(BluetoothDevice dev) {
                             runOnUiThread(() -> {
                                 if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
-                                    tvStatus.setText("Establishing link to " + name + "...");
+                                    tvStatus.setText("Connecting…");
                                 }
                             });
                         }
@@ -2210,7 +2158,7 @@ public class MainActivity extends AppCompatActivity {
                                     btnConnect.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
                                 }
 
-                                updateConnectedPhoneUi(name, "CONNECTED · CARPLAY READY");
+                                updateConnectedPhoneUi(name, "Connected");
                                 notifier.show(Notifier.Kind.OK, "Connected to " + name, "Starting CarPlay");
 
                                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
@@ -2236,7 +2184,7 @@ public class MainActivity extends AppCompatActivity {
                                     View.OnClickListener launchAnywayListener = fl -> {
                                         prefHelper.setSelectedDriverDevice(device.getAddress());
                                         isCarPlayConnected = true;
-                                        updateConnectedPhoneUi(name, "CONNECTED · CARPLAY READY");
+                                        updateConnectedPhoneUi(name, "Connected");
                                         if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
                                             deviceSelectorDialog.dismiss();
                                         }
@@ -2524,7 +2472,6 @@ public class MainActivity extends AppCompatActivity {
         if (gpsManager != null) gpsManager.stop();
         if (btWatcher != null) btWatcher.stop();
         if (thermometerWatcher != null) thermometerWatcher.stop();
-        if (deviceSelectorTimer != null) deviceSelectorTimer.cancel();
         cleanupDialogBtReceivers();
         if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
             deviceSelectorDialog.dismiss();
