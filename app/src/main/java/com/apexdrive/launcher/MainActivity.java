@@ -54,7 +54,6 @@ import com.apexdrive.launcher.services.CarThermometerWatcher;
 import com.apexdrive.launcher.services.GpsTelemetryManager;
 import com.apexdrive.launcher.services.MediaStateHolder;
 import com.apexdrive.launcher.services.MediaSyncService;
-import com.apexdrive.launcher.utils.DrivingState;
 import com.apexdrive.launcher.utils.Notifier;
 import com.apexdrive.launcher.utils.PreferenceHelper;
 
@@ -115,7 +114,6 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvNavHeadingBig, tvNavAccuracy, tvNavTripDist, tvNavTripDuration;
 
     private Notifier notifier;
-    private final DrivingState drivingState = new DrivingState();
     private final Handler clockHandler = new Handler(Looper.getMainLooper());
     private BroadcastReceiver mediaReceiver;
 
@@ -135,14 +133,6 @@ public class MainActivity extends AppCompatActivity {
         prefHelper = new PreferenceHelper(this);
         setContentView(R.layout.activity_main);
         notifier = new Notifier(this);
-        drivingState.setListener(driving -> runOnUiThread(() -> {
-            View chip = findViewById(R.id.chipDriving);
-            if (chip != null) chip.setVisibility(driving ? View.VISIBLE : View.GONE);
-            updatePairRow();
-            applyAppsDrivingMode(driving);
-            applySettingsDrivingMode(driving);
-        }));
-
         initViews();
         initNavigation();
         initClock();
@@ -646,11 +636,10 @@ public class MainActivity extends AppCompatActivity {
         View rowSettings = viewCarPlay.findViewById(R.id.rowPhoneSettings);
         if (rowSettings != null) rowSettings.setOnClickListener(v -> openBluetoothManager());
         View rowPair = viewCarPlay.findViewById(R.id.rowPairPhone);
-        if (rowPair != null) rowPair.setOnClickListener(v -> { if (!lockedWhileDriving()) openBluetoothManager(); });
+        if (rowPair != null) rowPair.setOnClickListener(v -> openBluetoothManager());
         View steps = viewCarPlay.findViewById(R.id.btnShowSteps);
         if (steps != null) steps.setOnClickListener(v -> showCarPlaySteps());
         refreshOtherPhones();
-        updatePairRow();
     }
 
     private boolean isAutoOpenCarPlay() {
@@ -695,22 +684,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception ignored) {}
     }
 
-    /** Pairing is locked while driving, as the design system shows. */
-    private void updatePairRow() {
-        if (viewCarPlay == null) return;
-        boolean locked = drivingState.isDriving();
-        ImageView icon = viewCarPlay.findViewById(R.id.ivPairIcon);
-        TextView title = viewCarPlay.findViewById(R.id.tvPairTitle);
-        TextView detail = viewCarPlay.findViewById(R.id.tvPairDetail);
-        if (icon != null) icon.setImageResource(locked ? R.drawable.ic_sym_lock : R.drawable.ic_sym_add);
-        int dim = ContextCompat.getColor(this, R.color.ad_label_4);
-        if (title != null) title.setTextColor(locked ? dim : ContextCompat.getColor(this, R.color.ad_label_1));
-        if (detail != null) {
-            detail.setText(locked ? "Available when parked" : "About 1 minute");
-            detail.setTextColor(locked ? dim : ContextCompat.getColor(this, R.color.ad_label_2));
-        }
-    }
-
     private void setupMapsWidgets() {
         tvNavHeadingBig = viewMaps.findViewById(R.id.tvNavHeadingBig);
         tvNavAccuracy = viewMaps.findViewById(R.id.tvNavAccuracy);
@@ -740,7 +713,7 @@ public class MainActivity extends AppCompatActivity {
 
         btnChooseMapApp = viewMaps.findViewById(R.id.btnChooseMapApp);
         if (btnChooseMapApp != null) {
-            btnChooseMapApp.setOnClickListener(v -> { if (!lockedWhileDriving()) showMapPicker(); });
+            btnChooseMapApp.setOnClickListener(v -> showMapPicker());
         }
     }
 
@@ -1030,11 +1003,6 @@ public class MainActivity extends AppCompatActivity {
         appsAdapter.setOnAppClickListener(this::onAppItemClicked);
         gvApps.setOnItemClickListener((parent, view, position, id) -> onAppItemClicked(appsAdapter.getItem(position)));
 
-        appsAdapter.setFavouritePackages(java.util.Arrays.asList(
-                prefHelper.getMapPackage(), prefHelper.getCarPlayPackage(), prefHelper.getRadioPackage()));
-        gvApps.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
-            if (b - t != ob - ot && drivingState.isDriving()) applyAppsDrivingMode(true);
-        });
         loadInstalledAppsAsync();
         registerPackageReceiver();
 
@@ -1047,28 +1015,6 @@ public class MainActivity extends AppCompatActivity {
             }
             @Override public void afterTextChanged(Editable s) {}
         });
-    }
-
-    /** Driving: hide search, show the banner and 6 favourites in a 3 x 2 grid. */
-    private void applyAppsDrivingMode(boolean driving) {
-        if (viewApps == null || appsAdapter == null) return;
-        GridView grid = viewApps.findViewById(R.id.gvApps);
-        View field = viewApps.findViewById(R.id.fieldSearchApps);
-        View banner = viewApps.findViewById(R.id.bannerDrivingApps);
-        EditText search = viewApps.findViewById(R.id.etSearchApps);
-        if (driving && search != null) {
-            search.clearFocus();
-            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-            if (imm != null) imm.hideSoftInputFromWindow(search.getWindowToken(), 0);
-        }
-        field.setVisibility(driving ? View.GONE : View.VISIBLE);
-        banner.setVisibility(driving ? View.VISIBLE : View.GONE);
-        int gap = Math.round(getResources().getDisplayMetrics().density * (driving ? 24 : 16));
-        grid.setNumColumns(driving ? 3 : 5);
-        grid.setHorizontalSpacing(gap);
-        grid.setVerticalSpacing(gap);
-        int tile = grid.getHeight() > 0 ? (grid.getHeight() - gap) / 2 : 0;
-        appsAdapter.setDriving(driving, tile);
     }
 
     private void onAppItemClicked(AppInfo app) {
@@ -1126,10 +1072,10 @@ public class MainActivity extends AppCompatActivity {
         btnSelectDriverPhone = settingsView("tvSetDriverPhone");
         String driver = getDeviceNameFromAddress(prefHelper.getSelectedDriverDevice());
         if (driver != null) btnSelectDriverPhone.setText(driver);
-        onSettingsRow("rowSetDriverPhone", () -> showDeviceSelectorDialog(false), true);
+        onSettingsRow("rowSetDriverPhone", () -> showDeviceSelectorDialog(false));
         btnSelectCarPlayApp = settingsView("tvSetCarPlayApp");
         btnSelectCarPlayApp.setText(prefHelper.getCarPlayName());
-        onSettingsRow("rowSetCarPlayApp", this::showCarPlayPicker, true);
+        onSettingsRow("rowSetCarPlayApp", this::showCarPlayPicker);
         androidx.appcompat.widget.SwitchCompat swAuto = settingsView("switchSetAutoOpen");
         swAuto.setChecked(isAutoOpenCarPlay());
         onSettingsRow("rowSetAutoOpen", () -> {
@@ -1140,32 +1086,32 @@ public class MainActivity extends AppCompatActivity {
                 androidx.appcompat.widget.SwitchCompat other = viewCarPlay.findViewById(R.id.switchAutoOpen);
                 if (other != null) other.setChecked(next);
             }
-        }, false);
+        });
 
         // Navigation
         btnSelectMapApp = settingsView("tvSetMapApp");
         btnSelectMapApp.setText(prefHelper.getMapName());
-        onSettingsRow("rowSetMapApp", this::showMapPicker, true);
+        onSettingsRow("rowSetMapApp", this::showMapPicker);
         onSettingsRow("rowSetGps", () -> {
             if (gpsManager != null) gpsManager.start();
             notifier.show(Notifier.Kind.INFO, "GPS restarted");
-        }, false);
+        });
 
         // Audio
         btnSelectRadioApp = settingsView("tvSetRadioApp");
         btnSelectRadioApp.setText(prefHelper.getRadioName());
-        onSettingsRow("rowSetRadioApp", this::showRadioPicker, true);
-        onSettingsRow("rowSetEqualiser", this::openAudioEqualizer, false);
+        onSettingsRow("rowSetRadioApp", this::showRadioPicker);
+        onSettingsRow("rowSetEqualiser", this::openAudioEqualizer);
 
         // Display
         androidx.appcompat.widget.SwitchCompat swNight = settingsView("switchSetNight");
         swNight.setChecked(isNightTheme());
-        onSettingsRow("rowSetNight", this::toggleTheme, false);
+        onSettingsRow("rowSetNight", this::toggleTheme);
         View kmh = settingsView("segUnitKmh");
         View mph = settingsView("segUnitMph");
         kmh.setOnClickListener(v -> { if (prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH)) toggleSpeedUnit(); });
         mph.setOnClickListener(v -> { if (!prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH)) toggleSpeedUnit(); });
-        onSettingsRow("rowSetUnits", this::toggleSpeedUnit, false);
+        onSettingsRow("rowSetUnits", this::toggleSpeedUnit);
         updateUnitSegment();
         androidx.appcompat.widget.SwitchCompat swClock = settingsView("switchSetClock");
         swClock.setChecked(is24HourClock());
@@ -1174,19 +1120,19 @@ public class MainActivity extends AppCompatActivity {
             getSharedPreferences("ad_display", MODE_PRIVATE).edit().putBoolean("clock_24", !is24HourClock()).apply();
             swClock.setChecked(is24HourClock());
             updateClockDetail();
-        }, false);
+        });
 
         // Advanced
-        onSettingsRow("rowSetFactory", this::openFactorySettings, true);
+        onSettingsRow("rowSetFactory", this::openFactorySettings);
         onSettingsRow("rowSetAndroid", () -> {
             try {
                 startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } catch (Exception e) {
                 notifier.show(Notifier.Kind.ALERT, "Can't open Android settings");
             }
-        }, true);
-        onSettingsRow("rowSetBluetooth", this::openBluetoothManager, true);
-        onSettingsRow("rowSetRestart", this::recreate, false);
+        });
+        onSettingsRow("rowSetBluetooth", this::openBluetoothManager);
+        onSettingsRow("rowSetRestart", this::recreate);
 
         // About
         TextView version = settingsView("tvSetVersion");
@@ -1200,14 +1146,13 @@ public class MainActivity extends AppCompatActivity {
         return (T) viewSetup.findViewById(getResources().getIdentifier(idName, "id", getPackageName()));
     }
 
-    private void onSettingsRow(String idName, Runnable action, boolean parkedOnly) {
+    private void onSettingsRow(String idName, Runnable action) {
         View row = settingsView(idName);
         if (row == null) return;
-        row.setOnClickListener(v -> { if (!parkedOnly || !lockedWhileDriving()) action.run(); });
+        row.setOnClickListener(v -> action.run());
     }
 
     private void showSettingsGroup(String key) {
-        if (drivingState.isDriving() && "Advanced".equals(key)) key = "Display";
         settingsGroup = key;
         getSharedPreferences("ad_display", MODE_PRIVATE).edit().putString("settings_group", key).apply();
         for (String k : SETTINGS_GROUPS) {
@@ -1221,14 +1166,6 @@ public class MainActivity extends AppCompatActivity {
             }
             if (page != null) page.setVisibility(on ? View.VISIBLE : View.GONE);
         }
-    }
-
-    /** Driving: Advanced is hidden; Phone, Display and Audio stay. */
-    private void applySettingsDrivingMode(boolean driving) {
-        if (viewSetup == null) return;
-        View advanced = settingsView("setGrpAdvanced");
-        if (advanced != null) advanced.setVisibility(driving ? View.GONE : View.VISIBLE);
-        if (driving && "Advanced".equals(settingsGroup)) showSettingsGroup("Display");
     }
 
     private void updateUnitSegment() {
@@ -1637,13 +1574,6 @@ public class MainActivity extends AppCompatActivity {
         recreate();
     }
 
-    /** True, with a notification, when the action is not allowed while the car is moving. */
-    private boolean lockedWhileDriving() {
-        if (!drivingState.isDriving()) return false;
-        notifier.show(Notifier.Kind.CAUTION, "Available when parked");
-        return true;
-    }
-
     /** The single design-system accent (Day and Night variants come from resources). */
     private int accent() {
         return ContextCompat.getColor(this, R.color.ad_accent_text);
@@ -1754,7 +1684,6 @@ public class MainActivity extends AppCompatActivity {
             public void onSpeedUpdated(int speed, String unit) {
                 runOnUiThread(() -> {
                     boolean mph = prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH);
-                    drivingState.onSpeed(mph ? speed * 1.609344f : speed, android.os.SystemClock.elapsedRealtime());
                     tvSpeed.setText(String.valueOf(speed));
                     tvSpeedUnit.setText(unit.toLowerCase(Locale.US));
                 });
@@ -2080,7 +2009,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showDeviceSelectorDialog(boolean isAutoDismiss) {
-        if (lockedWhileDriving()) return;
         if (isFinishing()) return;
         if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
             deviceSelectorDialog.dismiss();

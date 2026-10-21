@@ -91,32 +91,6 @@
                 android:text="–" />
         </LinearLayout>
 
-        <!-- Driving, shown only while driving -->
-        <LinearLayout
-            android:id="@+id/chipDriving"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:visibility="gone">
-
-            <ImageView
-                android:layout_width="26dp"
-                android:layout_height="26dp"
-                android:src="@drawable/ic_sym_directions_car"
-                android:tint="@color/ad_label_1"
-                android:importantForAccessibility="no" />
-
-            <TextView
-                style="@style/TextAppearance.ApexDrive.Label"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:fontFamily="@font/atkinson_next_medium"
-                android:text="Driving" />
-        </LinearLayout>
-
         <!-- GPS -->
         <LinearLayout
             android:layout_width="wrap_content"
