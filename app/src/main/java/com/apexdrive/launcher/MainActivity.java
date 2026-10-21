@@ -351,10 +351,10 @@ public class MainActivity extends AppCompatActivity {
                 if (tvName != null) tvName.setText(label);
                 if (tvStatus != null) {
                     if (isRunning) {
-                        tvStatus.setText("RUNNING IN BACKGROUND");
+                        tvStatus.setText("Running in background");
                         tvStatus.setTextColor(accentColor);
                     } else {
-                        tvStatus.setText("RECENT TASK · READY");
+                        tvStatus.setText("Recent app");
                         tvStatus.setTextColor(ContextCompat.getColor(this, R.color.cockpit_text_secondary));
                     }
                 }
@@ -385,11 +385,11 @@ public class MainActivity extends AppCompatActivity {
                         llTasksList.removeView(cardView);
                         if (llTasksList.getChildCount() == 0) {
                             if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.VISIBLE);
-                            if (tvRecentsBadge != null) tvRecentsBadge.setText("OPTIMIZED");
+                            if (tvRecentsBadge != null) tvRecentsBadge.setText("No background apps");
                             if (btnCloseAllTasks != null) btnCloseAllTasks.setEnabled(false);
                         } else {
                             if (tvRecentsBadge != null) {
-                                tvRecentsBadge.setText(llTasksList.getChildCount() + " TASKS");
+                                tvRecentsBadge.setText(llTasksList.getChildCount() + " tasks");
                             }
                         }
                     });
@@ -403,12 +403,12 @@ public class MainActivity extends AppCompatActivity {
 
         if (llTasksList.getChildCount() == 0) {
             if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.VISIBLE);
-            if (tvRecentsBadge != null) tvRecentsBadge.setText("OPTIMIZED");
+            if (tvRecentsBadge != null) tvRecentsBadge.setText("No background apps");
             if (btnCloseAllTasks != null) btnCloseAllTasks.setEnabled(false);
         } else {
             if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.GONE);
             if (tvRecentsBadge != null) {
-                tvRecentsBadge.setText(activeCount > 0 ? activeCount + " RUNNING" : llTasksList.getChildCount() + " RECENT");
+                tvRecentsBadge.setText(activeCount > 0 ? activeCount + " running" : llTasksList.getChildCount() + " recent");
             }
             if (btnCloseAllTasks != null) {
                 btnCloseAllTasks.setEnabled(true);
@@ -427,7 +427,7 @@ public class MainActivity extends AppCompatActivity {
                     prefHelper.clearRecentApps();
                     llTasksList.removeAllViews();
                     if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.VISIBLE);
-                    if (tvRecentsBadge != null) tvRecentsBadge.setText("RAM OPTIMIZED");
+                    if (tvRecentsBadge != null) tvRecentsBadge.setText("No background apps");
                     btnCloseAllTasks.setEnabled(false);
                     notifier.show(Notifier.Kind.OK, "Background apps closed");
                 });
@@ -528,7 +528,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (tvCarPlayProtocol != null) {
-            tvCarPlayProtocol.setText(prefHelper.getCarPlayName().toUpperCase());
+            tvCarPlayProtocol.setText(prefHelper.getCarPlayName());
         }
 
         if (tvSpeed != null) {
@@ -584,20 +584,20 @@ public class MainActivity extends AppCompatActivity {
             if (isRadioPlaying) {
                 isRadioPlaying = false;
                 Button btnRadio = viewAudio != null ? viewAudio.findViewById(R.id.btnRadioPlay) : null;
-                if (btnRadio != null) btnRadio.setText("PLAY RADIO");
+                if (btnRadio != null) btnRadio.setText("Play radio");
                 TextView tvPreset = viewAudio != null ? viewAudio.findViewById(R.id.tvAudioPresetBadge) : null;
-                if (tvPreset != null) tvPreset.setText("STANDBY");
+                if (tvPreset != null) tvPreset.setText("Standby");
                 sendRadioHardwarePauseBroadcasts();
                 MediaSyncService.pauseAllMedia(this);
                 btnMediaPlayPause.setText("Play");
             } else if (tvTrackTitle != null && tvTrackTitle.getText() != null && tvTrackTitle.getText().toString().startsWith("FM ")) {
                 isRadioPlaying = true;
                 Button btnRadio = viewAudio != null ? viewAudio.findViewById(R.id.btnRadioPlay) : null;
-                if (btnRadio != null) btnRadio.setText("PAUSE RADIO");
+                if (btnRadio != null) btnRadio.setText("Pause radio");
                 TextView tvFreq = viewAudio != null ? viewAudio.findViewById(R.id.tvRadioFreq) : null;
                 String freq = tvFreq != null ? tvFreq.getText().toString() : "87.5";
                 TextView tvPreset = viewAudio != null ? viewAudio.findViewById(R.id.tvAudioPresetBadge) : null;
-                if (tvPreset != null) tvPreset.setText("ACTIVE · " + freq + " MHZ");
+                if (tvPreset != null) tvPreset.setText("Active · " + freq + " MHz");
                 sendRadioHardwareBroadcasts(freq);
                 btnMediaPlayPause.setText("Pause");
             } else {
@@ -655,7 +655,7 @@ public class MainActivity extends AppCompatActivity {
         if (btnOpenOsmAnd != null) {
             String mapName = prefHelper.getMapName();
             if (mapName != null && !mapName.isEmpty()) {
-                btnOpenOsmAnd.setText("LAUNCH " + mapName.toUpperCase());
+                btnOpenOsmAnd.setText("Launch " + mapName);
             }
             btnOpenOsmAnd.setOnClickListener(v -> launchOfflineMap());
         }
@@ -775,7 +775,7 @@ public class MainActivity extends AppCompatActivity {
 
         new AlertDialog.Builder(this)
                 .setTitle("NAVIGATION APP NOT FOUND")
-                .setMessage("No navigation engine installed for searching \"" + query.toUpperCase() + "\".\n\nWould you like to install OsmAnd Offline Maps from USB or launch CarPlay Navigation?")
+                .setMessage("No navigation engine installed for searching \"" + query + "\".\n\nWould you like to install OsmAnd Offline Maps from USB or launch CarPlay Navigation?")
                 .setPositiveButton("LAUNCH CARPLAY", (d, w) -> launchCarPlay())
                 .setNeutralButton("OFFLINE MAP SETUP", (d, w) -> launchOfflineMap())
                 .setNegativeButton("CANCEL", null)
@@ -795,13 +795,13 @@ public class MainActivity extends AppCompatActivity {
         int textPrimary = ContextCompat.getColor(this, R.color.cockpit_text_primary);
 
         btnSrcRadio.setOnClickListener(v -> {
-            tvActive.setText("FM RADIO TUNER (SI473X IC)");
+            tvActive.setText("FM radio");
             btnSrcRadio.setTextColor(accent());
             btnSrcSpotify.setTextColor(textPrimary);
             btnSrcBluetooth.setTextColor(textPrimary);
             btnSrcUsb.setTextColor(textPrimary);
             if (tvPreset != null) {
-                tvPreset.setText(isRadioPlaying ? "ACTIVE TUNER" : "STANDBY · PRESS PLAY");
+                tvPreset.setText(isRadioPlaying ? "Active tuner" : "Standby · press play");
             }
             notifier.show(Notifier.Kind.INFO, "Radio selected", "Press play to listen");
         });
@@ -810,25 +810,25 @@ public class MainActivity extends AppCompatActivity {
             btnRadioPlay.setOnClickListener(v -> {
                 if (!isRadioPlaying) {
                     isRadioPlaying = true;
-                    btnRadioPlay.setText("PAUSE RADIO");
+                    btnRadioPlay.setText("Pause radio");
                     if (tvPreset != null) {
-                        tvPreset.setText("ACTIVE · " + tvFreq.getText() + " MHZ");
+                        tvPreset.setText("Active · " + tvFreq.getText() + " MHz");
                     }
 
                     // 1. Wake up vendor radio hardware tuner IC in background without switching away from launcher
                     sendRadioHardwareBroadcasts(tvFreq.getText().toString());
 
                     // 2. Update dashboard track display
-                    if (tvTrackTitle != null) tvTrackTitle.setText("FM " + tvFreq.getText() + " MHz");
+                    if (tvTrackTitle != null) tvTrackTitle.setText("Fm " + tvFreq.getText() + " MHz");
                     if (tvTrackArtist != null) tvTrackArtist.setText("Radio Tuner Broadcast");
                     if (btnMediaPlayPause != null) btnMediaPlayPause.setText("Pause");
 
                     notifier.show(Notifier.Kind.INFO, "Radio playing", tvFreq.getText() + " MHz");
                 } else {
                     isRadioPlaying = false;
-                    btnRadioPlay.setText("PLAY RADIO");
+                    btnRadioPlay.setText("Play radio");
                     if (tvPreset != null) {
-                        tvPreset.setText("STANDBY");
+                        tvPreset.setText("Standby");
                     }
                     sendRadioHardwarePauseBroadcasts();
                     MediaSyncService.pauseAllMedia(this);
@@ -850,7 +850,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         viewAudio.findViewById(R.id.btnSrcSpotify).setOnClickListener(v -> {
-            tvActive.setText("SPOTIFY AUDIO STREAM");
+            tvActive.setText("Spotify");
             btnSrcSpotify.setTextColor(accent());
             btnSrcRadio.setTextColor(textPrimary);
             btnSrcBluetooth.setTextColor(textPrimary);
@@ -868,7 +868,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         viewAudio.findViewById(R.id.btnSrcBluetooth).setOnClickListener(v -> {
-            tvActive.setText("BLUETOOTH AUDIO STREAM");
+            tvActive.setText("Bluetooth audio");
             btnSrcBluetooth.setTextColor(accent());
             btnSrcRadio.setTextColor(textPrimary);
             btnSrcSpotify.setTextColor(textPrimary);
@@ -882,7 +882,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         viewAudio.findViewById(R.id.btnSrcUsb).setOnClickListener(v -> {
-            tvActive.setText("USB MASS STORAGE");
+            tvActive.setText("USB");
             btnSrcUsb.setTextColor(accent());
             btnSrcRadio.setTextColor(textPrimary);
             btnSrcSpotify.setTextColor(textPrimary);
@@ -907,10 +907,10 @@ public class MainActivity extends AppCompatActivity {
                 String freqStr = String.format(Locale.US, "%.1f", Math.max(87.5, f));
                 tvFreq.setText(freqStr);
                 if (isRadioPlaying && tvPreset != null) {
-                    tvPreset.setText("ACTIVE · " + freqStr + " MHZ");
+                    tvPreset.setText("Active · " + freqStr + " MHz");
                 }
                 if (isRadioPlaying && tvTrackTitle != null) {
-                    tvTrackTitle.setText("FM " + freqStr + " MHz");
+                    tvTrackTitle.setText("Fm " + freqStr + " MHz");
                 }
                 try {
                     int freqKhz = (int) (Double.parseDouble(freqStr) * 1000);
@@ -928,10 +928,10 @@ public class MainActivity extends AppCompatActivity {
                 String freqStr = String.format(Locale.US, "%.1f", Math.min(108.0, f));
                 tvFreq.setText(freqStr);
                 if (isRadioPlaying && tvPreset != null) {
-                    tvPreset.setText("ACTIVE · " + freqStr + " MHZ");
+                    tvPreset.setText("Active · " + freqStr + " MHz");
                 }
                 if (isRadioPlaying && tvTrackTitle != null) {
-                    tvTrackTitle.setText("FM " + freqStr + " MHz");
+                    tvTrackTitle.setText("Fm " + freqStr + " MHz");
                 }
                 try {
                     int freqKhz = (int) (Double.parseDouble(freqStr) * 1000);
@@ -1167,7 +1167,7 @@ public class MainActivity extends AppCompatActivity {
             btnSelectCarPlayApp.setText(name);
         }
         if (tvCarPlayProtocol != null) {
-            tvCarPlayProtocol.setText(name.toUpperCase());
+            tvCarPlayProtocol.setText(name);
         }
         notifier.show(Notifier.Kind.OK, "CarPlay app set", name);
     }
@@ -1301,7 +1301,7 @@ public class MainActivity extends AppCompatActivity {
             btnSelectMapApp.setText(name);
         }
         if (btnOpenOsmAnd != null) {
-            btnOpenOsmAnd.setText("LAUNCH " + name.toUpperCase());
+            btnOpenOsmAnd.setText("Launch " + name);
         }
         notifier.show(Notifier.Kind.OK, "Map app set", name);
     }
@@ -1628,7 +1628,7 @@ public class MainActivity extends AppCompatActivity {
         layout.setBackgroundColor(0xFF0F172A);
 
         TextView title = new TextView(this);
-        title.setText("VEHICLE THERMOMETER CALIBRATION");
+        title.setText("Calibrate temperature");
         title.setTextColor(accent());
         title.setTextSize(13);
         title.setTypeface(null, Typeface.BOLD);
@@ -1688,7 +1688,7 @@ public class MainActivity extends AppCompatActivity {
         layout.addView(btnRow);
 
         Button btnSyncGps = new Button(this);
-        btnSyncGps.setText("SYNC LIVE GPS WEATHER");
+        btnSyncGps.setText("Use GPS weather");
         btnSyncGps.setTextSize(11);
         btnSyncGps.setTextColor(0xFF94A3B8);
         btnSyncGps.setBackgroundResource(R.drawable.bg_elevated_btn);
@@ -1697,7 +1697,7 @@ public class MainActivity extends AppCompatActivity {
         btnSyncGps.setLayoutParams(lpGps);
 
         Button btnSave = new Button(this);
-        btnSave.setText("MATCH & LOCK TEMPERATURE");
+        btnSave.setText("Save temperature");
         btnSave.setTextSize(11);
         btnSave.setTextColor(accent());
         btnSave.setBackgroundResource(R.drawable.bg_elevated_btn);
@@ -1948,25 +1948,25 @@ public class MainActivity extends AppCompatActivity {
 
             @SuppressLint("MissingPermission")
             String name = (device.getName() != null && !device.getName().isEmpty()) ? device.getName() : "Phone (" + device.getAddress() + ")";
-            tvName.setText(name.toUpperCase());
+            tvName.setText(name);
 
             boolean isActuallyConnected = (btWatcher != null && btWatcher.isDeviceCurrentlyConnected(device));
             boolean isSavedDriver = (savedAddr != null && savedAddr.equalsIgnoreCase(device.getAddress()));
             if (isActuallyConnected || (isCarPlayConnected && isSavedDriver)) {
-                tvStatus.setText("CONNECTED · READY FOR CARPLAY");
+                tvStatus.setText("Connected");
                 tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
                 tvName.setTextColor(accentColor);
-                btnConnect.setText("LAUNCH");
+                btnConnect.setText("Launch");
                 btnConnect.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
             } else if (isSavedDriver) {
-                tvStatus.setText("DEFAULT DRIVER · READY TO CONNECT");
+                tvStatus.setText("Default phone");
                 tvStatus.setTextColor(accentColor);
-                btnConnect.setText("CONNECT");
+                btnConnect.setText("Connect");
                 btnConnect.setTextColor(accentColor);
             } else {
-                tvStatus.setText("PAIRED · READY TO CONNECT");
+                tvStatus.setText("Paired");
                 tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.cockpit_text_secondary));
-                btnConnect.setText("CONNECT");
+                btnConnect.setText("Connect");
                 btnConnect.setTextColor(accentColor);
             }
 
@@ -1997,10 +1997,10 @@ public class MainActivity extends AppCompatActivity {
                 isBtConnecting = true;
                 prefHelper.setSelectedDriverDevice(device.getAddress());
 
-                tvStatus.setText("CONNECTING TO " + name.toUpperCase() + "...");
+                tvStatus.setText("Connecting to " + name + "...");
                 tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.ad_accent_text));
                 tvName.setTextColor(accentColor);
-                btnConnect.setText("CONNECTING...");
+                btnConnect.setText("Connecting...");
                 btnConnect.setTextColor(accentColor);
 
                 // Disable all cards while connection is in progress so driver doesn't spam
@@ -2020,7 +2020,7 @@ public class MainActivity extends AppCompatActivity {
                         public void onConnecting(BluetoothDevice dev) {
                             runOnUiThread(() -> {
                                 if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
-                                    tvStatus.setText("ESTABLISHING LINK TO " + name.toUpperCase() + "...");
+                                    tvStatus.setText("Establishing link to " + name + "...");
                                 }
                             });
                         }
@@ -2033,9 +2033,9 @@ public class MainActivity extends AppCompatActivity {
                                 prefHelper.setSelectedDriverDevice(device.getAddress());
 
                                 if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
-                                    tvStatus.setText("CONNECTED · STARTING CARPLAY");
+                                    tvStatus.setText("Connected, starting CarPlay");
                                     tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
-                                    btnConnect.setText("CONNECTED");
+                                    btnConnect.setText("Connected");
                                     btnConnect.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
                                 }
 
@@ -2057,9 +2057,9 @@ public class MainActivity extends AppCompatActivity {
                                 isBtConnecting = false;
 
                                 if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
-                                    tvStatus.setText("CONNECTED IN CAR? TAP TO LAUNCH ANYWAY");
+                                    tvStatus.setText("Connected in the car? Launch anyway");
                                     tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.ad_accent_text));
-                                    btnConnect.setText("LAUNCH ANYWAY");
+                                    btnConnect.setText("Launch anyway");
                                     btnConnect.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
 
                                     View.OnClickListener launchAnywayListener = fl -> {
@@ -2145,7 +2145,7 @@ public class MainActivity extends AppCompatActivity {
                     tvTrackArtist.setText(artist);
                 }
                 if (btnMediaPlayPause != null && hasPlayState) {
-                    btnMediaPlayPause.setText(isPlaying ? "PAUSE" : "PLAY");
+                    btnMediaPlayPause.setText(isPlaying ? "Pause" : "Play");
                 }
 
                 String action = intent.getAction();
