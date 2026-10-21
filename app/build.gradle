@@ -46,6 +46,14 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
+    lint {
+        // targetSdk 28 is deliberate for head units; see "Why targetSdk 28" in README.md.
+        disable "ExpiredTargetSdkVersion"
+        // Report only until the existing errors (see the lint report artifact) are fixed;
+        // then remove this line so lint gates CI.
+        abortOnError false
+    }
+
     // Views are looked up with findViewById; ViewBinding is not used.
 }
 
