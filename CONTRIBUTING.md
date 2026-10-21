@@ -23,7 +23,7 @@ did not do it for you (the file is git-ignored).
 * One branch per change, branched from `main`. Open a pull request; CI must pass.
 * Small commits, one logical change each.
 * [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): subject`.
-  Types: `feat`, `fix`, `docs`, `build`, `ci`, `test`, `refactor`, `chore`.
+  Types: `feat`, `fix`, `perf`, `docs`, `build`, `ci`, `test`, `refactor`, `chore`.
   Subject: imperative, lower-case, under 72 characters. Use the body to explain *why*.
 
 ## Rules for code changes
@@ -34,6 +34,11 @@ did not do it for you (the file is git-ignored).
 * Never block the CarPlay launch path when detection fails (see `AGENT_HANDOFF.md`).
 * Pure logic (parsing, conversions) should be testable on the JVM without Android
   classes. Add a test under `app/src/test/java` when you add such logic.
+
+## Credit
+
+Add yourself to [`CONTRIBUTORS.md`](CONTRIBUTORS.md) in your first pull request; the file
+explains the format.
 
 ## Signing
 
