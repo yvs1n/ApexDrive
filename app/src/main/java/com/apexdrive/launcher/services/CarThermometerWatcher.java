@@ -144,33 +144,46 @@ public class CarThermometerWatcher implements SensorEventListener {
         startPeriodicPoll();
 
         // Immediate automatic location-based weather sync on ignition / boot
-        if (prefHelper.isAutoWeatherEnabled()) {
+        if (isOnlineWeatherEnabled()) {
             triggerImmediateLocationWeatherSync();
         }
     }
 
     public void triggerImmediateLocationWeatherSync() {
+        if (!isOnlineWeatherEnabled()) return;
+        // Only an existing location is used: the last known fix, else the saved coarse
+        // location. There is no IP-based lookup (P-37).
+        Location last = null;
         try {
             LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-            Location last = null;
             if (lm != null) {
                 last = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 if (last == null) last = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                 if (last == null) last = lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
             }
-            if (last != null && (last.getLatitude() != 0.0 || last.getLongitude() != 0.0)) {
-                fetchOnlineWeather(last.getLatitude(), last.getLongitude());
-            } else {
-                fetchIpGeolocationAndWeather();
-            }
-        } catch (Exception e) {
-            fetchIpGeolocationAndWeather();
+        } catch (Exception ignored) {
+            // No permission yet: fall back to the saved location below.
         }
+        if (last != null && (last.getLatitude() != 0.0 || last.getLongitude() != 0.0)) {
+            fetchOnlineWeather(last.getLatitude(), last.getLongitude());
+        } else if (prefHelper.hasSavedWeatherLocation()) {
+            fetchOnlineWeather(prefHelper.getSavedWeatherLat(), prefHelper.getSavedWeatherLon());
+        }
+    }
+
+    /** Weather makes network calls only when the user has allowed it and auto weather is on. */
+    private boolean isOnlineWeatherEnabled() {
+        return prefHelper.isOnlineWeatherAllowed() && prefHelper.isAutoWeatherEnabled();
+    }
+
+    private static double round2(double v) {
+        return Math.round(v * 100.0) / 100.0;
     }
 
     public void onLocationUpdated(double latitude, double longitude) {
         if (latitude == 0.0 && longitude == 0.0) return;
-        if (!prefHelper.isAutoWeatherEnabled() && prefHelper.isManualTempCalibration()) return;
+        if (!isOnlineWeatherEnabled()) return;
+        prefHelper.setSavedWeatherLocation(round2(latitude), round2(longitude));
 
         long now = System.currentTimeMillis();
         boolean timeElapsed = (now - lastOnlineFetchTime > 10 * 60 * 1000); // 10 minutes debounce
@@ -180,37 +193,8 @@ public class CarThermometerWatcher implements SensorEventListener {
         }
     }
 
-    public void fetchIpGeolocationAndWeather() {
-        new Thread(() -> {
-            try {
-                URL url = new URL("http://ip-api.com/json");
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setConnectTimeout(4000);
-                conn.setReadTimeout(4000);
-                if (conn.getResponseCode() == 200) {
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                    StringBuilder sb = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) sb.append(line);
-                    reader.close();
-                    JSONObject json = new JSONObject(sb.toString());
-                    if ("success".equalsIgnoreCase(json.optString("status"))) {
-                        double lat = json.optDouble("lat", 0.0);
-                        double lon = json.optDouble("lon", 0.0);
-                        String city = json.optString("city", "");
-                        if (!city.isEmpty()) {
-                            currentCity = city.toUpperCase(Locale.US);
-                        }
-                        if (lat != 0.0 && lon != 0.0) {
-                            fetchOnlineWeather(lat, lon);
-                        }
-                    }
-                }
-            } catch (Exception ignored) {}
-        }).start();
-    }
-
     public void fetchOnlineWeather(double latitude, double longitude) {
+        if (!isOnlineWeatherEnabled()) return;
         if (latitude == 0.0 && longitude == 0.0) return;
         lastOnlineFetchTime = System.currentTimeMillis();
         lastFetchLat = latitude;
@@ -219,7 +203,7 @@ public class CarThermometerWatcher implements SensorEventListener {
         new Thread(() -> {
             try {
                 String urlStr = String.format(Locale.US,
-                        "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&current_weather=true",
+                        "https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f&current_weather=true",
                         latitude, longitude);
                 URL url = new URL(urlStr);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -263,7 +247,7 @@ public class CarThermometerWatcher implements SensorEventListener {
     private void resolveCityName(double latitude, double longitude) {
         try {
             String geoUrl = String.format(Locale.US,
-                    "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=%.4f&longitude=%.4f&localityLanguage=en",
+                    "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=%.2f&longitude=%.2f&localityLanguage=en",
                     latitude, longitude);
             URL url = new URL(geoUrl);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
