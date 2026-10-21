@@ -42,6 +42,5 @@ repository secrets; see "Signing" in `README.md`.
 
 ## License
 
-**This repository does not have a LICENSE file yet.** Until the owner picks one the
-code is legally "all rights reserved" and contributions have no stated terms. If you
-plan to contribute, please wait for (or ask about) the license decision first.
+ApexDrive is released under the [MIT License](LICENSE). By contributing you agree that
+your contributions are licensed under the same terms.

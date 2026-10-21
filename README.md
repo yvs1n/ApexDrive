@@ -125,3 +125,9 @@ Locally you can sign the same way by exporting `SIGNING_KEYSTORE_FILE`, `SIGNING
 `versionCode` comes from the `VERSION_CODE` environment variable (CI sets it to the run number);
 local builds use 1. A signed release APK is built with `./gradlew assembleRelease` when the signing
 variables are present.
+
+---
+
+## 8. License
+
+MIT. See [LICENSE](LICENSE).
