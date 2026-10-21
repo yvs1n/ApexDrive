@@ -78,7 +78,15 @@ public class CarThermometerWatcher implements SensorEventListener {
     private long lastBroadcastAt = 0;
 
     private String weatherCity = "";
-    private long lastOnlineFetchTime = 0;
+    // Weather scheduling. Times are SystemClock.elapsedRealtime(); 0 means "never".
+    private static final long WEATHER_REFRESH_MS = 10 * 60 * 1000L;
+    private static final long WEATHER_RETRY_BASE_MS = 30 * 1000L;
+    private double lastWeatherLat = 0.0;
+    private double lastWeatherLon = 0.0;
+    private long lastWeatherSuccessAt = 0;
+    private long lastWeatherAttemptAt = 0;
+    private int weatherFailures = 0;
+    private boolean weatherFetching = false;
     private double lastFetchLat = 0.0;
     private double lastFetchLon = 0.0;
 
@@ -254,24 +262,53 @@ public class CarThermometerWatcher implements SensorEventListener {
     public void onLocationUpdated(double latitude, double longitude) {
         if (latitude == 0.0 && longitude == 0.0) return;
         if (!isOnlineWeatherEnabled()) return;
-        prefHelper.setSavedWeatherLocation(round2(latitude), round2(longitude));
+        double rLat = round2(latitude), rLon = round2(longitude);
+        if (!prefHelper.hasSavedWeatherLocation()
+                || (float) rLat != (float) prefHelper.getSavedWeatherLat()
+                || (float) rLon != (float) prefHelper.getSavedWeatherLon()) {
+            prefHelper.setSavedWeatherLocation(rLat, rLon); // written only when the 1 km cell changes
+        }
 
-        long now = System.currentTimeMillis();
-        boolean timeElapsed = (now - lastOnlineFetchTime > 10 * 60 * 1000); // 10 minutes debounce
-        boolean distMoved = (Math.abs(latitude - lastFetchLat) > 0.03 || Math.abs(longitude - lastFetchLon) > 0.03); // ~3km
-        if (lastOnlineFetchTime == 0 || timeElapsed || distMoved) {
+        lastFetchLat = latitude;
+        lastFetchLon = longitude;
+        boolean moved = lastWeatherSuccessAt != 0
+                && (Math.abs(latitude - lastWeatherLat) > 0.03 || Math.abs(longitude - lastWeatherLon) > 0.03); // ~3 km
+        if (moved) {
             fetchOnlineWeather(latitude, longitude);
+        } else {
+            refreshWeatherIfDue();
         }
     }
 
+    /**
+     * Fetches when the last successful reading is old, or after a failure once the
+     * backoff (30 s doubling to 10 min) has passed. A failed attempt no longer blocks
+     * retries for 10 minutes.
+     */
+    private void refreshWeatherIfDue() {
+        if (!isOnlineWeatherEnabled() || weatherFetching) return;
+        if (lastFetchLat == 0.0 && lastFetchLon == 0.0) return;
+        long now = SystemClock.elapsedRealtime();
+        if (weatherFailures > 0) {
+            long backoff = Math.min(WEATHER_REFRESH_MS, WEATHER_RETRY_BASE_MS << Math.min(weatherFailures - 1, 5));
+            if (now - lastWeatherAttemptAt < backoff) return;
+        } else if (lastWeatherSuccessAt != 0 && now - lastWeatherSuccessAt < WEATHER_REFRESH_MS) {
+            return;
+        }
+        fetchOnlineWeather(lastFetchLat, lastFetchLon);
+    }
+
     public void fetchOnlineWeather(double latitude, double longitude) {
-        if (!isOnlineWeatherEnabled()) return;
+        if (!isOnlineWeatherEnabled() || weatherFetching) return;
         if (latitude == 0.0 && longitude == 0.0) return;
-        lastOnlineFetchTime = System.currentTimeMillis();
+        lastWeatherAttemptAt = SystemClock.elapsedRealtime();
+        weatherFetching = true;
         lastFetchLat = latitude;
         lastFetchLon = longitude;
 
-        final boolean needCity = weatherCity.isEmpty();
+        final String knownCity = weatherCity;
+        final boolean needCity = weatherCity.isEmpty()
+                || Math.abs(latitude - lastWeatherLat) > 0.03 || Math.abs(longitude - lastWeatherLon) > 0.03;
         new Thread(() -> {
             try {
                 String urlStr = String.format(Locale.US,
@@ -296,20 +333,38 @@ public class CarThermometerWatcher implements SensorEventListener {
                         JSONObject cw = json.getJSONObject("current_weather");
                         final float temp = (float) cw.getDouble("temperature");
                         final String condition = mapWeatherCode(cw.optInt("weathercode", 0));
-                        final String city = needCity ? resolveCityName(latitude, longitude) : "";
-                        pollHandler.post(() -> onWeatherResult(temp, condition, city));
+                        final String city = needCity ? resolveCityName(latitude, longitude) : knownCity;
+                        pollHandler.post(() -> onWeatherResult(temp, condition, city, latitude, longitude));
+                        return;
                     }
                 }
             } catch (Exception ignored) {}
+            pollHandler.post(this::onWeatherFailed); // reached on any failure
         }).start();
     }
 
     /** Runs on the main thread: all weather fields change together. */
-    private void onWeatherResult(float tempC, String condition, String city) {
-        if (stopped || !UnitMath.isPlausibleOutsideCelsius(tempC)) return;
-        if (!city.isEmpty()) weatherCity = city;
+    private void onWeatherResult(float tempC, String condition, String city, double lat, double lon) {
+        weatherFetching = false;
+        if (stopped) return;
+        if (!UnitMath.isPlausibleOutsideCelsius(tempC)) {
+            onWeatherFailed();
+            return;
+        }
+        weatherFailures = 0;
+        lastWeatherSuccessAt = SystemClock.elapsedRealtime();
+        lastWeatherLat = lat;
+        lastWeatherLon = lon;
+        weatherCity = city; // "" when unknown, so a city from an earlier place is not kept
         label[Source.WEATHER.ordinal()] = condition;
         setReading(Source.WEATHER, tempC);
+    }
+
+    /** Runs on the main thread. The previous value ages out instead of staying "live". */
+    private void onWeatherFailed() {
+        weatherFetching = false;
+        if (stopped) return;
+        weatherFailures++;
     }
 
     /** Blocking; call from a worker thread. Returns "" when unknown. */
@@ -458,6 +513,7 @@ public class CarThermometerWatcher implements SensorEventListener {
                     checkSystemProperties();
                 }
                 publish(); // lets a reading that has become stale drop out
+                refreshWeatherIfDue();
                 pollHandler.postDelayed(this, POLL_INTERVAL_MS);
             }
         }, POLL_INTERVAL_MS);
@@ -529,6 +585,7 @@ public class CarThermometerWatcher implements SensorEventListener {
 
     public void stop() {
         stopped = true;
+        weatherFetching = false; // a pending result is discarded with the handler queue
         pollHandler.removeCallbacksAndMessages(null);
         if (sensorManager != null && tempSensor != null) {
             sensorManager.unregisterListener(this);
