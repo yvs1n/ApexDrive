@@ -699,7 +699,94 @@ Contributors discover channels on a PC: `adb shell dumpsys activity broadcasts` 
 
 ## Tier 4 — Polish
 
-_(next commit)_
+### F-24 Voice assistant button
+
+**User value.** One big button (and a wheel key via F-22) to talk to the phone's assistant instead of touching the phone.
+
+**How it works.** Options in order of usefulness: (1) **Bluetooth voice recognition** through the phone: `BluetoothHeadset.startVoiceRecognition(BluetoothDevice)` (API 11+) asks the connected phone to start its assistant over HFP, so the driver talks through the car's microphone and hears the answer on the speakers. It works only if the unit exposes HFP to Android rather than handling it in the MCU; on MCU units the vendor has its own voice button; (2) `Intent.ACTION_VOICE_COMMAND` (API 4) or `Intent.ACTION_ASSIST` to start an assistant installed on the unit, rare on aftermarket ROMs; (3) CarPlay/Android Auto's own voice key, delivered by the dongle app, outside the launcher's control (the profile can name the key if the dongle has one). The button chooses the first that the profile says works and hides if none passed in F-03. No on-device speech recognition is attempted (`SpeechRecognizer` needs a recogniser service the unit usually lacks). API 31+ requires the `BLUETOOTH_CONNECT` permission for the headset call.
+
+**Effort.** S-M.
+
+**Dependencies.** F-01, F-03, F-04, F-22.
+
+**Risks.** Fails silently on units where HFP is MCU-only; microphone permission and routing differences.
+
+**Screen.** Home and Phone (Connect).
+
+**Verify in the car.** Whether `startVoiceRecognition` triggers the phone's assistant and routes the microphone and speaker correctly.
+
+---
+
+### F-25 Dashcam and reverse-camera shortcuts
+
+**User value.** One tap to the dashcam app or the 360° camera view the driver installed.
+
+**How it works.** Shortcuts only. The reverse camera is switched in hardware/firmware by the reverse signal and the launcher must neither intercept nor cover it; it only offers a "Camera" shortcut that launches the unit's camera app package (listed in the profile, for example a vendor camera app) and a user-selectable dashcam package. Where a USB UVC camera is attached, live view needs a UVC library, which is out of scope. The overlay (F-18) hides while the reverse-camera app is foreground.
+
+**Effort.** S.
+
+**Dependencies.** F-01 (package names), Apps screen app picker.
+
+**Risks.** Launching a camera app while reversing could take over a signal the driver relies on; test that the factory reverse switching still takes priority.
+
+**Screen.** Apps and Home tile.
+
+**Verify in the car.** That reverse still preempts the launcher and the shortcut returns cleanly.
+
+---
+
+### F-26 Parked screensaver clock
+
+**User value.** A calm, dim clock (and temperature) when the car is on but idle, rather than a bright dashboard.
+
+**How it works.** After N minutes with speed zero and no touch, the launcher shows a dark full-screen clock inside its own window (not `DreamService`, which needs user setup and ROM support), with the own-window brightness lowered through `WindowManager.LayoutParams.screenBrightness`, moving slightly every minute to avoid burn-in on the panel. A touch or movement dismisses it. The head unit's ACC-off behaviour (sleep or shutdown) is separate and not affected.
+
+**Effort.** S.
+
+**Dependencies.** Design system tokens; the Night palette from F-06.
+
+**Risks.** Hiding useful info (an incoming call must dismiss it); some units keep the screen on regardless of brightness.
+
+**Screen.** Home (idle state).
+
+**Verify in the car.** Whether per-window brightness works on the unit's backlight driver.
+
+---
+
+### F-27 Localization including Arabic and RTL
+
+**User value.** The launcher in the driver's own language; Arabic is a first-class case for the owner's region.
+
+**How it works.** Move every user-visible string out of Java and layouts into `strings.xml` (many labels like `RECENTS`, `LAUNCH ANYWAY` and the dialogs are hard-coded today, which is also an Audit 1 / Audit 2 topic, P-xx TBD), add `values-ar` and a few others, declare `android:supportsRtl="true"` (API 17+) in the manifest, and convert `left/right` attributes to `start/end` (`marginStart`, `paddingEnd`, `layout_gravity="start"`) so layouts mirror. Icons with direction (back arrows, next-turn arrows) need `autoMirrored` or per-direction assets; media transport controls conventionally do not mirror. Numbers: choose between Western and Arabic-Indic digits as a setting (`NumberFormat` with a locale). Language is picked in the first run (Audit 2's "language/units" step) and applied through a per-app `Configuration` override (`createConfigurationContext`, API 17+) because API 21-32 has no per-app language setting (API 33 adds `LocaleManager`/`AppCompatDelegate.setApplicationLocales` for an official path). Fonts: verify that the display font in the design system has Arabic glyphs, otherwise fall back to a system font for Arabic.
+
+**Effort.** M (string extraction is the bulk), plus per-language translation.
+
+**Dependencies.** Audit 2 (language step); design system (fonts and mirroring rules).
+
+**Risks.** Layout overflow in long languages at 1024x600; hard-coded unit strings (`KM/H`) in code; contributor translations of safety-relevant text.
+
+**Screen.** All; the picker is in the first-run flow and Settings.
+
+**Verify in the car.** Arabic text shaping and RTL layout with the unit's stock font rendering, and the font's glyph coverage.
+
+---
+
+### F-28 Optional regional extras
+
+**User value.** Local things a driver in one place values and a driver elsewhere never wants.
+
+**How it works.** The region catalog (F-01) gains an `extras` list; each extra is an opt-in module that is off unless its region is selected. Candidates: prayer times and Hijri date for regions that use them (computed offline from the last fix and a calculation-method setting, as F-06 does for the sun; the Hijri date by a tabular algorithm, or `android.icu.util.IslamicCalendar` on API 24+, no network); the camera-alert policy and data from F-12; regional speed units; a local map-hint text (replacing the UAE instructions with data). Rule: an extra never ships on by default and never changes the core layout, so the launcher stays the same product everywhere.
+
+**Effort.** S per extra.
+
+**Dependencies.** F-01, F-06, F-12, F-27.
+
+**Risks.** Maintenance burden and correctness of religious or legal content (prayer time method, camera law): require a named regional maintainer in the catalog file.
+
+**Screen.** Home (optional tile) and Settings.
+
+**Verify in the car.** None beyond location accuracy.
+
 
 ## Release sequence and summary
 
