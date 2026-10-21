@@ -250,3 +250,53 @@ Several labels look like live status but are static XML text that no Java code e
 - **What happens:** The picker says "Tap your phone to lock Bluetooth & CarPlay. Prevents hijacking other phones in the car." The selection only stores a MAC string. `getSelectedDriverDevice()` is used for labels and the dead auto-connect path (P-06), never to block or ignore other phones.
 - **Why it matters:** A security-sounding promise with no enforcement.
 - **Fix:** Reword to "Remember this phone", or implement the enforcement and test it. Audit 3 decides.
+
+---
+
+## C. Security and privacy
+
+Threat model: the unit is a shared, always-on Android device with a data connection (phone hotspot or SIM), other sideloaded apps (CarPlay bridge, map, vendor tools), and a public GitHub repository. The realistic risks are privacy leaks to third parties and other apps, and spoofed inputs shown to the driver. There is no authentication surface.
+
+**P-37 · High · `CarThermometerWatcher.java:186`, `AndroidManifest.xml:32`, `MainActivity.java:137-140`, `PreferenceHelper.java:124-126`**
+- **What happens:** When there is no last-known location, the launcher calls `http://ip-api.com/json` in cleartext (`:186`) and trusts the returned latitude, longitude and city (`:197-205`). It runs on the first launch, before the user has answered the location prompt: `checkPermissions()` and `initCarThermometer()` run in the same `onCreate`, `getLastKnownLocation` throws `SecurityException`, and the `catch` at `:166` goes to the IP lookup. `usesCleartextTraffic="true"` exists to allow exactly this.
+- **Why it matters:** The unit's public IP is sent in the clear to a third party, and a hotspot-side attacker can change the reply to set any location. Android 9+ blocks cleartext by default for `targetSdk` 28, so the manifest flag is the only reason it works.
+- **Fix:** Drop the IP lookup (use the saved location or ask the user for a city). Remove `usesCleartextTraffic` and add a `network_security_config` that denies cleartext. If an IP lookup is wanted, use an HTTPS endpoint behind the consent in P-38.
+
+**P-38 · High · `CarThermometerWatcher.java:221-222`, `:265-266`, `:147-149`, `:171-181`, `PreferenceHelper.java:124-130`, `MainActivity.java:1822`**
+- **What happens:** Latitude and longitude with 4 decimals (about 11 m) go to `api.open-meteo.com` and `api.bigdatacloud.net` at start-up and then every 10 minutes or 3 km. Auto-weather defaults to `true`. The only code that writes the preference is `setAutoWeatherEnabled(true)` (`MainActivity.java:1822`); nothing can turn it off. There is no consent screen and no disclosure in the README.
+- **Why it matters:** A continuous precise-location feed to two third parties, with no off switch. It is also an opensource project that other people will install in their cars.
+- **Fix:** First-run opt-in with plain wording (what is sent, to whom). A Setup toggle that calls `setAutoWeatherEnabled(false)` and stops all network use. Round to 2 decimals (about 1 km), which is enough for weather. List the endpoints in the README. Keep the city name optional.
+
+**P-39 · Med · `BluetoothWatcher.java:586-616`** `[verify in car]`
+- **What happens:** `broadcastHeadUnitConnect()` sends the phone's MAC, name and the whole `BluetoothDevice` parcelable as extras (`address`, `mac`, `name`, `dev_name`, `device`) in implicit broadcasts to 11 action strings, twice per attempt (P-08).
+- **Why it matters:** Any installed app can register for those public strings and collect the driver's phone identity. In the case of a vendor system app that reads them, the data goes to an app the launcher author never reviewed.
+- **Fix:** Send only to the receiver the active profile names (`setPackage` or `setComponent`), and only the fields that receiver needs. With no profile, send nothing (P-76).
+
+**P-40 · Med · `MediaSyncService.java:21`, `:97-101`, `:146-150`, `:180-182`, `:218-220`; `MainActivity.java:2272`, `:2290`**
+- **What happens:** Track title, artist and play state are broadcast app-wide with an implicit intent. The receiver in `MainActivity` is registered with no permission, so any app can send `com.apexdrive.launcher.MEDIA_UPDATED` to set the track text, the play state, and (through `:2262`) the "CarPlay connected" state.
+- **Why it matters:** Metadata leaks to other apps, and the dashboard can be spoofed.
+- **Fix:** Preferred: replace the broadcast with an in-process observer (this also unlocks album art, P-13). Otherwise `setPackage(getPackageName())` on every send, and a signature-level `<permission>` on the receiver. `ContextCompat.registerReceiver(..., RECEIVER_NOT_EXPORTED)` needs `androidx.core` 1.9 or later.
+
+**P-41 · Low · `CarThermometerWatcher.java:125-136`, `BluetoothWatcher.java:156-180`, `MediaSyncService.java:106-121`**
+- **What happens:** Vendor and CAN actions are accepted from any sender, so any app can set the outside temperature, the Bluetooth state or the track.
+- **Why it matters:** Integrity of what the driver reads. Impact is limited because nothing here controls the car.
+- **Fix:** System and vendor actions cannot be protected with a permission. Limit the exposure by registering only the actions of the active profile (P-76) and by range-checking values (P-23).
+
+**P-42 · Med · `AndroidManifest.xml:19-22`, `:70-76`, `BootReceiver.java:12-19`**
+- **What happens:**
+  - `BootReceiver` is `exported="true"` but does nothing except log, yet requires `RECEIVE_BOOT_COMPLETED`.
+  - `REORDER_TASKS` (`:20`) and `ACCESS_NETWORK_STATE` (`:16`) are not used by any code (`moveTaskToFront` and `ConnectivityManager` do not appear in the sources).
+  - `QUERY_ALL_PACKAGES` (`:22`) has no effect at `targetSdk` 28 (package visibility filtering starts at 30).
+  - `KILL_BACKGROUND_PROCESSES` supports the weak feature in P-15.
+- **Why it matters:** Over-broad permissions in a public project invite scrutiny and make the later `targetSdk` upgrade (P-71) harder. `[verify in car]` ACC wake without reboot does not fire `BOOT_COMPLETED` (P-57), so this receiver does not deliver the "instant ignition wake" its comment promises.
+- **Fix:** Delete `BootReceiver`, `RECEIVE_BOOT_COMPLETED`, `REORDER_TASKS`, `ACCESS_NETWORK_STATE`. Keep `QUERY_ALL_PACKAGES` only with a comment that a launcher needs it from `targetSdk` 30, or replace it with a `<queries>` block for `MAIN/LAUNCHER`.
+
+**P-43 · Low · `AndroidManifest.xml:25`**
+- **What happens:** `allowBackup="true"` lets `adb backup` and cloud backup copy the preferences, which include the driver phone's MAC (`PreferenceHelper.java:14`) and the recent-apps list.
+- **Why it matters:** Phone identity in backups.
+- **Fix:** `android:allowBackup="false"`.
+
+**P-44 · Med · `MainActivity.java:137`, `:2422-2448`**
+- **What happens:** `checkPermissions()` requests location (fine and coarse) and the two Bluetooth permissions in `onCreate`, with no rationale. The Bluetooth ones are install-time "normal" permissions, so they are never prompted. A denial is not handled; the result callback only restarts GPS.
+- **Why it matters:** The first thing a new user sees is a permission dialog over an empty cockpit. After a denial the Maps screen reads "Searching Satellite Coordinates..." forever (`view_maps.xml:85`), with nothing explaining why. `README.md:59` tells the user to pick "Allow all the time", an option that does not exist for `targetSdk` 28.
+- **Fix:** Ask in context on the first Maps or speed tap, explain why, and show an explicit "Location permission denied" state with a button. Fix the README. `[verify in car]` some units hide or auto-deny the permission dialog; the app should then say how to grant it with `adb shell pm grant`.
