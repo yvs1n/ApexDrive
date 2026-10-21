@@ -74,6 +74,9 @@ public class CarThermometerWatcher implements SensorEventListener {
     private volatile String displayedCondition = "NO DATA";
     private volatile String displayedCity = "";
 
+    private static final long POLL_INTERVAL_MS = 60 * 1000L;
+    private long lastBroadcastAt = 0;
+
     private String weatherCity = "";
     private long lastOnlineFetchTime = 0;
     private double lastFetchLat = 0.0;
@@ -351,6 +354,7 @@ public class CarThermometerWatcher implements SensorEventListener {
      * ignored. Values are taken as degrees Celsius. [verify in car] key names and unit.
      */
     private void parseCanbusTempIntent(Intent intent) {
+        lastBroadcastAt = SystemClock.elapsedRealtime();
         try {
             Bundle extras = intent.getExtras();
             if (extras == null) return;
@@ -390,28 +394,38 @@ public class CarThermometerWatcher implements SensorEventListener {
         } catch (Exception ignored) {}
     }
 
+    private static java.lang.reflect.Method sysPropGet;
+    private static boolean sysPropUnavailable;
+
+    /**
+     * Reads vendor system properties in-process (no "getprop" process is spawned, P-48).
+     * android.os.SystemProperties is a hidden API; on failure this stays silent and the
+     * properties are simply not used. [verify in car] which property the unit sets.
+     */
     private void checkSystemProperties() {
-        new Thread(() -> {
-            String[] props = {
-                    "persist.sys.can.temp",
-                    "sys.car.temp",
-                    "sys.car.outtemp",
-                    "persist.fyt.temp",
-                    "sys.canbus.out_temp"
-            };
-            for (String prop : props) {
-                try {
-                    Process p = Runtime.getRuntime().exec("getprop " + prop);
-                    BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                    String val = r.readLine();
-                    r.close();
-                    if (val != null && !val.trim().isEmpty()) {
-                        pollHandler.post(() -> parseAndSetTemp(val.trim()));
-                        return;
-                    }
-                } catch (Exception ignored) {}
+        if (sysPropUnavailable) return;
+        String[] props = {
+                "persist.sys.can.temp",
+                "sys.car.temp",
+                "sys.car.outtemp",
+                "persist.fyt.temp",
+                "sys.canbus.out_temp"
+        };
+        try {
+            if (sysPropGet == null) {
+                Class<?> c = Class.forName("android.os.SystemProperties");
+                sysPropGet = c.getMethod("get", String.class);
             }
-        }).start();
+            for (String prop : props) {
+                String val = (String) sysPropGet.invoke(null, prop);
+                if (val != null && !val.trim().isEmpty()) {
+                    parseAndSetTemp(val.trim());
+                    return;
+                }
+            }
+        } catch (Throwable t) {
+            sysPropUnavailable = true;
+        }
     }
 
     /**
@@ -437,11 +451,16 @@ public class CarThermometerWatcher implements SensorEventListener {
         pollHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                pollCanSettings();
-                checkSystemProperties();
-                pollHandler.postDelayed(this, 15000);
+                // Polling is only a fallback: once the unit broadcasts, rely on that.
+                long sinceBroadcast = SystemClock.elapsedRealtime() - lastBroadcastAt;
+                if (lastBroadcastAt == 0 || sinceBroadcast > VEHICLE_MAX_AGE_MS) {
+                    pollCanSettings();
+                    checkSystemProperties();
+                }
+                publish(); // lets a reading that has become stale drop out
+                pollHandler.postDelayed(this, POLL_INTERVAL_MS);
             }
-        }, 15000);
+        }, POLL_INTERVAL_MS);
     }
 
     private void setReading(Source s, float valueC) {
