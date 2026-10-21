@@ -1624,21 +1624,20 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(40, 36, 40, 36);
-        layout.setBackgroundColor(0xFF0F172A);
+        layout.setPadding(32, 32, 32, 32);
+        layout.setBackgroundResource(R.drawable.ad_bg_notification);
 
         TextView title = new TextView(this);
         title.setText("Calibrate temperature");
-        title.setTextColor(accent());
-        title.setTextSize(13);
-        title.setTypeface(null, Typeface.BOLD);
-        title.setLetterSpacing(0.08f);
+        title.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
+        title.setTextSize(28);
+        title.setTypeface(androidx.core.content.res.ResourcesCompat.getFont(this, R.font.atkinson_next_semibold));
         layout.addView(title);
 
         TextView subtitle = new TextView(this);
-        subtitle.setText("Calibrate to match your Hyundai instrument cluster outside temperature or sync via online GPS weather.");
-        subtitle.setTextColor(0xFF94A3B8);
-        subtitle.setTextSize(11);
+        subtitle.setText("Match the outside temperature on your instrument cluster, or use GPS weather.");
+        subtitle.setTextColor(ContextCompat.getColor(this, R.color.ad_label_2));
+        subtitle.setTextSize(20);
         subtitle.setPadding(0, 8, 0, 24);
         layout.addView(subtitle);
 
@@ -1646,9 +1645,9 @@ public class MainActivity extends AppCompatActivity {
         final float[] tempHolder = new float[]{ thermometerWatcher.getCurrentTempCelsius() };
         final boolean isMph = prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH);
         updateTempDisplay(tvCurrentVal, tempHolder[0], isMph);
-        tvCurrentVal.setTextSize(42);
-        tvCurrentVal.setTextColor(0xFFF8FAFC);
-        tvCurrentVal.setTypeface(null, Typeface.BOLD);
+        tvCurrentVal.setTextSize(64);
+        tvCurrentVal.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
+        tvCurrentVal.setTypeface(androidx.core.content.res.ResourcesCompat.getFont(this, R.font.atkinson_next_semibold));
         tvCurrentVal.setGravity(Gravity.CENTER);
         tvCurrentVal.setPadding(0, 10, 0, 24);
         layout.addView(tvCurrentVal);
@@ -1659,8 +1658,8 @@ public class MainActivity extends AppCompatActivity {
 
         Button btnMinus = new Button(this);
         btnMinus.setText("− 1°");
-        btnMinus.setTextSize(16);
-        btnMinus.setTextColor(0xFFF8FAFC);
+        btnMinus.setTextSize(28);
+        btnMinus.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
         btnMinus.setBackgroundResource(R.drawable.bg_elevated_btn);
         btnMinus.setLayoutParams(new LinearLayout.LayoutParams(0, 110, 1f));
         btnMinus.setOnClickListener(v -> {
@@ -1673,8 +1672,8 @@ public class MainActivity extends AppCompatActivity {
 
         Button btnPlus = new Button(this);
         btnPlus.setText("+ 1°");
-        btnPlus.setTextSize(16);
-        btnPlus.setTextColor(0xFFF8FAFC);
+        btnPlus.setTextSize(28);
+        btnPlus.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
         btnPlus.setBackgroundResource(R.drawable.bg_elevated_btn);
         btnPlus.setLayoutParams(new LinearLayout.LayoutParams(0, 110, 1f));
         btnPlus.setOnClickListener(v -> {
@@ -1689,18 +1688,20 @@ public class MainActivity extends AppCompatActivity {
 
         Button btnSyncGps = new Button(this);
         btnSyncGps.setText("Use GPS weather");
-        btnSyncGps.setTextSize(11);
-        btnSyncGps.setTextColor(0xFF94A3B8);
-        btnSyncGps.setBackgroundResource(R.drawable.bg_elevated_btn);
+        btnSyncGps.setAllCaps(false);
+        btnSyncGps.setTextSize(22);
+        btnSyncGps.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
+        btnSyncGps.setBackgroundResource(R.drawable.ad_bg_btn_secondary);
         LinearLayout.LayoutParams lpGps = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 110);
         lpGps.setMargins(0, 18, 0, 0);
         btnSyncGps.setLayoutParams(lpGps);
 
         Button btnSave = new Button(this);
         btnSave.setText("Save temperature");
-        btnSave.setTextSize(11);
-        btnSave.setTextColor(accent());
-        btnSave.setBackgroundResource(R.drawable.bg_elevated_btn);
+        btnSave.setAllCaps(false);
+        btnSave.setTextSize(22);
+        btnSave.setTextColor(ContextCompat.getColor(this, R.color.ad_on_accent));
+        btnSave.setBackgroundResource(R.drawable.ad_bg_btn_primary);
         LinearLayout.LayoutParams lpSave = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 110);
         lpSave.setMargins(0, 12, 0, 0);
         btnSave.setLayoutParams(lpSave);
