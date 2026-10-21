@@ -429,7 +429,165 @@ Delivery: many head units have no internet, so the primary path is "download on 
 
 ## Tier 2 — Daily usefulness
 
-_(next commit)_
+The loop works; now the launcher earns a place on the dashboard every drive.
+
+### F-11 OsmAnd next-turn on Home via its AIDL API
+
+**User value.** The next manoeuvre (arrow, street, distance, ETA) appears on Home and Maps while OsmAnd is in the background or in another window, so the driver does not have to keep the navigation app in front.
+
+**How it works.** OsmAnd (`net.osmand.plus` / `net.osmand`) exposes a bound-service AIDL API, `IOsmAndAidlInterface` (with a callback interface `IOsmAndAidlCallback`), published in the OsmAnd-API project. ApexDrive copies the `.aidl` files into `app/src/main/aidl/net/osmand/aidl/` (so the package names match), enables AIDL in Gradle (`buildFeatures { aidl true }`), and binds with `bindService` using an explicit `Intent` whose package is the installed OsmAnd and whose action is the one the API documents for its service (`net.osmand.aidl.OsmandAidlServiceV2` at the time of writing; confirm against the OsmAnd-API sources when implementing). Navigation updates are requested by registering a callback for navigation updates and receive directional information (distance to the next turn, turn type, left-hand/right-hand side) and route totals (time/distance left). The exact method and field names differ by OsmAnd version (the app's own dialog already mentions 4.5.10), so a thin `OsmAndBridge` wrapper isolates them, and Home shows nothing if binding fails. The AIDL files are tiny interface definitions, not a UI library.
+
+A fallback with no AIDL: none that is reliable. OsmAnd's `geo:` intent (already used for search) starts navigation but does not report it back, so the feature simply does not appear when binding fails.
+
+API 30+ package visibility: on Android 11+ binding to another package needs `<queries>` in the manifest (or `QUERY_ALL_PACKAGES`, which the app already holds). Android 14+ adds foreground-service type constraints for long-running services; the bound connection itself is fine.
+
+**Effort.** M.
+
+**Dependencies.** OsmAnd installed and the AIDL service available; F-01 (navigation package from the profile, region map hint). Audit 1 (service lifecycle findings, P-xx TBD).
+
+**Risks.** OsmAnd API drift between versions; OsmAnd's own power-saving killing the bound service; the head unit's low RAM killing OsmAnd in the background (Android will; a head unit with 1 GB may not keep both alive). Treat as optional and degrade quietly.
+
+**Screen.** Home (compact turn card) and Maps (larger card plus the existing "Launch" button).
+
+**Verify in the car.** That OsmAnd's service binds on the unit, that updates keep arriving with OsmAnd in the background, and the update rate; memory headroom with OsmAnd, the CarPlay app and ApexDrive together.
+
+---
+
+### F-12 Speed-limit and camera alerts
+
+**User value.** A warning when over the limit and a heads-up before a fixed speed camera or hazard.
+
+**How it works.** Two separate sources, independent of each other:
+1. **Speed limit.** OsmAnd already has a speed-limit widget; the cheapest correct path is to let OsmAnd show it and have ApexDrive only highlight the speed number when it exceeds a limit that OsmAnd reports, if the AIDL API of the installed version exposes it (verify when implementing; do not assume). Otherwise offer a manual "alert me above N km/h" threshold (S-effort, no data). Offline road-limit data in the launcher would mean bundling or parsing OSM extracts, which is out of scope.
+2. **Camera alerts from a bundled regional file.** `assets/profiles/regions/<id>-cameras.csv` (`lat,lon,type,limit,heading`) contributed by the community per region. A lightweight index (a grid keyed by 0.1° cell) is loaded at start; on each GPS fix (`GpsTelemetryManager`, already smoothing speed and heading) look up the neighbouring cells and alert within a distance that scales with speed (for example 8 seconds of travel), only for cameras whose bearing is within about 30° of the vehicle heading. A tone through `ToneGenerator` or `SoundPool` plus a visual banner on Home; audio focus requested with `AudioManager.requestAudioFocus` (API 8+) using a transient-may-duck request so music ducks rather than stops.
+
+**Legality.** Camera alerts are restricted or banned in some countries. The region catalog carries `extras.cameraAlerts: "allowed" | "restricted" | "forbidden"`, the feature is off by default, hidden where `forbidden`, and the first-run text never implies it works everywhere. Treat this as a hard requirement for open-source distribution.
+
+**Effort.** M (camera alerts), S (manual threshold).
+
+**Dependencies.** F-01 region catalog; GPS lifecycle (Audit 1 GPS findings, P-xx TBD); F-11 if OsmAnd reports limits.
+
+**Risks.** Stale data causing false alerts; legal exposure per country (above); GPS jitter near the camera; alert fatigue.
+
+**Screen.** Home (speed tile and banner); Settings for the toggle and threshold.
+
+**Verify in the car.** GPS update rate and accuracy at speed on the T3L; audio ducking behaviour across the head unit's audio paths (the MCU may mix its own sources).
+
+---
+
+### F-13 Saved destinations
+
+**User value.** Home, Work and a few favourites one tap away, handed to the navigation app, with no typing at the dashboard.
+
+**How it works.** A small list (name, lat/lon, optional address text) stored in `SharedPreferences` JSON (or a tiny SQLite table shared with F-14/F-15), created from (a) the current location ("Save here", which also works for parking), (b) a typed place name resolved through the navigation app, not through a geocoder, to avoid needing a network service, and (c) import via F-08. Navigation hand-off uses the `geo:lat,lon` intent already used for OsmAnd search, targeted to the profile's navigation package (`Intent.setPackage`). Home shows the first two as large tiles; Maps shows the full list.
+
+**Effort.** S.
+
+**Dependencies.** F-01 (navigation package), F-08 (portability).
+
+**Risks.** The `geo:` intent behaves differently across navigation apps (some start navigation, some only show the point); the label shown on the tile must say what will happen ("Show on map" vs "Navigate") per app, tested per package.
+
+**Screen.** Maps and Home.
+
+**Verify in the car.** `geo:` hand-off in the owner's navigation app starting guidance from the head unit.
+
+---
+
+### F-14 Where I parked
+
+**User value.** "Where did I leave the car?" answered by the phone or by the unit at the next start, with a map link.
+
+**How it works.** The launcher cannot rely on a shutdown callback: when ACC is cut the unit can power down in seconds and `ACTION_SHUTDOWN`/`ACTION_SCREEN_OFF` may not be delivered to a launcher, so the design is **continuous checkpointing, not an ignition-off event**. `GpsTelemetryManager` stores the last fix (lat, lon, accuracy, time) to `SharedPreferences` every ~30 s while moving and, when speed has been under ~3 km/h for a few minutes, marks it as "parked here" with a time. At the next start, the launcher shows "Parked at <place/coords> since <time>" until the car has moved. Optionally, the vendor ignition/ACC broadcast from the head-unit profile (if the catalog lists one, verified through F-03) triggers an immediate flush. Display: a card on Home, "Parked at <place or coordinates> since <time>", with a "Navigate to my car" button that hands the saved point to the navigation app through F-13. There is no phone hand-off without a network, so a share link or QR code is out of scope.
+
+Reverse geocoding (`android.location.Geocoder`) needs a backend service that head units lack, so the card shows coordinates and, if the user saved places (F-13), the nearest saved place name.
+
+**Effort.** S.
+
+**Dependencies.** GPS lifecycle fixes (Audit 1 GPS findings, P-xx TBD), F-13, optionally F-01 ignition action.
+
+**Risks.** Flash wear from frequent writes (use `apply()` at a modest interval and write only when the position changed); a GPS fix that was stale when ACC went off (store accuracy and age and show "approximate").
+
+**Screen.** Home.
+
+**Verify in the car.** How long after ACC off the launcher process actually stays alive (this decides how late the last checkpoint is); whether the unit keeps GPS powered after ignition off.
+
+---
+
+### F-15 Trip computer with history
+
+**User value.** Distance, driving time, average and maximum speed, and a short history (today, this week, per trip), instead of a single reset-only counter.
+
+**How it works.** `GpsTelemetryManager` already computes speed smoothing and trip distance. Add a trip recorder: a trip starts when speed rises above ~5 km/h and ends after about 5 minutes below ~3 km/h (or on a vendor ignition-off action if the profile has one); on end, one row is written to a small SQLite table via `SQLiteOpenHelper` (id, start, end, distance, moving time, max speed, average speed, optionally start/end coordinates). A screen lists trips with totals; "reset" becomes "start a new trip counter" without deleting history. Distance uses the sum of fix-to-fix distances (`Location.distanceTo`) with a minimum-accuracy and minimum-step filter to avoid creeping while parked.
+
+Units come from the Vehicle Profile (`units.distance`, `units.speed`), not a hard-coded km/h, which also removes any hard-coded unit assumption flagged in Audit 1 (P-xx TBD). If the OBD-II feature (F-19) is present, fuel use per trip is added.
+
+**Effort.** M.
+
+**Dependencies.** GPS lifecycle and units fixes (Audit 1, P-xx TBD); F-01 units; F-19 optionally.
+
+**Risks.** GPS drift counting phantom distance; trips split across tunnel gaps (apply a merge window); unbounded table growth (cap at, for example, the last 1000 trips with an export through F-08).
+
+**Screen.** Home (current trip tile) and a Trips list (Settings or Maps).
+
+**Verify in the car.** GPS accuracy at low speed and in underground parking; odometer comparison against the dashboard over a known distance.
+
+---
+
+### F-16 Favourite contacts and quick-dial
+
+**User value.** Call "Mum" with one tap on the head unit without hunting through the vendor Bluetooth app.
+
+**How it works.** On an MCU-Bluetooth head unit, the phone book (if the unit even synchronises it by PBAP) lives in the vendor's app, not in Android's `ContactsContract`. So the reliable design is a **launcher-owned favourites list**: the driver enters up to 8 entries (name, number; optionally a photo from the card art, no contact read permission needed), stored in `SharedPreferences` or the F-13 database. Dialling goes through whatever this unit supports, discovered by F-03: (1) a vendor `dial` command in the head-unit profile if it has one, (2) `Intent.ACTION_CALL` with a `tel:` URI (requires the `CALL_PHONE` runtime permission from API 23; `ACTION_DIAL` needs no permission but opens a dial screen and requires one more tap), and (3) falling back to opening the vendor Bluetooth app. If the unit's HFP is handled by the MCU, option (1) is the one that works; Android's telephony may not exist on a Wi-Fi-only unit.
+
+If the unit does expose contacts (`ContactsContract`), an optional "import favourites" reads `STARRED` contacts with `READ_CONTACTS`. The permission is requested only then, with a reason (Audit 2 permissions pattern).
+
+**Effort.** M (S for the manual list; M because of per-unit dialling).
+
+**Dependencies.** F-01, F-03 (dial capability), F-23 (per-driver favourites), Audit 2 Phone/Connect screen layout.
+
+**Risks.** A dial action that does nothing on a given unit makes the feature dead; hide it when `dial` is `failed` in F-03. Privacy of numbers in exports (F-08 include-personal-data toggle). Driver distraction: contact entry only while parked.
+
+**Screen.** Phone (Connect); Home tile for the top two.
+
+**Verify in the car.** Which of the three dial routes the unit honours during a real HFP call and whether the call audio goes through the car speakers.
+
+---
+
+### F-17 Home widgets
+
+**User value.** The driver chooses what Home shows (clock, a calendar or weather widget from an installed app), as on any launcher.
+
+**How it works.** The launcher hosts `AppWidgetHost` (API 3+) and `AppWidgetManager`. Adding a widget: `AppWidgetHost.allocateAppWidgetId()`, request binding with `AppWidgetManager.bindAppWidgetIdIfAllowed` (API 16+) or the `ACTION_APPWIDGET_BIND` consent intent (system dialogs may be missing on a head-unit ROM; the full permission path `BIND_APPWIDGET` is signature-level on most ROMs), then a configure activity if the widget has one, then `AppWidgetHost.createView`. A restricted "dashboard slots" model fits 1024x600: two or three fixed slots whose sizes are chosen by the design system, not a free-form grid, so touch targets stay at 48-64 dp.
+
+Widgets are only available when the installed apps provide any; a head-unit ROM with few apps may have none, and some ROMs' widget pickers or providers are stripped. This is the lowest-confidence item of tier 2.
+
+**Effort.** L (host plumbing, picker UI, persistence, layout per slot).
+
+**Dependencies.** Design system slot layouts; F-23 if widgets are per driver.
+
+**Risks.** Widget processes consuming memory on a 1 GB unit; widgets drawn with unreadable fonts at car distances; ROM without widget support (check `PackageManager.hasSystemFeature(FEATURE_APP_WIDGETS)`, API 21+).
+
+**Screen.** Home.
+
+**Verify in the car.** Whether `AppWidgetManager.getInstalledProviders()` returns anything useful on the unit and whether binding works without a system consent dialog.
+
+---
+
+### F-18 Split view / glanceable overlay
+
+**User value.** See navigation and music (or the camera) at once.
+
+**How it works.** True multi-window is a platform feature from Android 7.0 (API 24): `ActivityOptions.setLaunchBounds` and `Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT` (API 24) place a second activity beside the first when the ROM enables split-screen or freeform. Many head-unit ROMs on API 21-23, and many on 24+, either lack it or implement their own vendor split screen, so it cannot be a core feature. Plan: (a) on API 24+ units where `Activity.isInMultiWindowMode()` is supported, offer "Open next to this" for the nav app, via a Maps screen action; (b) a **launcher-owned overlay** that works on all versions: a small always-on-top strip with the next turn (F-11) and now-playing (F-05), implemented with a `WindowManager` overlay window (`TYPE_PHONE` on API 21-25, `TYPE_APPLICATION_OVERLAY` from API 26) and `SYSTEM_ALERT_WINDOW` permission, which a user must grant via `Settings.ACTION_MANAGE_OVERLAY_PERMISSION` (API 23+). Overlays are touch-sensitive and could cover controls of other apps; keep it small and draggable off.
+
+**Effort.** L (split) / M (overlay).
+
+**Dependencies.** F-11, F-05. Overlay permission step in the permissions list.
+
+**Risks.** ROM overlay restrictions; interfering with the CarPlay app's touch handling; getting in the way of the factory reverse-camera screen (must hide when the reverse camera app is foreground; F-25).
+
+**Screen.** Maps and Home; Settings for the overlay toggle.
+
+**Verify in the car.** Whether the ROM supports multi-window at all, and whether an overlay window appears above the ZLink CarPlay surface.
 
 ## Tier 3 — Vehicle integration
 
