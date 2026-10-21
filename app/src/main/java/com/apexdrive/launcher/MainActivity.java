@@ -517,6 +517,16 @@ public class MainActivity extends AppCompatActivity {
         tvTripTime = viewDash.findViewById(R.id.tvTripTime);
         tvCarPlayProtocol = viewDash.findViewById(R.id.tvCarPlayProtocol);
 
+        View tileNowPlaying = viewDash.findViewById(R.id.tileNowPlaying);
+        if (tileNowPlaying != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            tileNowPlaying.setClipToOutline(true);
+            tileNowPlaying.setOutlineProvider(android.view.ViewOutlineProvider.BACKGROUND);
+        }
+        View btnOpenMapsHome = viewDash.findViewById(R.id.btnOpenMapsHome);
+        if (btnOpenMapsHome != null) {
+            btnOpenMapsHome.setOnClickListener(v -> showView(viewMaps, railBtnMaps));
+        }
+
         if (tvCarPlayProtocol != null) {
             tvCarPlayProtocol.setText(prefHelper.getCarPlayName().toUpperCase());
         }
@@ -579,7 +589,7 @@ public class MainActivity extends AppCompatActivity {
                 if (tvPreset != null) tvPreset.setText("STANDBY");
                 sendRadioHardwarePauseBroadcasts();
                 MediaSyncService.pauseAllMedia(this);
-                btnMediaPlayPause.setText("PLAY");
+                btnMediaPlayPause.setText("Play");
             } else if (tvTrackTitle != null && tvTrackTitle.getText() != null && tvTrackTitle.getText().toString().startsWith("FM ")) {
                 isRadioPlaying = true;
                 Button btnRadio = viewAudio != null ? viewAudio.findViewById(R.id.btnRadioPlay) : null;
@@ -589,7 +599,7 @@ public class MainActivity extends AppCompatActivity {
                 TextView tvPreset = viewAudio != null ? viewAudio.findViewById(R.id.tvAudioPresetBadge) : null;
                 if (tvPreset != null) tvPreset.setText("ACTIVE · " + freq + " MHZ");
                 sendRadioHardwareBroadcasts(freq);
-                btnMediaPlayPause.setText("PAUSE");
+                btnMediaPlayPause.setText("Pause");
             } else {
                 MediaSyncService.togglePlayPause(this);
             }
@@ -807,7 +817,7 @@ public class MainActivity extends AppCompatActivity {
                     // 2. Update dashboard track display
                     if (tvTrackTitle != null) tvTrackTitle.setText("FM " + tvFreq.getText() + " MHz");
                     if (tvTrackArtist != null) tvTrackArtist.setText("Radio Tuner Broadcast");
-                    if (btnMediaPlayPause != null) btnMediaPlayPause.setText("PAUSE");
+                    if (btnMediaPlayPause != null) btnMediaPlayPause.setText("Pause");
 
                     notifier.show(Notifier.Kind.INFO, "Radio playing", tvFreq.getText() + " MHz");
                 } else {
@@ -818,7 +828,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     sendRadioHardwarePauseBroadcasts();
                     MediaSyncService.pauseAllMedia(this);
-                    if (btnMediaPlayPause != null) btnMediaPlayPause.setText("PLAY");
+                    if (btnMediaPlayPause != null) btnMediaPlayPause.setText("Play");
                     notifier.show(Notifier.Kind.INFO, "Radio paused");
                 }
             });
@@ -1023,7 +1033,7 @@ public class MainActivity extends AppCompatActivity {
         String next = current.equals(PreferenceHelper.UNIT_KMH) ? PreferenceHelper.UNIT_MPH : PreferenceHelper.UNIT_KMH;
         prefHelper.setSpeedUnit(next);
         if (btnToggleUnit != null) btnToggleUnit.setText(next);
-        if (tvSpeedUnit != null) tvSpeedUnit.setText(next);
+        if (tvSpeedUnit != null) tvSpeedUnit.setText(next.toLowerCase(Locale.US));
         if (gpsManager != null) {
             gpsManager.setUseMph(next.equals(PreferenceHelper.UNIT_MPH));
         }
@@ -1037,11 +1047,11 @@ public class MainActivity extends AppCompatActivity {
         if (gpsManager != null) {
             gpsManager.resetTrip();
             boolean isMph = prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH);
-            String distText = isMph ? "TRIP A: 0.0 MI" : "TRIP A: 0.0 KM";
+            String distText = isMph ? "Trip 0.0 mi" : "Trip 0.0 km";
             if (tvTripDistance != null) tvTripDistance.setText(distText);
-            if (tvTripTime != null) tvTripTime.setText("TIME: 0 MIN · RESET");
+            if (tvTripTime != null) tvTripTime.setText("0 min");
             if (tvNavTripDist != null) tvNavTripDist.setText(distText);
-            if (tvNavTripDuration != null) tvNavTripDuration.setText("DURATION: 0 MIN");
+            if (tvNavTripDuration != null) tvNavTripDuration.setText("Duration 0 min");
             notifier.show(Notifier.Kind.OK, "Trip reset");
         }
     }
@@ -1449,7 +1459,7 @@ public class MainActivity extends AppCompatActivity {
             public void onSpeedUpdated(int speed, String unit) {
                 runOnUiThread(() -> {
                     tvSpeed.setText(String.valueOf(speed));
-                    tvSpeedUnit.setText(unit);
+                    tvSpeedUnit.setText(unit.toLowerCase(Locale.US));
                 });
             }
 
@@ -1490,17 +1500,17 @@ public class MainActivity extends AppCompatActivity {
                     boolean isMph = prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH);
                     String distText;
                     if (isMph) {
-                        distText = String.format(Locale.US, "TRIP A: %.1f MI", distanceKm * 0.621371);
+                        distText = String.format(Locale.US, "Trip %.1f mi", distanceKm * 0.621371);
                     } else {
-                        distText = String.format(Locale.US, "TRIP A: %.1f KM", distanceKm);
+                        distText = String.format(Locale.US, "Trip %.1f km", distanceKm);
                     }
                     tvTripDistance.setText(distText);
-                    tvTripTime.setText(String.format(Locale.US, "TIME: %d MIN · RESET", elapsedMinutes));
+                    tvTripTime.setText(String.format(Locale.US, "%d min", elapsedMinutes));
                     if (tvNavTripDist != null) {
                         tvNavTripDist.setText(distText);
                     }
                     if (tvNavTripDuration != null) {
-                        tvNavTripDuration.setText(String.format(Locale.US, "DURATION: %d MIN", elapsedMinutes));
+                        tvNavTripDuration.setText(String.format(Locale.US, "Duration %d min", elapsedMinutes));
                     }
                 });
             }
