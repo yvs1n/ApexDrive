@@ -10,11 +10,11 @@ ApexDrive is a lightweight, zero-lag Android automotive launcher engineered spec
 ### Key Features:
 * **True Android Home Activity:** Uses `<category android:name="android.intent.category.HOME" />` so it resumes instantly upon car ignition.
 * **1-Touch Apple CarPlay (Configurable Launcher):** Direct intent launcher with live connection status. You can switch between **Zlink 5.3**, **AutoKit / Carlinkit**, **TLink**, **SpeedPlay**, or any installed app directly inside the **Setup** menu!
-* **Real GPS Speedometer & Telemetry:** Uses native Android `LocationManager.GPS_PROVIDER` (not heavy widget daemons). Shows live km/h, 8-point compass heading, and trip distance.
+* **Real GPS Speedometer & Telemetry:** Uses native Android `LocationManager.GPS_PROVIDER` (not heavy widget daemons). Shows live km/h, 16-point compass heading, and trip distance.
 * **Live Media Controller:** Hooks into Android `MediaSessionManager` to display real song titles, artists, and playback controls for Spotify, Apple Music, YouTube Music, Radio, or CarPlay audio.
 * **Bluetooth Connection Strip:** Compact, low-profile status card for your head unit's `SantafemR` Bluetooth connection.
 * **Driver Ergonomics:** Left-hand drive navigation rail with touch targets $\ge 52\,\text{dp}$, glanceable typography, and customizable accent colors.
-* **Low Memory Footprint:** Built with lightweight native Android views (<35 MB RAM footprint).
+* **Low Memory Footprint:** Built with lightweight native Android views (no unnecessary libraries; memory use has not been measured yet).
 
 ---
 
@@ -22,15 +22,15 @@ ApexDrive is a lightweight, zero-lag Android automotive launcher engineered spec
 
 ### Option A: Via Android Studio (Recommended)
 1. Open **Android Studio**.
-2. Select **Open** and choose this folder: `c:\Users\yassi\Documents\Android Launcher`.
+2. Select **Open** and choose the cloned repository folder.
 3. Wait for Gradle sync to complete.
 4. Go to **Build** $\rightarrow$ **Build Bundle(s) / APK(s)** $\rightarrow$ **Build APK(s)**.
 5. Once compiled, Android Studio will show a popup with a link to `app-debug.apk` (located in `app/build/outputs/apk/debug/`).
 
 ### Option B: Via Command Line (Gradle)
-Run in PowerShell:
-```powershell
-./gradlew assembleDebug
+Needs JDK 17 and the Android SDK. Run in a shell:
+```bash
+./gradlew assembleDebug        # Windows: gradlew.bat assembleDebug
 ```
 The compiled APK will be generated at:
 `app/build/outputs/apk/debug/app-debug.apk`
