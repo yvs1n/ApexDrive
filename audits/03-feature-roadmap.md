@@ -1,0 +1,444 @@
+# Audit 3: Feature roadmap — making ApexDrive actually useful
+
+Status: proposal. Documentation only, no code changes. Companion documents: Audit 1 (`audits/01-production-readiness.md`, owns the `P-xx` finding IDs) and Audit 2 (UX and onboarding).
+
+## 0. How to read this
+
+**Target hardware.** An aftermarket Allwinner T3L head unit, 1024x600 mdpi landscape, Android API 21-28 (the app is `minSdk 21`, `targetSdk 28`, `compileSdk 33`). Bluetooth on such units is frequently run by a separate MCU, so standard Android Bluetooth APIs may not tell the truth (see `AGENT_HANDOFF.md` section 4A). Native apps, XML views and ViewBinding only; no third-party UI libraries.
+
+**Screen names** follow the new vocabulary: Home (today's DASH), Phone (to be renamed Connect), Maps, Audio, Apps, Settings (today's SETUP), plus the first-run flow.
+
+**Each feature has:** user value, how it works on this hardware (APIs for API 21-28, with API 31+/33+ alternatives noted separately), effort (S ≈ days, M ≈ 1-2 weeks, L ≈ weeks), dependencies, risks, the screen it lands on, and a **Verify in the car** note where the result depends on the head unit rather than on Android.
+
+**Cross-references.** Bugs are not repeated here; they are cited as Audit 1 IDs (`P-xx`). Where a feature is only sound after a bug is fixed, the dependency says so. Audit 1 section G (vehicle and head-unit assumptions) is the reason F-01 to F-03 exist.
+
+> Cross-reference status: Audit 1 has not yet sent its section G ID list. Until it does, references read "Audit 1 §G" without a number and are marked `(P-xx TBD)`. This is to be replaced by real IDs before merge.
+
+**What is hard-coded today** (from `origin/main` at `6b31f21`, this is the starting point for F-01):
+
+| Assumption | Where |
+| --- | --- |
+| Header pill `SANTA FE · IX45`, `HYUNDAI SANTA FE · IX45 COCKPIT`, `SANTAFEMR`, Santa Fe/ZLink text | `res/layout/activity_main.xml`, `view_dashboard.xml`, `view_carplay.xml` |
+| Expected Bluetooth name `SantafemR` (`bt_default_device`; "Pair via SantafemR (PIN 0000)") | `res/values/strings.xml`, `BluetoothWatcher.java` |
+| Factory dialog: PIN `123456`, "CANbus 03 Simple Soft (XP), Profile 61 Hyundai Kia / 01 All new Santafe" | `MainActivity.openFactorySettings()` |
+| Radio, media-key, power, recents broadcasts sent to every vendor (`com.ts.*`, `com.microntek.*`, `com.allwinner.*`, `com.syu.*`, `action.hct.*`, `com.android.fm.*`) | `MainActivity` (radio tune/power/stop, recents, `com.microntek.kill`), `BluetoothWatcher` (connect broadcasts) |
+| Vendor system properties and `Settings.System` keys probed for BT state | `BluetoothWatcher` (`sys.bt.connected`, `ts.bt.state`, `bt_device_name`, ...) |
+| UAE map instructions ("sideload OsmAnd 4.5.10 and United-arab-emirates_asia.obf") | `MainActivity.launchOfflineMap()` dialog |
+| CarPlay/ZLink package list and explicit ZLink intent | `PreferenceHelper.DEFAULT_CARPLAY_PKG`, `MainActivity` |
+| No Day/Night implementation exists; the accent colour is applied in code, and `recreate()` is used by "restart launcher" | `MainActivity` |
+
+---
+
+## Tier 1 — Make the core loop work
+
+The core loop is: ignition on, phone connects, CarPlay (or music) is one tap away, now-playing is truthful, the screen is readable day and night, and none of it depends on the car being a Santa Fe.
+
+### F-01 Vehicle Profile data model (bundled JSON, community-extensible)
+
+**User value.** One resolved "Vehicle Profile" replaces every hard-coded Santa Fe/UAE/vendor assumption. The launcher header shows the driver's own car, the right vendor commands are used (and only those), and an unlisted car still works through a Generic profile. Because profiles are data, someone with a Kia Sportage on a Joying unit can add it with a pull request and no Java.
+
+**How it works.**
+
+Three small catalogs in `app/src/main/assets/`, so each contribution touches one file and is easy to review:
+
+```
+assets/profiles/
+  schema/vehicle-profile.schema.json    # JSON Schema (draft 2020-12) for the three catalogs
+  vehicles/hyundai.json                  # one file per make
+  vehicles/_generic.json                 # "Other / not listed"
+  headunits/allwinner-t3l.json           # one file per head-unit family
+  headunits/_generic.json                # "Generic Android unit"
+  regions/ae.json  regions/default.json  # units, map hints, optional extras
+```
+
+No index file is needed: `AssetManager.list("profiles/vehicles")` enumerates the makes at run time, so adding a file is the entire change. Parsing uses `org.json` (part of the platform since API 1), so no Gson or other dependency. A Node script (`tools/validate-profiles.js`, Node is already available to contributors and CI) validates every file against the schema and checks that every `headUnit.commands.*.actions` entry is a well-formed action; it runs as a CI step so a broken profile PR fails before review.
+
+*Vehicle catalog* (`vehicles/hyundai.json`):
+
+```json
+{
+  "schema": 1,
+  "make": { "id": "hyundai", "name": "Hyundai" },
+  "models": [
+    {
+      "id": "santa-fe-dm",
+      "name": "Santa Fe",
+      "years": "2012-2018",
+      "generation": "DM (ix45 in some markets)",
+      "headerName": "SANTA FE · IX45",
+      "btNameHints": ["SantafemR", "Santa Fe*"],
+      "suggestedHeadUnits": ["allwinner-t3l"],
+      "defaultApps": {
+        "carplay": ["com.zjinnova.zlink", "com.zlink.carplay", "cn.manstep.phonemirrorbox"],
+        "navigation": ["net.osmand.plus", "net.osmand"]
+      },
+      "notes": "Factory-fit 7-inch replacement; CANbus decoder settings are on the head unit, not here.",
+      "canbusHint": "Simple Soft (XP) · Hyundai/Kia profile (see head-unit factory menu)"
+    }
+  ]
+}
+```
+
+*Head-unit catalog* (`headunits/allwinner-t3l.json`). `commands` is the key idea: each logical command lists exactly the broadcasts/keys that this family responds to, instead of the launcher shotgunning every vendor:
+
+```json
+{
+  "schema": 1,
+  "id": "allwinner-t3l",
+  "name": "Allwinner T3L",
+  "verified": "maintainer",
+  "detect": {
+    "buildProps": { "ro.board.platform": ["t3", "t3l"] },
+    "packagesPresent": ["com.zjinnova.zlink"],
+    "weight": 0.8
+  },
+  "bluetooth": {
+    "androidStackReliable": false,
+    "settingsKeys": ["bt_device_name", "bt_connected_dev_name", "current_connect_bt_addr"],
+    "systemProps": ["sys.bt.connected"],
+    "connectActions": []
+  },
+  "commands": {
+    "radioPower": [{ "type": "broadcast", "action": "com.allwinner.radio.power" }],
+    "radioTune":  [{ "type": "broadcast", "action": "com.allwinner.radio.tune", "extras": { "freq": "$freqKhz" } }],
+    "radioStop":  [{ "type": "broadcast", "action": "com.allwinner.radio.stop" }],
+    "mediaPlay":  [{ "type": "key", "keycode": "KEYCODE_MEDIA_PLAY" }],
+    "recents":    [{ "type": "broadcast", "action": "com.android.systemui.recent.action.TOGGLE_RECENTS" }],
+    "factorySettings": [{ "type": "activity", "action": "com.ts.factory" }]
+  },
+  "factoryPinHint": null,
+  "carplayLaunch": [
+    { "type": "activity", "action": "zjinnova.android.intent.action.ZLINK_MAIN", "extras": { "page": "LINK", "feature": "carplay" } }
+  ]
+}
+```
+
+*The example above is illustrative.* Which actions the T3L really answers is to be confirmed with F-03 ("Test my unit") before the entry is marked `"verified": "maintainer"`. Until then the shipped entry carries the union that works today, flagged `"verified": "unverified"`, and the Test screen narrows it. `verified` has three values: `maintainer` (tested by the project owner in a car), `community` (reported by a contributor with a Test-my-unit report attached), `unverified` (copied from forum knowledge).
+
+*Generic fallbacks.* `headunits/_generic.json` uses only portable Android: media keys via `AudioManager.dispatchMediaKeyEvent` (API 19+), `Intent.ACTION_MAIN` launches, no vendor broadcasts, `bluetooth.androidStackReliable: true`. `vehicles/_generic.json` has `headerName: "ApexDrive"` and no model hints. A user who picks "Other" gets a launcher that works on any Android unit and simply hides controls that have no command (see F-03).
+
+*Region catalog* (`regions/ae.json`) carries what is currently UAE-specific text and units:
+
+```json
+{
+  "schema": 1,
+  "id": "ae",
+  "name": "United Arab Emirates",
+  "units": { "speed": "kmh", "distance": "km", "temperature": "c", "clock24h": true },
+  "defaultLatLon": [25.2048, 55.2708],
+  "navigation": {
+    "mapHint": { "string": "map_hint_ae", "obfName": "United-arab-emirates_asia.obf" }
+  },
+  "extras": []
+}
+```
+
+*Resolved profile.* At the end of the selector the launcher writes one JSON blob to `SharedPreferences` (`vehicle_profile`) and everything reads it through a new `VehicleProfile` object (immutable, loaded once). It holds ids (`makeId`, `modelId`, `headUnitId`, `regionId`) plus the resolved values, plus the user's overrides and the results of the Test screen:
+
+```json
+{
+  "schema": 1,
+  "makeId": "hyundai", "modelId": "santa-fe-dm", "headUnitId": "allwinner-t3l", "regionId": "ae",
+  "displayName": "SANTA FE · IX45",
+  "units": { "speed": "kmh", "distance": "km", "temperature": "c" },
+  "btNameHints": ["SantafemR"],
+  "capabilities": { "radioTune": "ok", "mediaPlay": "ok", "recents": "failed", "btStateRead": "ok" },
+  "overrides": { "carplayPackage": null, "navigationPackage": null },
+  "setupCompleted": true
+}
+```
+
+*Dispatcher.* A single `VendorCommands` class (name indicative) turns a logical command into the listed intents and sends only those. The scattered `sendBroadcast` blocks in `MainActivity` (radio, recents, kill) and the connect broadcasts in `BluetoothWatcher` collapse into calls like `vendorCommands.send(RADIO_TUNE, freqKhz)`. Commands whose capability is `failed` are hidden in the UI rather than shown as dead buttons.
+
+**Effort.** M. Catalog schema, loader, validator and replacing the strings is straightforward; the careful work is collapsing the existing shotgun broadcasts without losing coverage on the owner's own unit, which F-03 provides the evidence for.
+
+**Dependencies.** Resolves Audit 1 §G (P-xx TBD) in full: it is the data layer for removing the Santa Fe/UAE/shotgun assumptions. F-02 and F-03 are its UI. Audit 2 onboarding step "vehicle & head unit".
+
+**Risks.**
+- Profile bloat and unverified entries giving false confidence. Mitigation: the `verified` field is shown in the confirm screen ("Community-verified" / "Not yet verified on a real car") and unverified units default to the Test screen being offered.
+- Schema churn. Mitigation: `schema` integer on every file and in the stored profile; the loader ignores unknown fields and refuses newer schemas with a clear message; a migration step handles older stored profiles.
+- The factory PIN (`123456`) currently shown in a dialog is a head-unit-specific fact, not a vehicle fact; it moves to `factoryPinHint` and is shown only for units where it is documented.
+- Command actions copied from forums might be wrong or intrusive (for example `com.microntek.kill`). Mitigation: reviewer checklist in `CONTRIBUTING`; the Test screen is the proof.
+
+**Screen.** None itself; consumed by Home (header), Phone/Connect (BT name, pairing text), Maps (map hint), Audio (radio and media commands), Settings (change vehicle), first-run flow.
+
+**Verify in the car.** Every command list entry for the owner's T3L unit, via F-03.
+
+---
+
+### F-02 First-run vehicle and head-unit selector
+
+**User value.** On the very first launch the driver says what car and what stereo they have, in at most three taps, and the launcher stops pretending to be a Santa Fe. Everything is skippable, and "Other / not listed" always yields a working launcher.
+
+**How it works.**
+
+Position in the first-run flow (Audit 2 order): language/units, **vehicle and head unit**, driver phone, apps, permissions (with a reason each). F-02 is the second step. It opens before the main dashboard and nothing else is shown until it is completed or skipped; it is a full-screen `Fragment`/layout inside `MainActivity` (no new Activity needed, which also avoids a launcher-as-HOME double-launch, see `AGENT_HANDOFF.md` section 4C).
+
+Screens (1024x600, 64 dp tiles, no keyboard needed):
+
+1. **Make.** A grid of make tiles, most-installed first, with "Other / not listed" and "Skip for now" always present. Tap 1.
+2. **Model.** Models of that make as a list (name plus years), "Not listed" last. Tap 2.
+3. **Head unit.** Four family tiles: Allwinner T3L, Microntek, SYU/Joying, "Other / unknown" (the catalog may list more). The family suggested by the model (`suggestedHeadUnits`) or by auto-detection (`detect.buildProps`/`packagesPresent`, matched against `Build.MANUFACTURER`/`Build.MODEL`/`Build.BOARD`, `android.os.SystemProperties` read by reflection as `BluetoothWatcher` already does, and installed packages) is pre-selected. When detection is confident (single match with weight above a threshold) this screen is skipped and its result shown on the confirm card. Tap 3 otherwise.
+4. **Confirm footer** (part of screen 3, see tap count below): display name, head unit, a verified badge, the Bluetooth name hint ("your phone will see the unit as: ..." with a Change button), and "Test my unit" (F-03, optional).
+
+Tap count: three. Make (1), Model (2), then the head-unit screen, which has the suggested family pre-selected and a primary Continue button that writes the profile (3). The confirm summary (display name, verified badge, Bluetooth name hint with a Change button, optional "Test my unit") is the footer of that head-unit screen, not a fourth screen. When auto-detection is confident the head-unit tiles are replaced by that summary alone, so the flow is still three taps. Skipping is one tap ("Skip for now" on the first screen) and writes the `_generic` vehicle and head unit.
+
+Units and region are not asked here: they are Audit 2's first step ("language/units"). That step passes `regionId` and the unit choices in; the selector only reads them. If the driver arrives here without having made that choice, the region defaults to the device locale's country (`Locale.getDefault().getCountry()`), falling back to `default`.
+
+What is skippable: all of it. Make, model, head unit each have "Other / not listed". Skipping never blocks CarPlay launch (the rule in `AGENT_HANDOFF.md` section 7.3: never block the CarPlay launch). A skipped setup keeps `setupCompleted=false` and Home shows a one-line, dismissible reminder card ("Finish vehicle setup") rather than a modal.
+
+Writes the Vehicle Profile from F-01: `displayName` (replaces the hard-coded header `SANTA FE · IX45`; a model with no `headerName` falls back to "Make Model" and Generic falls back to "APEXDRIVE"), `btNameHints` (replaces `SantafemR` in strings and in the `BluetoothWatcher` pairing message; also editable, because the Bluetooth name belongs to the head unit and the owner can rename it, it is not a property of the car), the list of vendor commands from the head-unit catalog, default CarPlay/navigation app suggestions (still verified against installed packages, never assumed present), and the region's map hint (replaces the UAE-specific dialog text).
+
+Changing it later: Settings has a "Vehicle & head unit" row showing the current profile. Tapping it re-runs the same screens. Changing the head unit offers to re-run the Test (F-03). A "Reset vehicle profile" action returns to the Generic profile without touching other settings.
+
+**An unlisted car.** "Other / not listed" at Make or Model: the driver may optionally type a display name (the head unit's on-screen keyboard; the field is optional and can be left empty). The head-unit step still runs, because commands depend on the stereo, not on the car. The confirm card shows a "Not in our list yet" note with a "Share my setup" button that writes a prefilled profile stub and the Test-my-unit results to USB (F-08's writer) and shows the project's GitHub new-issue URL as plain text (no QR library, no network call). Nothing is sent automatically; the launcher is frequently offline and the profile may contain the unit's Bluetooth name.
+
+**Effort.** M. The UI is simple lists; head-unit detection and the confirm logic are a little work; most effort is shared with F-01.
+
+**Dependencies.** F-01 (data). Audit 2 first-run onboarding (order and shell; F-07). F-03 for the optional test. Audit 1 §G (P-xx TBD).
+
+**Risks.**
+- Wrong head-unit pick leads to commands that do nothing. Mitigation: pre-selection, the verified badge, F-03, and the capability gating of buttons.
+- First-run double-launch or lost state: the selector must survive `recreate()` and a process kill mid-flow (store the draft in `onSaveInstanceState` and persist after each tap).
+- The existing user base (this owner's unit) upgrades from a version with no profile. Mitigation: if `vehicle_profile` is absent and the Santa Fe header/BT name preference exists, migrate silently to `hyundai/santa-fe-dm` + `allwinner-t3l` and mark setup complete; only new installs see the flow.
+
+**Screen.** First-run flow; entry in Settings.
+
+**Verify in the car.** Auto-detection fields (`Build.*`, board properties, installed vendor packages) on the owner's T3L, so that the catalog's `detect` block matches reality.
+
+---
+
+### F-03 "Test my unit" capability screen
+
+**User value.** The driver (parked) learns which controls their head unit actually responds to, the launcher hides the ones that do not, and a contributor gets a report that proves a head-unit entry works. This is what turns "forum folklore" broadcasts into verified ones.
+
+**How it works.**
+
+Reached from the confirm card (F-02) and from Settings > Vehicle & head unit > Test my unit. One command per row, one at a time (never a burst, the opposite of today's shotgun):
+
+| Test | What it does | Result source |
+| --- | --- | --- |
+| Radio on / tune to a station / off | `radioPower`, `radioTune`, `radioStop` via the profile's action list | Driver taps "It worked" / "Nothing happened" |
+| Media play/pause/next | `AudioManager.dispatchMediaKeyEvent` (API 19+) and the profile's key actions | Driver |
+| Recents | profile action | Driver |
+| Factory settings | profile intent (opens another screen, so offered last; marked "will leave the launcher") | Driver |
+| Bluetooth state | Reads the profile's `settingsKeys` and `systemProps` and shows the raw values next to the Android Bluetooth state | Automatic: shows what each channel returned and whether it matches the driver-confirmed "my phone is connected" |
+| CarPlay app launch | the profile's `carplayLaunch` list | Driver |
+
+Each row has a Send button and, after it, "It worked" / "No effect" / "Skip". Results persist in the profile under `capabilities` (`ok`/`failed`/`untested`). `failed` hides that control in the UI (for example no radio tuner on Audio when `radioTune` failed), and a hidden control is always reachable again from the Test screen. Broadcast sends are fire-and-forget (there is no acknowledgement from `sendBroadcast`), which is why the driver confirms the effect.
+
+Safety: tests run only while parked. The screen reads speed from `GpsTelemetryManager` and, above ~3 km/h, locks with "Test only when parked". This also avoids the legal issue of operating a screen while driving.
+
+Output: "Copy report" writes a JSON/Markdown report to USB (F-08 writer) with model, head unit, `Build.*`, which commands passed, and the raw Bluetooth channel values. The text explains how to attach it to a GitHub issue to promote a head-unit entry to `community` verified.
+
+**Effort.** M. A list screen and a result store; the value is in having F-01's dispatcher in place first.
+
+**Dependencies.** F-01. F-08 file writer for the report. Audit 1 §G (P-xx TBD) for why the shotgun must go.
+
+**Risks.**
+- A test broadcast can have side effects on a poorly understood unit (for example a "power" action that switches the radio hardware off). Mitigation: a short warning, no automatic tests, the Factory screen not tested by default.
+- "It worked" is subjective and the effect may be delayed. Mitigation: wording ("did the radio start within 5 seconds?").
+- Results can go stale after a head-unit firmware update; the Settings entry shows the date tested and offers retest.
+
+**Screen.** Settings (and first-run confirm card). Results gate Audio (radio), Home (recents), Phone/Connect (BT).
+
+**Verify in the car.** This entire feature *is* the verification tool; its first run is on the owner's T3L, and its output seeds the T3L catalog entry.
+
+---
+
+### F-04 Reliable phone detection and optional CarPlay auto-launch
+
+**User value.** When the driver's phone connects, ApexDrive knows (and says so truthfully), and, only if the driver turned it on, opens the CarPlay/Android Auto app for them. Today's detection can say "connected" falsely or miss a connection that happened before the launcher started.
+
+**How it works.**
+
+1. **Detection signals** (merged into one state `NOT_CONNECTED / CONNECTING / CONNECTED_VERIFIED / CONNECTED_UNVERIFIED`), exactly the existing multi-channel idea, but driven by the profile instead of fixed lists: `BluetoothA2dp`/`BluetoothHeadset` profile proxies (`BluetoothAdapter.getProfileProxy`, API 11+), `BluetoothDevice.ACTION_ACL_CONNECTED` / `ACTION_ACL_DISCONNECTED` (API 1), `AudioManager.isBluetoothA2dpOn()`/`isBluetoothScoOn()`, and the head-unit's `settingsKeys`/`systemProps` from the profile. Only the channels listed for the selected head unit are polled, which also reduces boot-time work. The existing bugs in this engine (boot race, false "connected", duplicate load) are Audit 1's (P-xx TBD, BT detection findings); this feature depends on them being fixed and does not duplicate them.
+2. **Driver phone.** The selected driver device (`KEY_SELECTED_DRIVER_DEVICE`, set in the driver-phone step of the first-run flow) is the identity everything keys on. A connection by a different paired device is shown as "Other device" and never auto-launches.
+3. **Auto-launch policy** (Settings > Phone/Connect, **off by default**): `Off` / `Ask` (a 10-second banner "Open CarPlay? [Open] [Dismiss]") / `Auto`. `Auto` requires: the driver enabled it; the connected device is the selected driver phone; detection is `CONNECTED_VERIFIED`, or `CONNECTED_UNVERIFIED` only with an explicit sub-toggle; the connection has been stable for N seconds (default 5, so a flapping link does not launch); it has not already launched in this ignition cycle (a cool-down of several minutes, because the launcher cannot reliably know about ignition); the CarPlay app is not already foreground (`ActivityManager.getRunningTasks` is deprecated from API 21 and returns only own tasks, so use the CarPlay launch result and a "launched at" timestamp instead); and the user has not tapped anything in the first ~3 seconds after the connect event (a tap means "I'm doing something else").
+4. **Launch.** The profile's `carplayLaunch` action list, falling back to the installed package from the profile's `defaultApps.carplay` via `PackageManager.getLaunchIntentForPackage`. The existing explicit ZLink intent (`zjinnova.android.intent.action.ZLINK_MAIN` with `page`/`feature`) is data in the T3L entry, not code.
+5. **API 29+ note.** Android 10 introduced restrictions on starting activities from the background that apply regardless of `targetSdkVersion`; a launcher that is currently the visible HOME app is normally in the foreground at connect time and is fine, but a launch from a background service is not guaranteed on Android 10+ ROMs. This hardware is API 21-28 so it is not a blocker today. Alternatives if needed on newer units: a high-priority notification with a full-screen intent (`USE_FULL_SCREEN_INTENT`, with its own permission rules from API 34) or the `SYSTEM_ALERT_WINDOW` exemption.
+
+**Effort.** M. The engine exists; the work is the state machine, the policy and the per-device scoping.
+
+**Dependencies.** Audit 1 BT-detection findings (P-xx TBD) must be fixed first; F-01 (profile channels and launch lists); the driver-phone step of the first-run flow (Audit 2); F-23 (per-driver) later reuses the per-device key.
+
+**Risks.**
+- Surprising the driver: launching an app they did not ask for is intrusive. Mitigation: off by default, visible Ask mode, once per cycle.
+- Boot ordering: the phone often connects *before* the launcher's UI is up. The state must be computed on start, not only from events.
+- Unreliable "connected" on MCU Bluetooth: auto-launch with `CONNECTED_UNVERIFIED` could launch with no phone. Hence the stricter default.
+
+**Screen.** Phone (Connect) for the toggle and status; Home shows the connection state; first-run driver-phone step offers to enable it.
+
+**Verify in the car.** Which signals actually fire on the T3L for (a) a phone that connects before the launcher starts, (b) a phone connecting while the launcher is open, (c) a manual connect from the head unit's own Bluetooth app; and whether the CarPlay app can be started over a running Bluetooth audio session without dropping it.
+
+---
+
+### F-05 Real now-playing from MediaSession, with album art
+
+**User value.** The Audio and Home screens show what is really playing, with cover art, so the launcher looks like a car stereo instead of a text label.
+
+**How it works.**
+
+Today `MediaSyncService` (a `NotificationListenerService`, needed so `MediaSessionManager.getActiveSessions(ComponentName)` is allowed, API 21+) holds the active `MediaController`/`MediaMetadata` but only reads `METADATA_KEY_TITLE` and `METADATA_KEY_ARTIST`, then sends an `ACTION_MEDIA_UPDATED` broadcast with strings.
+
+- **Art keys** (all API 21+): `MediaMetadata.METADATA_KEY_ALBUM_ART`, `METADATA_KEY_ART` (Bitmaps via `getBitmap`), and `METADATA_KEY_ALBUM_ART_URI`, `METADATA_KEY_ART_URI`, `METADATA_KEY_DISPLAY_ICON_URI` (strings; `content://` or `file://` readable through `ContentResolver.openInputStream`; do not fetch `http(s)` URIs without a deliberate network feature). Order: `ALBUM_ART`, `ART`, `DISPLAY_ICON`, then the URI keys.
+- **Do not put the Bitmap in the broadcast.** An `Intent` extra goes through Binder, whose per-transaction limit is about 1 MB, shared by all transactions in progress, and a large cover can throw `TransactionTooLargeException` or silently drop the update. Decode and **downscale in the service first** (for example to 256x256: `BitmapFactory` with `inSampleSize` from a bounds-only pass for URIs, `Bitmap.createScaledBitmap` for ready bitmaps), then hand it to the UI through an **in-process** holder: a `NowPlayingStore` singleton with a volatile snapshot (`title`, `artist`, `album`, `art`, `isPlaying`, `sourcePackage`, a monotonically increasing version) and a listener interface. The service and the Activity run in the same process (no `android:process` in the manifest), so no IPC is involved. The existing text broadcast may remain for compatibility but is no longer the data path. A 256x256 ARGB_8888 bitmap is 256 KB; keep exactly one current art and recycle the previous.
+- **Fallback chain** when a session has no art: the large icon of the media notification (the listener already sees posted notifications; `Notification.EXTRA_LARGE_ICON` bitmap on API 19+, `Notification.getLargeIcon()` as an `Icon` from API 23), then the source app's launcher icon via `controller.getPackageName()` (API 21) and `PackageManager.getApplicationIcon`, then a generic placeholder.
+- **Sources with no session or no art.** FM radio and any source that only emits a vendor broadcast (the existing `com.microntek.bt.music`, `com.goc.bluetooth.avrcp`, `com.ts.bt.track` receivers) have no art: show the source icon plus text (for radio: the frequency large, the station name if the broadcast has one). The vendor list of broadcast actions to listen for comes from the head-unit profile instead of a fixed list.
+- **CarPlay/ZLink and Bluetooth AVRCP.** Whether art is available depends on whether the dongle app or the unit's Bluetooth app publishes a `MediaSession` (then everything above works) or only a vendor broadcast (title/artist at best). AVRCP 1.4 cover art exists in the protocol but head-unit MCUs usually forward only text. This must be measured, not assumed (below).
+- **Controls and seek.** Transport buttons keep using the controller's `TransportControls` (API 21) when a session exists and fall back to the profile's media-key commands otherwise. Progress uses `PlaybackState.getPosition()` extrapolated with `getPlaybackSpeed()` and `getLastPositionUpdateTime()`.
+- **API 31+/33+.** `getActiveSessions` still requires notification-listener access. On Android 13 (API 33) a sideloaded APK cannot be granted notification access until the user allows "restricted settings" in App info; this matters for a USB-installed launcher on newer units and must be in the permissions step's copy (Audit 2). Android 13 also adds a media-notification-based path; none of this changes the code for the API 21-28 target.
+
+**Effort.** M. Art decode and holder are small; the fallback chain and race handling (art arriving after metadata, session changes) are the care points.
+
+**Dependencies.** Audit 1 MediaSyncService findings (P-xx TBD, for example listener lifetime and session switching). F-01 for the vendor action list. Notification access granted (the permissions step).
+
+**Risks.**
+- Memory pressure on a 1 GB unit: bounded by one 256 KB bitmap and off-main-thread decode.
+- Wrong session chosen when several are active (ZLink plus Bluetooth plus a leftover music player). Needs a defined priority: playing session first, then most recently changed.
+- Stale art after skipping a track whose new art loads later: version counter and "clear art on title change".
+- Sideloaded notification access on API 33+ as above.
+
+**Screen.** Audio (full art and controls), Home (compact tile).
+
+**Verify in the car.** For each of Spotify/local player on the unit, the Bluetooth music source, the ZLink CarPlay app and FM radio: does a `MediaSession` appear in `getActiveSessions`, and does it carry art or only text. Record this in the F-03 report so the catalog can state per head unit which sources have art.
+
+---
+
+### F-06 Automatic Day/Night theme
+
+**User value.** The cockpit palette is readable in bright sun and not blinding at night, without the driver touching it, and tunnels do not flip it back and forth.
+
+**How it works.**
+
+1. **Three modes in Settings: Auto (default), Day, Night.** A manual Day or Night **always wins** over everything below.
+2. **Auto decision order** (highest priority first):
+   1. Head-unit illumination signal, only if the profile's `illumination` block exists *and* the driver enabled "Follow headlights/illumination" in Settings. Vendor-specific (a `Settings.System` key or a broadcast from the MCU when the lights or backlight dimmer change); the catalog stores the key/action, and nothing is assumed. See Verify below.
+   2. **Sunrise/sunset computed offline** from the last GPS fix. The NOAA solar-position equations (or the equivalent simplified sunrise equation) need only latitude, longitude, the date and the time zone, and run in microseconds with no network. Night begins at civil twilight end or sunset (choose sunset plus a few minutes), day begins at sunrise. The location comes, in this order, from the current `GpsTelemetryManager` fix, then the last saved location (persist the last fix to `SharedPreferences` whenever the position moves more than a few kilometres), then the region's `defaultLatLon` from F-01, and if there is none:
+   3. **Clock fallback**: Night from 18:00 to 06:00.
+   Polar summer/winter (the equation returns no sunrise/sunset) also falls to the clock rule.
+3. **Hysteresis: 30 seconds.** A change of the computed state must hold for 30 s before applying, so a tunnel (GPS lost, or illumination briefly on) does not flip the theme. In a long tunnel the illumination signal could still hold past 30 s; the sun-based path is immune because it uses the last fix; the setting "Follow headlights" is therefore opt-in and documented.
+4. **Time source.** Head units without a SIM or Wi-Fi often have a wrong system clock. When the system year is obviously wrong (before the app's build year), derive the date and UTC time from `Location.getTime()` (GPS time) and the device time zone offset.
+5. **Applying the theme without losing place.** The accent is applied in code today (no Day/Night resources exist). The Day palette needs a full token set (surfaces, text, borders, status colours); the design-system proposal in progress must define Day values for each token. Two implementations are possible: (a) `AppCompatDelegate.setDefaultNightMode` plus `values-night` resources, which **recreates the Activity** on a change, or (b) swapping palette values at runtime and re-tinting views (the approach already used for the accent). Either way, the current tab is saved in `onSaveInstanceState` and restored, and the setup flow, the BT card dialog countdown and any playing UI state are preserved; the user must never be thrown back to Home because the sun set. Recommendation: (b) for the launcher (no flash, no recreate, which also avoids the audio-screen flicker); keep (a) only if the Day palette is expressed purely in resources.
+6. **Brightness.** The theme is not the backlight; backlight is the head unit's. Do not touch `Settings.System.SCREEN_BRIGHTNESS` (needs `WRITE_SETTINGS`); use `WindowManager.LayoutParams.screenBrightness` on the own window only if a "dim at night" option is added.
+7. **API 29+.** Android's own dark theme (`Configuration.UI_MODE_NIGHT_YES`, `AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM`) is available; on newer units "follow system" can be an extra mode, but head-unit ROMs rarely drive it, so it is not the default.
+
+**Effort.** M. The solar calculation is ~50 lines; the bulk is the Day palette and the safe re-theme.
+
+**Dependencies.** The Day tokens from the design system. F-01 (illumination block and `defaultLatLon`). `GpsTelemetryManager` for the fix (Audit 1 findings on GPS lifecycle, P-xx TBD).
+
+**Risks.**
+- Wrong clock or time zone gives wrong day/night. Mitigation: GPS time and the fallbacks above, and the manual override.
+- A Day palette that fails contrast at 1024x600 in sunlight; needs an on-device check.
+- Recreate during a call or while the settings dialog is open (if approach (a) is used).
+
+**Screen.** All; the control is in Settings.
+
+**Verify in the car.** (1) Whether the T3L exposes an illumination/headlight signal at all and under which key or broadcast name (capture with `adb shell settings list system`, `adb shell dumpsys activity broadcasts` before and after switching the headlights; community contributes the finding to the head-unit catalog). (2) Whether the system clock is correct at cold start with no network. (3) Whether GPS gets a fix in time for Auto to be right within a minute of start.
+
+---
+
+### F-07 First-run setup flow
+
+**User value.** A new install walks the driver through the few things that matter, in a sensible order, then never shows it again; each step can be skipped and resumed.
+
+**How it works.** This feature is the shell; Audit 2 owns the content and order (language/units, vehicle & head unit, driver phone, apps, permissions with a reason each). This audit contributes the mechanics:
+
+- A `SetupState` stored in `SharedPreferences`: current step, per-step status `pending/done/skipped`, and `completed`. It persists after every step so a process kill or `recreate()` resumes in the right place.
+- The shell is a single full-screen container inside `MainActivity` with a step indicator and a persistent "Skip this step" button; "Skip all" lands on Home with the Generic profile. Skipped steps surface as one dismissible card on Home ("2 setup steps skipped") and in Settings > Setup, where each can be run later.
+- F-02 is step 2 and writes the Vehicle Profile; the permission step requests location (for F-06, F-14 and GPS), notification-listener access for F-05 (with the Android 13 restricted-settings note), and Bluetooth, each with its own sentence.
+- Re-running: Settings > Setup > "Run setup again".
+
+**Effort.** S-M.
+
+**Dependencies.** Audit 2 (content and order). F-02, F-04 (driver phone), F-05 (notification access).
+
+**Risks.** Becoming a wall of screens (cap the flow at five short steps and keep every step skippable). Permission prompts differ by Android version; see the permissions step in Audit 2.
+
+**Screen.** First-run flow.
+
+**Verify in the car.** That a cold boot on the unit (where the launcher may start before Bluetooth and GPS are up) does not leave the flow in a half-state.
+
+---
+
+### F-08 Settings export/import to USB
+
+**User value.** Re-flashing the head unit, swapping the unit, or helping a friend with the same car: settings come back in one step.
+
+**How it works.** A single versioned JSON file `apexdrive-settings-v1.json` containing the preferences (accent, units, theme mode, CarPlay and navigation packages, auto-launch policy), the Vehicle Profile from F-01, and later the favourites (F-16), saved destinations (F-13) and driver profiles (F-23). The driver's Bluetooth address and any contact numbers are included only if the driver ticks "Include personal data" (default off), because the file lives on a USB stick.
+
+Writing and reading a file on removable storage on a head unit is the hard part:
+1. Prefer the Storage Access Framework (`Intent.ACTION_CREATE_DOCUMENT` / `ACTION_OPEN_DOCUMENT`, API 19+), no storage permission needed; but many head-unit ROMs ship without a DocumentsUI, so check `resolveActivity` first.
+2. Fallback: enumerate removable volumes with `getExternalFilesDirs(null)` (API 19+; returns an app-specific directory per volume, writable without a permission) and, for the default `targetSdk 28` path, scan `/storage/*` for mounted USB volumes with `WRITE_EXTERNAL_STORAGE`. The USB path varies by vendor (`/storage/usbotg`, `/mnt/usb_storage`, `/storage/<uuid>`); a "choose the stick" list shows what was found.
+3. Import validates `schema` (refuses newer), shows a diff summary (what will change), and applies atomically.
+
+API 30+ scoped storage makes path-scanning unavailable and SAF the main route; API 21-28 allows both.
+
+**Effort.** S-M (M if the USB scanning needs several vendor paths).
+
+**Dependencies.** F-01 for the profile section. Audit 2 for where Export/Import sits in Settings.
+
+**Risks.** Privacy of the file (above); importing a file for a different head unit (warn, offer "keep my current head-unit profile"); USB volumes not mounting at all on some units.
+
+**Screen.** Settings.
+
+**Verify in the car.** Whether a USB stick is visible to the app, at which path, and whether the SAF picker exists on the T3L ROM.
+
+---
+
+### F-09 In-app update check (GitHub Releases)
+
+**User value.** The driver is told a newer ApexDrive exists instead of never finding out; for open source this is how bug fixes reach cars.
+
+**How it works.** `GET https://api.github.com/repos/yvs1n/ApexDrive/releases/latest` over `HttpsURLConnection` (no library), parse `tag_name`, `html_url`, `body` and the APK asset `browser_download_url` with `org.json`. Compare against `BuildConfig.VERSION_NAME` using a simple semantic-version comparison. Run at most once a day and only when connected (`ConnectivityManager`, `ACCESS_NETWORK_STATE` already declared; `INTERNET` too). Unauthenticated GitHub API calls are rate-limited (60 per hour per IP), which is plenty at one a day; send a `User-Agent` and use `If-None-Match` (ETag) to be polite.
+
+Delivery: many head units have no internet, so the primary path is "download on a phone, copy to USB": the update card shows the version, the changelog text, and the release URL. Optional direct path: `DownloadManager` plus an `ACTION_VIEW` install intent for the APK; on API 24+ the file must be shared through a `FileProvider` and, from API 26, the app needs `REQUEST_INSTALL_PACKAGES`; on API 21-23 a `file://` URI works. Verify the download against the release's SHA-256 if the release notes publish one (a small convention to adopt in the release workflow). Nothing is installed without the driver's tap, and the check is a Settings toggle (on by default but disclosed in first run).
+
+**Effort.** S for check and notify; M with in-app install.
+
+**Dependencies.** A release process that tags versions and attaches an APK (the CI currently produces an artifact on push, not a Release; the release workflow is part of v1.0). Audit 1 findings on signing and version numbering (P-xx TBD).
+
+**Risks.**
+- Debug-signed APKs: an update must be signed with the same key as the installed one or Android refuses it. Today CI builds `app-debug.apk`; releases must use a stable signing key (a release-engineering item for Audit 1).
+- TLS on old ROMs: API 21 supports TLS 1.2 but an old CA store or a wrong clock can fail the handshake; the check must fail silently and quietly.
+- Trust: the check discloses the IP address to GitHub; state it in Settings.
+
+**Screen.** Settings (and a small badge on Home).
+
+**Verify in the car.** Whether the unit has internet at all and whether HTTPS to `api.github.com` succeeds given its clock and CA store.
+
+---
+
+### F-10 Crash and log export to USB
+
+**User value.** When the launcher misbehaves in a car, the driver or a contributor can hand over a log instead of "it just crashed", which is the difference between a fixable issue and a lost one in an open-source project.
+
+**How it works.** A `Thread.setDefaultUncaughtExceptionHandler` that writes the stack trace, app version, `Build.*`, the profile ids (no personal data) and the last ~200 lines of the app's own log to a rotating file in internal storage (a few files, size-capped), then rethrows to the previous handler. For ordinary logs, `Runtime.exec("logcat -d -t 500")` returns only the app's own process lines on API 16+ (no `READ_LOGS` permission needed; the app cannot read other apps' logs on those versions), enough for support. Export reuses F-08's USB writer; "Copy report" shows a short path and a one-line GitHub new-issue hint. A "Share on your phone" route is not possible without a network, so USB is the path. The log must be scrubbed: no device addresses or contact numbers unless "include personal data" is ticked.
+
+**Effort.** S.
+
+**Dependencies.** F-08 writer. Audit 1 (logging hygiene, P-xx TBD).
+
+**Risks.** Logs may contain the driver's Bluetooth device names; scrub or tick-gate. Handler loops on crash-on-startup: write once and set a "last crash" flag so Settings can show "ApexDrive crashed last time, export log?".
+
+**Screen.** Settings.
+
+**Verify in the car.** That a deliberate crash writes the file on the unit's flash and that the USB export finds the stick (shared with F-08).
+
+---
+
+## Tier 2 — Daily usefulness
+
+_(next commit)_
+
+## Tier 3 — Vehicle integration
+
+_(next commit)_
+
+## Tier 4 — Polish
+
+_(next commit)_
+
+## Release sequence and summary
+
+_(next commit)_
