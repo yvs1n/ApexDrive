@@ -591,7 +591,111 @@ Widgets are only available when the installed apps provide any; a head-unit ROM 
 
 ## Tier 3 — Vehicle integration
 
-_(next commit)_
+The launcher starts to know the car itself. Everything in this tier is more hardware-dependent than tiers 1-2 and ships behind explicit opt-in.
+
+### F-19 OBD-II over a Bluetooth ELM327 adapter
+
+**User value.** Real coolant temperature, RPM, battery voltage, fuel level, engine load and fault codes on Home, read from the car's diagnostic port, independent of the head unit's CAN decoder box.
+
+**How it works.** An ELM327 dongle is a serial device. Over Bluetooth Classic it is an SPP (RFCOMM) endpoint: `BluetoothDevice.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"))`, `connect()` on a background thread, then ASCII text over the socket's streams. A minimal session: `ATZ` (reset), `ATE0` (echo off), `ATL0`, `ATS0`, `ATH0`, `ATSP0` (automatic protocol), then Mode 01 PIDs polled round-robin at a modest rate: `010C` RPM = (256*A+B)/4, `010D` speed = A km/h, `0105` coolant = A-40 °C, `0104` engine load = A*100/255 %, `012F` fuel level = A*100/255 % (not all cars support it), `0142` control-module voltage = (256*A+B)/1000 V. Supported PIDs are discovered with `0100`, `0120`, ... (bitmasks). Mode 03 reads stored fault codes and Mode 04 clears them (clear behind a confirmation; never run silently). Every response must be tolerant: `NO DATA`, `SEARCHING...`, `UNABLE TO CONNECT`, `?`, and echoed prompts (`>`) occur.
+
+**The key hardware question.** The head unit's Bluetooth may be an MCU/UART link (`AGENT_HANDOFF.md` section 4A), in which case the Android Bluetooth stack may not be able to open an RFCOMM socket to a third-party device at all (the adapter may be absent or only used for profiles). Alternatives: a **Wi-Fi ELM327** (TCP to the dongle's address, commonly `192.168.0.10:35000`; the unit's Wi-Fi is often busy with the CarPlay wireless bridge, so this may not be possible at the same time); or a **USB** OBD adapter (needs a USB-serial driver, which would mean a third-party library, so it is out of scope). The head-unit profile's `bluetooth.androidStackReliable` (F-01) decides whether the feature is offered.
+
+API notes: `BLUETOOTH`/`BLUETOOTH_ADMIN` are already declared; from API 31 `BLUETOOTH_CONNECT`/`BLUETOOTH_SCAN` replace them (not needed on API 21-28). From API 23 discovery needs a location permission, already held. Pairing an ELM327 usually uses PIN 1234 or 0000, which the app can try only through the system pairing dialog; a head unit whose settings app owns pairing may need the adapter paired there.
+
+**Effort.** L (parser, PID table, connection lifecycle, reconnect, UI).
+
+**Dependencies.** F-01 (is Android Bluetooth trustworthy on this unit); F-15 (trip fuel); F-21 (maintenance by odometer).
+
+**Risks.**
+- Cheap ELM327 clones return wrong or truncated data and can wedge the vehicle's diagnostic bus in rare cases; polling must be conservative, never write anything except Mode 04 on explicit request.
+- An always-connected adapter drains the car battery on some vehicles; document unplugging, and disconnect when the screen is off.
+- Safety and warranty: never display fault codes in a way that suggests it is safe to drive; keep clearing a deliberate action.
+- Bluetooth contention: A2DP/HFP to the phone plus an RFCOMM link to the dongle may overload an MCU or a weak Bluetooth chip.
+
+**Screen.** Home (gauges) and a Diagnostics page in Settings.
+
+**Verify in the car.** Can the head-unit's Android stack open an RFCOMM connection to an ELM327 at all; which protocol the Hyundai uses (ISO 15765-4 CAN is typical on this generation of Santa Fe, but verify) and which PIDs it answers; whether simultaneous phone audio and OBD stay stable.
+
+---
+
+### F-20 CAN-bus data (vehicle data the head unit already has)
+
+**User value.** Door-open warnings, reverse and handbrake state, outside temperature, steering angle, and sometimes vehicle speed or fuel level, with no extra dongle.
+
+**How it works.** Aftermarket units connect to the car's CAN bus through a decoder box ("CANbus: Simple Soft (XP), Hyundai/Kia profile" in the existing factory-settings dialog). The decoded data is held by the vendor's own service; the Android side sees it only if the vendor exposes it through broadcasts, `Settings.System`/properties, or a proprietary service. There is no standard Android API for it. The existing `CarThermometerWatcher` is a small example of this pattern (ambient temperature read from vendor channels). So: the head-unit catalog (F-01) gains a `canbus` section listing, per field, the channel type and name (broadcast action and extra keys, or `Settings.System` key), with a `verified` state like every other entry. The launcher reads only the channels listed for the selected head unit, which replaces the current probe-everything approach.
+
+Contributors discover channels on a PC: `adb shell dumpsys activity broadcasts` while opening a door, `adb shell settings list system` before and after, `adb shell getprop`. F-03's report can include a "watch these keys for changes" mode that lists any `Settings.System` values that change while the driver opens a door, so contributors do not need a PC (reading `Settings.System` needs no permission; arbitrary other apps' broadcasts cannot be enumerated).
+
+**Effort.** M per head-unit family (L overall, mostly community-driven).
+
+**Dependencies.** F-01, F-03; F-19 as the dongle alternative where the vendor does not expose anything. Audit 1 §G (P-xx TBD) for the existing thermometer probing.
+
+**Risks.** Fragile: vendor firmware updates change keys; wrong decoding shows false data (a "door open" warning that never clears); anything safety-related must be shown as informational only.
+
+**Screen.** Home (warnings and gauges).
+
+**Verify in the car.** The whole feature: which fields the T3L exposes for the Hyundai profile and under what names.
+
+---
+
+### F-21 Fuel and maintenance log
+
+**User value.** Fill-ups, fuel economy and service reminders (oil, tyres, insurance and registration dates) without a separate app.
+
+**How it works.** Local storage (SQLite via `SQLiteOpenHelper`). A fill-up entry: date, odometer (typed or suggested from the F-15 trip total plus the last known odometer; OBD odometer is not standardised, so do not assume it), litres/gallons and price, "full tank" flag. Fuel economy is computed full-to-full. Service reminders are rules (every N km or N months) evaluated at start and shown as a Home card. Units and currency from the Vehicle Profile/region (F-01). Entry is parked-only (like F-03) and large-target; the primary entry path is realistically voice or phone, which is out of scope, so keep the form to a few numeric fields. Export through F-08.
+
+**Effort.** M.
+
+**Dependencies.** F-01 (units), F-15 (distance), F-08 (backup).
+
+**Risks.** A data-entry feature on a car screen is only useful if entry is very quick; without good defaults it will go unused. No network backup means a re-flash loses the log unless it is exported.
+
+**Screen.** Settings > Vehicle (log), Home (reminder card).
+
+**Verify in the car.** Nothing hardware-specific; test on-screen entry ergonomics while parked.
+
+---
+
+### F-22 Steering-wheel key mapping
+
+**User value.** The wheel buttons do what the driver wants (next track, voice, launch navigation, answer), including on units where the factory mapping is poor.
+
+**How it works.** The unit's MCU turns the resistor-ladder button presses into Android key events (media keys, volume) or into vendor broadcasts, depending on the ROM; the factory-settings screen has a "learn keys" function on many units. A launcher only sees key events while it has focus (`Activity.onKeyDown`/`dispatchKeyEvent`). For global handling, use an `AccessibilityService` that requests `FLAG_REQUEST_FILTER_KEY_EVENTS` (API 18+) and implements `onKeyEvent`, which sees key events regardless of the foreground app and can consume them. The service is enabled by the user in Accessibility settings (and on Android 13 sideloaded apps need "restricted settings" allowed first). A "learn" mode records the next `KeyEvent` (`keyCode`, `scanCode`) and binds it to an action from a list: media controls (through the F-05 controller), launch an app, open CarPlay, voice (F-24), or "nothing". Actions that arrive as vendor broadcasts instead of key events are caught by registering the profile's key-broadcast actions (F-01).
+
+**Effort.** L.
+
+**Dependencies.** F-01/F-03 (which key path the unit uses); the accessibility permission step in Audit 2; F-24.
+
+**Risks.**
+- Accessibility services have a heavy privacy implication; keep the service minimal (key events only, `canRetrieveWindowContent=false`) and say so plainly. Some app stores restrict this permission, but this is sideloaded.
+- Conflicts with the unit's own key handling (double actions). Mitigation: consume mapped keys, let others through.
+- Not every wheel button produces an Android event at all.
+
+**Screen.** Settings > Steering wheel.
+
+**Verify in the car.** Which events each button produces (`keyCode`/`scanCode` or broadcast) on the T3L, and whether the service sees them while CarPlay is in front.
+
+---
+
+### F-23 Per-driver profiles tied to each phone
+
+**User value.** When the second driver's phone connects, the launcher switches to their accent colour, favourites, home destinations and preferred apps.
+
+**How it works.** A driver profile is keyed by the paired phone's Bluetooth address (the existing selected-driver-device concept in `PreferenceHelper`, widened from one value to a list): `{id, name, deviceAddress, accent, favouriteContacts, savedDestinations, carplayPackage, autoLaunchPolicy}`. F-04's detection result selects the active profile; an unknown device offers "Create a profile for this phone" (parked only) or "Use default". Vehicle and head-unit settings are not per driver. F-08 exports the profiles (addresses and numbers only with the personal-data toggle).
+
+**Effort.** M.
+
+**Dependencies.** F-04 (identity), F-13, F-16, F-08, Audit 2 (driver-phone step becomes "add the first driver").
+
+**Risks.** Misidentifying the driver when two phones are in range (then the launcher must wait for the audio-connected one, not merely paired); storing Bluetooth addresses of personal devices; profile sprawl.
+
+**Screen.** Settings > Drivers; Phone (Connect) shows the active driver.
+
+**Verify in the car.** Whether the unit reports which of two phones holds the audio/HFP link, and how fast.
+
+---
+
 
 ## Tier 4 — Polish
 
