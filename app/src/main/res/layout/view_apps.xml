@@ -3,55 +3,44 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="@dimen/ad_shell_inset">
 
-    <!-- Top Apps Header with Live Filter Search -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="44dp"
+        android:layout_height="@dimen/ad_target"
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
         <TextView
             android:id="@+id/tvInstalledAppsTitle"
+            style="@style/TextAppearance.ApexDrive.Title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Installed vehicle apps"
-            android:textColor="@color/cockpit_text_primary"
-            android:textSize="20sp"
-            android:fontFamily="@font/atkinson_next_semibold" />
+            android:text="Apps" />
 
         <EditText
             android:id="@+id/etSearchApps"
-            android:layout_width="260dp"
-            android:layout_height="44dp"
-            android:background="@drawable/bg_panel"
-            android:hint="Search apps..."
-            android:textColorHint="@color/cockpit_text_secondary"
-            android:textColor="@color/cockpit_text_primary"
-            android:textSize="20sp"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
+            style="@style/TextAppearance.ApexDrive.Body"
+            android:layout_width="320dp"
+            android:layout_height="@dimen/ad_target"
+            android:background="@drawable/bg_card_inner"
+            android:hint="Search apps"
+            android:textColorHint="@color/ad_label_3"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
             android:maxLines="1"
             android:inputType="text" />
     </LinearLayout>
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="12dp"
-        android:background="@color/cockpit_surface_border_subtle" />
-
-    <!-- Apps Grid View -->
     <GridView
         android:id="@+id/gvApps"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_marginTop="@dimen/ad_tile_gap"
         android:numColumns="5"
-        android:horizontalSpacing="12dp"
-        android:verticalSpacing="12dp"
+        android:horizontalSpacing="8dp"
+        android:verticalSpacing="8dp"
         android:stretchMode="columnWidth"
         android:gravity="center" />
 

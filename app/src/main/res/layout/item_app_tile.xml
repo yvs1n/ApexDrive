@@ -1,38 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="106dp"
+    android:layout_height="136dp"
     android:orientation="vertical"
     android:gravity="center"
-    android:padding="4dp">
+    android:padding="8dp"
+    android:background="@drawable/ad_bg_rail_item">
 
-    <!-- Apple/Swiss Continuous Squircle Icon Container (64dp x 64dp) -->
     <FrameLayout
-        android:layout_width="64dp"
-        android:layout_height="64dp"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
         android:background="@drawable/bg_squircle"
-        android:padding="9dp">
+        android:padding="10dp">
 
         <ImageView
             android:id="@+id/ivAppIcon"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scaleType="fitCenter"
-            android:contentDescription="App Icon" />
+            android:importantForAccessibility="no" />
     </FrameLayout>
 
-    <!-- App Name Label (Optical Sizing: 12sp, Swiss medium, crisp) -->
     <TextView
         android:id="@+id/tvAppName"
+        style="@style/TextAppearance.ApexDrive.Body"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:maxWidth="92dp"
+        android:layout_marginTop="8dp"
+        android:maxWidth="160dp"
         android:ellipsize="end"
         android:maxLines="1"
-        android:gravity="center"
-        android:textColor="@color/cockpit_text_primary"
-        android:textSize="20sp"
-        android:fontFamily="@font/atkinson_next_medium" />
+        android:gravity="center" />
 
 </LinearLayout>
