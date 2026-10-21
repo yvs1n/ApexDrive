@@ -12,7 +12,7 @@ Status: proposal. Documentation only, no code changes. Companion documents: Audi
 
 **Cross-references.** Bugs are not repeated here; they are cited as Audit 1 IDs (`P-xx`). Where a feature is only sound after a bug is fixed, the dependency says so. Audit 1 section G (vehicle and head-unit assumptions) is the reason F-01 to F-03 exist.
 
-> Cross-reference status: Audit 1 has not yet sent its section G ID list. Until it does, references read "Audit 1 §G" without a number and are marked `(P-xx TBD)`. This is to be replaced by real IDs before merge.
+> Cross-references: Audit 1 section G is P-72 to P-81 (P-72 car identity, P-73 personal data, P-74 factory PIN and CAN dialog, P-75 region/language, P-76 vendor broadcast shotgun, P-77 guessed vendor keys, P-78 mis-assigned package lists, P-79 1024x600-only layouts, P-80 replaceable HOME and no capability probe, P-81 single-unit testing). Related: P-04 (BT false positives), P-06 (dead auto-connect), P-14 (notification access UI), P-38 (location consent), P-54 (crash loop as HOME). Audit 1 section G.3 proposes a `HeadUnitProfile` (vendor stack) separate from a `VehicleProfile` (labels, CAN, region); F-01 follows that split: its `headunits/` catalog is the HeadUnitProfile, `vehicles/` plus `regions/` are the VehicleProfile, and the make/model selector (F-02) fills the latter.
 
 **What is hard-coded today** (from `origin/main` at `6b31f21`, this is the starting point for F-01):
 
@@ -152,7 +152,7 @@ No index file is needed: `AssetManager.list("profiles/vehicles")` enumerates the
 
 **Effort.** M. Catalog schema, loader, validator and replacing the strings is straightforward; the careful work is collapsing the existing shotgun broadcasts without losing coverage on the owner's own unit, which F-03 provides the evidence for.
 
-**Dependencies.** Resolves Audit 1 §G (P-xx TBD) in full: it is the data layer for removing the Santa Fe/UAE/shotgun assumptions. F-02 and F-03 are its UI. Audit 2 onboarding step "vehicle & head unit".
+**Dependencies.** Resolves Audit 1 P-72 to P-78 and P-80/P-81 in full (P-79 is a layout issue outside this audit): it is the data layer for removing the Santa Fe/UAE/shotgun assumptions. F-02 and F-03 are its UI. Audit 2 onboarding step "vehicle & head unit".
 
 **Risks.**
 - Profile bloat and unverified entries giving false confidence. Mitigation: the `verified` field is shown in the confirm screen ("Community-verified" / "Not yet verified on a real car") and unverified units default to the Test screen being offered.
@@ -195,7 +195,7 @@ Changing it later: Settings has a "Vehicle & head unit" row showing the current 
 
 **Effort.** M. The UI is simple lists; head-unit detection and the confirm logic are a little work; most effort is shared with F-01.
 
-**Dependencies.** F-01 (data). Audit 2 first-run onboarding (order and shell; F-07). F-03 for the optional test. Audit 1 §G (P-xx TBD).
+**Dependencies.** F-01 (data). Audit 2 first-run onboarding (order and shell; F-07). F-03 for the optional test. Audit 1 P-72, P-75, P-80.
 
 **Risks.**
 - Wrong head-unit pick leads to commands that do nothing. Mitigation: pre-selection, the verified badge, F-03, and the capability gating of buttons.
@@ -233,7 +233,7 @@ Output: "Copy report" writes a JSON/Markdown report to USB (F-08 writer) with mo
 
 **Effort.** M. A list screen and a result store; the value is in having F-01's dispatcher in place first.
 
-**Dependencies.** F-01. F-08 file writer for the report. Audit 1 §G (P-xx TBD) for why the shotgun must go.
+**Dependencies.** F-01. F-08 file writer for the report. Audit 1 P-76, P-77, P-80 for why the shotgun must go.
 
 **Risks.**
 - A test broadcast can have side effects on a poorly understood unit (for example a "power" action that switches the radio hardware off). Mitigation: a short warning, no automatic tests, the Factory screen not tested by default.
@@ -260,7 +260,7 @@ Output: "Copy report" writes a JSON/Markdown report to USB (F-08 writer) with mo
 
 **Effort.** M. The engine exists; the work is the state machine, the policy and the per-device scoping.
 
-**Dependencies.** Audit 1 BT-detection findings (P-xx TBD) must be fixed first; F-01 (profile channels and launch lists); the driver-phone step of the first-run flow (Audit 2); F-23 (per-driver) later reuses the per-device key.
+**Dependencies.** Audit 1 findings P-04 (false positives) and P-06 (dead auto-connect) must be fixed first; F-01 (profile channels and launch lists); the driver-phone step of the first-run flow (Audit 2); F-23 (per-driver) later reuses the per-device key.
 
 **Risks.**
 - Surprising the driver: launching an app they did not ask for is intrusive. Mitigation: off by default, visible Ask mode, once per cycle.
@@ -291,7 +291,7 @@ Today `MediaSyncService` (a `NotificationListenerService`, needed so `MediaSessi
 
 **Effort.** M. Art decode and holder are small; the fallback chain and race handling (art arriving after metadata, session changes) are the care points.
 
-**Dependencies.** Audit 1 MediaSyncService findings (P-xx TBD, for example listener lifetime and session switching). F-01 for the vendor action list. Notification access granted (the permissions step).
+**Dependencies.** Audit 1 P-14 (notification access UI) and any MediaSyncService lifecycle findings. F-01 for the vendor action list. Notification access granted (the permissions step).
 
 **Risks.**
 - Memory pressure on a 1 GB unit: bounded by one 256 KB bitmap and off-main-thread decode.
@@ -325,7 +325,7 @@ Today `MediaSyncService` (a `NotificationListenerService`, needed so `MediaSessi
 
 **Effort.** M. The solar calculation is ~50 lines; the bulk is the Day palette and the safe re-theme.
 
-**Dependencies.** The Day tokens from the design system. F-01 (illumination block and `defaultLatLon`). `GpsTelemetryManager` for the fix (Audit 1 findings on GPS lifecycle, P-xx TBD).
+**Dependencies.** The Day tokens from the design system. F-01 (illumination block and `defaultLatLon`). `GpsTelemetryManager` for the fix (Audit 1 GPS lifecycle findings, if any, and P-38 for location consent).
 
 **Risks.**
 - Wrong clock or time zone gives wrong day/night. Mitigation: GPS time and the fallbacks above, and the manual override.
@@ -396,7 +396,7 @@ Delivery: many head units have no internet, so the primary path is "download on 
 
 **Effort.** S for check and notify; M with in-app install.
 
-**Dependencies.** A release process that tags versions and attaches an APK (the CI currently produces an artifact on push, not a Release; the release workflow is part of v1.0). Audit 1 findings on signing and version numbering (P-xx TBD).
+**Dependencies.** A release process that tags versions and attaches an APK (the CI currently produces an artifact on push, not a Release; the release workflow is part of v1.0). Audit 1 release/signing findings (no ID cited here; see Audit 1)..
 
 **Risks.**
 - Debug-signed APKs: an update must be signed with the same key as the installed one or Android refuses it. Today CI builds `app-debug.apk`; releases must use a stable signing key (a release-engineering item for Audit 1).
@@ -417,7 +417,7 @@ Delivery: many head units have no internet, so the primary path is "download on 
 
 **Effort.** S.
 
-**Dependencies.** F-08 writer. Audit 1 (logging hygiene, P-xx TBD).
+**Dependencies.** F-08 writer. P-73 (personal data in the codebase and logs) and P-54 (crash loop as HOME, which the crash flag in this feature also helps with).
 
 **Risks.** Logs may contain the driver's Bluetooth device names; scrub or tick-gate. Handler loops on crash-on-startup: write once and set a "last crash" flag so Settings can show "ApexDrive crashed last time, export log?".
 
@@ -443,7 +443,7 @@ API 30+ package visibility: on Android 11+ binding to another package needs `<qu
 
 **Effort.** M.
 
-**Dependencies.** OsmAnd installed and the AIDL service available; F-01 (navigation package from the profile, region map hint). Audit 1 (service lifecycle findings, P-xx TBD).
+**Dependencies.** OsmAnd installed and the AIDL service available; F-01 (navigation package from the profile, region map hint)..
 
 **Risks.** OsmAnd API drift between versions; OsmAnd's own power-saving killing the bound service; the head unit's low RAM killing OsmAnd in the background (Android will; a head unit with 1 GB may not keep both alive). Treat as optional and degrade quietly.
 
@@ -465,7 +465,7 @@ API 30+ package visibility: on Android 11+ binding to another package needs `<qu
 
 **Effort.** M (camera alerts), S (manual threshold).
 
-**Dependencies.** F-01 region catalog; GPS lifecycle (Audit 1 GPS findings, P-xx TBD); F-11 if OsmAnd reports limits.
+**Dependencies.** F-01 region catalog; GPS lifecycle (Audit 1 GPS findings; P-38 location consent); F-11 if OsmAnd reports limits.
 
 **Risks.** Stale data causing false alerts; legal exposure per country (above); GPS jitter near the camera; alert fatigue.
 
@@ -503,7 +503,7 @@ Reverse geocoding (`android.location.Geocoder`) needs a backend service that hea
 
 **Effort.** S.
 
-**Dependencies.** GPS lifecycle fixes (Audit 1 GPS findings, P-xx TBD), F-13, optionally F-01 ignition action.
+**Dependencies.** GPS lifecycle fixes (Audit 1 GPS findings; P-38 location consent), F-13, optionally F-01 ignition action.
 
 **Risks.** Flash wear from frequent writes (use `apply()` at a modest interval and write only when the position changed); a GPS fix that was stale when ACC went off (store accuracy and age and show "approximate").
 
@@ -519,11 +519,11 @@ Reverse geocoding (`android.location.Geocoder`) needs a backend service that hea
 
 **How it works.** `GpsTelemetryManager` already computes speed smoothing and trip distance. Add a trip recorder: a trip starts when speed rises above ~5 km/h and ends after about 5 minutes below ~3 km/h (or on a vendor ignition-off action if the profile has one); on end, one row is written to a small SQLite table via `SQLiteOpenHelper` (id, start, end, distance, moving time, max speed, average speed, optionally start/end coordinates). A screen lists trips with totals; "reset" becomes "start a new trip counter" without deleting history. Distance uses the sum of fix-to-fix distances (`Location.distanceTo`) with a minimum-accuracy and minimum-step filter to avoid creeping while parked.
 
-Units come from the Vehicle Profile (`units.distance`, `units.speed`), not a hard-coded km/h, which also removes any hard-coded unit assumption flagged in Audit 1 (P-xx TBD). If the OBD-II feature (F-19) is present, fuel use per trip is added.
+Units come from the Vehicle Profile (`units.distance`, `units.speed`), not a hard-coded km/h, which also removes any hard-coded unit assumption flagged in Audit 1 (P-75). If the OBD-II feature (F-19) is present, fuel use per trip is added.
 
 **Effort.** M.
 
-**Dependencies.** GPS lifecycle and units fixes (Audit 1, P-xx TBD); F-01 units; F-19 optionally.
+**Dependencies.** GPS lifecycle and units fixes (Audit 1 P-75, P-38); F-01 units; F-19 optionally.
 
 **Risks.** GPS drift counting phantom distance; trips split across tunnel gaps (apply a merge window); unbounded table growth (cap at, for example, the last 1000 trips with an export through F-08).
 
@@ -629,7 +629,7 @@ Contributors discover channels on a PC: `adb shell dumpsys activity broadcasts` 
 
 **Effort.** M per head-unit family (L overall, mostly community-driven).
 
-**Dependencies.** F-01, F-03; F-19 as the dongle alternative where the vendor does not expose anything. Audit 1 §G (P-xx TBD) for the existing thermometer probing.
+**Dependencies.** F-01, F-03; F-19 as the dongle alternative where the vendor does not expose anything. Audit 1 P-77 for the existing thermometer probing.
 
 **Risks.** Fragile: vendor firmware updates change keys; wrong decoding shows false data (a "door open" warning that never clears); anything safety-related must be shown as informational only.
 
@@ -757,7 +757,7 @@ Contributors discover channels on a PC: `adb shell dumpsys activity broadcasts` 
 
 **User value.** The launcher in the driver's own language; Arabic is a first-class case for the owner's region.
 
-**How it works.** Move every user-visible string out of Java and layouts into `strings.xml` (many labels like `RECENTS`, `LAUNCH ANYWAY` and the dialogs are hard-coded today, which is also an Audit 1 / Audit 2 topic, P-xx TBD), add `values-ar` and a few others, declare `android:supportsRtl="true"` (API 17+) in the manifest, and convert `left/right` attributes to `start/end` (`marginStart`, `paddingEnd`, `layout_gravity="start"`) so layouts mirror. Icons with direction (back arrows, next-turn arrows) need `autoMirrored` or per-direction assets; media transport controls conventionally do not mirror. Numbers: choose between Western and Arabic-Indic digits as a setting (`NumberFormat` with a locale). Language is picked in the first run (Audit 2's "language/units" step) and applied through a per-app `Configuration` override (`createConfigurationContext`, API 17+) because API 21-32 has no per-app language setting (API 33 adds `LocaleManager`/`AppCompatDelegate.setApplicationLocales` for an official path). Fonts: verify that the display font in the design system has Arabic glyphs, otherwise fall back to a system font for Arabic.
+**How it works.** Move every user-visible string out of Java and layouts into `strings.xml` (many labels like `RECENTS`, `LAUNCH ANYWAY` and the dialogs are hard-coded today, which is also an Audit 1 P-75 and Audit 2 topic), add `values-ar` and a few others, declare `android:supportsRtl="true"` (API 17+) in the manifest, and convert `left/right` attributes to `start/end` (`marginStart`, `paddingEnd`, `layout_gravity="start"`) so layouts mirror. Icons with direction (back arrows, next-turn arrows) need `autoMirrored` or per-direction assets; media transport controls conventionally do not mirror. Numbers: choose between Western and Arabic-Indic digits as a setting (`NumberFormat` with a locale). Language is picked in the first run (Audit 2's "language/units" step) and applied through a per-app `Configuration` override (`createConfigurationContext`, API 17+) because API 21-32 has no per-app language setting (API 33 adds `LocaleManager`/`AppCompatDelegate.setApplicationLocales` for an official path). Fonts: verify that the display font in the design system has Arabic glyphs, otherwise fall back to a system font for Arabic.
 
 **Effort.** M (string extraction is the bulk), plus per-language translation.
 
@@ -792,7 +792,7 @@ Contributors discover channels on a PC: `adb shell dumpsys activity broadcasts` 
 
 ### How F-01 to F-03 relate to the other audits
 
-- **Audit 1 §G (vehicle and head-unit assumptions, P-xx TBD).** Audit 1 lists the assumptions as defects (Santa Fe text, `SantafemR`, UAE map text, vendor broadcasts sent to every vendor, probing every vendor's properties). F-01 is the single fix for that whole group: the assumptions become data in a Vehicle Profile and the shotgun becomes a per-head-unit command list. Audit 1 should keep its findings as the defect record and point to F-01 as the remedy; this audit does not repeat them. Reverting any of them without F-01 would leave the launcher correct only for the owner's car.
+- **Audit 1 §G (vehicle and head-unit assumptions, P-72 to P-81).** Audit 1 lists the assumptions as defects (Santa Fe text, `SantafemR`, UAE map text, vendor broadcasts sent to every vendor, probing every vendor's properties). F-01 is the single fix for that whole group: the assumptions become data in a Vehicle Profile and the shotgun becomes a per-head-unit command list. Audit 1 should keep its findings as the defect record and point to F-01 as the remedy; this audit does not repeat them. Reverting any of them without F-01 would leave the launcher correct only for the owner's car.
 - **Audit 2 first-run onboarding.** Order: language/units, then vehicle and head unit (F-02), then driver phone, then apps, then permissions with a reason each. F-07 provides the resumable shell; F-02 fills step 2; F-03 is an optional sub-step of step 2 and a permanent entry in Settings. Audit 2 owns copy, layout and the permission wording (including the Android 13 restricted-settings note for notification access and accessibility).
 - **The design system.** Day/Night (F-06) needs Day tokens, F-02 needs tile and list components, F-17 needs slot layouts; these are requirements on the design-system proposal rather than work inside this audit.
 
@@ -847,7 +847,7 @@ Value = benefit to a typical driver (H/M/L); effort S ≈ days, M ≈ 1-2 weeks,
 
 ### Open questions
 
-1. Audit 1 section G IDs: references marked `(P-xx TBD)` throughout are to be replaced once audit1 sends them.
+1. Audit 1 IDs for GPS lifecycle, release signing and MediaSyncService lifecycle are not cited by number because audit1 sent only section G and related IDs; add them if they exist.
 2. Which Hyundai/Kia models and head-unit families are worth shipping in the first catalog beyond the owner's own, and who maintains each (a `maintainers` field per catalog file is suggested).
 3. Whether the project wants camera alerts at all given the legal variation (F-12), or only the manual threshold.
 4. Release signing: who holds the key (F-09, v1.0 release workflow).
