@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Album art placeholder: surface-2, control radius. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle"><corners android:radius="@dimen/ad_radius_control" /><solid android:color="@color/ad_surface_2" /></shape>

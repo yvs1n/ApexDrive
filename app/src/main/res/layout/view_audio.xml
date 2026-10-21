@@ -1,190 +1,246 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Audio (Audit 2, section 5.4), built from design-system tiles: now playing + sources, and the radio tile. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="horizontal"
-    android:padding="16dp">
+    android:orientation="horizontal">
 
-    <!-- Source Selector Rail -->
-    <LinearLayout
-        android:layout_width="220dp"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:background="@drawable/bg_panel"
-        android:padding="10dp">
-
-        <Button
-            android:id="@+id/btnSrcRadio"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:background="@drawable/bg_elevated_btn"
-        android:textAllCaps="false"
-            android:text="01  FM radio tuner"
-            android:textColor="@color/ad_accent_text"
-            android:textSize="20sp"
-            android:fontFamily="@font/atkinson_next_semibold"
-            android:gravity="start|center_vertical"
-            android:paddingStart="20dp" />
-
-        <Button
-            android:id="@+id/btnSrcSpotify"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/bg_elevated_btn"
-        android:textAllCaps="false"
-            android:text="02  Spotify audio"
-            android:textColor="@color/cockpit_text_primary"
-            android:textSize="20sp"
-            android:fontFamily="@font/atkinson_next_semibold"
-            android:gravity="start|center_vertical"
-            android:paddingStart="20dp" />
-
-        <Button
-            android:id="@+id/btnSrcBluetooth"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/bg_elevated_btn"
-        android:textAllCaps="false"
-            android:text="03  Bluetooth stream"
-            android:textColor="@color/cockpit_text_primary"
-            android:textSize="20sp"
-            android:fontFamily="@font/atkinson_next_semibold"
-            android:gravity="start|center_vertical"
-            android:paddingStart="20dp" />
-
-        <Button
-            android:id="@+id/btnSrcUsb"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/bg_elevated_btn"
-        android:textAllCaps="false"
-            android:text="04  USB media"
-            android:textColor="@color/cockpit_text_primary"
-            android:textSize="20sp"
-            android:fontFamily="@font/atkinson_next_semibold"
-            android:gravity="start|center_vertical"
-            android:paddingStart="20dp" />
-
-    </LinearLayout>
-
-    <View
-        android:layout_width="12dp"
-        android:layout_height="match_parent" />
-
-    <!-- Radio / Audio Tuner Panel -->
+    <!-- Now playing -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_weight="1"
+        android:layout_weight="544"
         android:orientation="vertical"
-        android:background="@drawable/bg_panel"
-        android:padding="20dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/tvAudioActiveSource"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Fm radio tuner (si473x ic)"
-                android:textColor="@color/cockpit_text_secondary"
-                android:textSize="20sp"
-                android:fontFamily="@font/atkinson_next_semibold" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
-
-            <TextView
-                android:id="@+id/tvAudioPresetBadge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Preset 01"
-                android:textColor="@color/ad_accent_text"
-                android:textSize="20sp"
-                android:fontFamily="@font/atkinson_next_semibold" />
-        </LinearLayout>
+        android:padding="@dimen/ad_tile_padding"
+        android:elevation="2dp"
+        android:background="@drawable/ad_bg_tile">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="horizontal">
+
+            <FrameLayout
+                android:layout_width="248dp"
+                android:layout_height="248dp"
+                android:background="@drawable/ad_bg_art">
+
+                <ImageView
+                    android:layout_width="96dp"
+                    android:layout_height="96dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_sym_music_note"
+                    app:tint="@color/ad_label_3"
+                    android:importantForAccessibility="no" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvAudioTrackTitle"
+                    style="@style/TextAppearance.ApexDrive.Glance"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="2"
+                    android:ellipsize="end"
+                    android:text="Nothing playing" />
+
+                <TextView
+                    android:id="@+id/tvAudioTrackArtist"
+                    style="@style/TextAppearance.ApexDrive.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    android:textColor="@color/ad_label_2"
+                    android:text="Choose a source below" />
+
+                <TextView
+                    android:id="@+id/tvAudioActiveSource"
+                    style="@style/TextAppearance.ApexDrive.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:singleLine="true"
+                    android:textColor="@color/ad_label_3"
+                    android:text="No source" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/btnAudioPrev"
+                        style="@style/Widget.ApexDrive.IconButton"
+                        android:src="@drawable/ic_sym_skip_previous_fill"
+                        android:contentDescription="Previous" />
+
+                    <ImageButton
+                        android:id="@+id/btnAudioPlayPause"
+                        style="@style/Widget.ApexDrive.IconButton"
+                        android:layout_marginStart="12dp"
+                        android:src="@drawable/ic_sym_play_arrow_fill"
+                        android:contentDescription="Play" />
+
+                    <ImageButton
+                        android:id="@+id/btnAudioNext"
+                        style="@style/Widget.ApexDrive.IconButton"
+                        android:layout_marginStart="12dp"
+                        android:src="@drawable/ic_sym_skip_next_fill"
+                        android:contentDescription="Next" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            style="@style/Widget.ApexDrive.TileHeader"
+            android:layout_marginTop="16dp"
+            android:text="Sources" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/ad_target"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            android:padding="4dp"
+            android:background="@drawable/ad_bg_segment">
+
+            <Button
+                android:id="@+id/btnSrcRadio"
+                style="@style/Widget.ApexDrive.Segment"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:text="Radio" />
+
+            <Button
+                android:id="@+id/btnSrcBluetooth"
+                style="@style/Widget.ApexDrive.Segment"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:text="Phone" />
+
+            <Button
+                android:id="@+id/btnSrcSpotify"
+                style="@style/Widget.ApexDrive.Segment"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:text="Spotify" />
+
+            <Button
+                android:id="@+id/btnSrcUsb"
+                style="@style/Widget.ApexDrive.Segment"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:text="USB" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Radio -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="328"
+        android:layout_marginStart="@dimen/ad_tile_gap"
+        android:orientation="vertical"
+        android:padding="@dimen/ad_tile_padding"
+        android:elevation="2dp"
+        android:background="@drawable/ad_bg_tile">
+
+        <TextView
+            style="@style/Widget.ApexDrive.TileHeader"
+            app:drawableStartCompat="@drawable/ic_hdr_radio"
+            android:text="Radio" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal"
+            android:gravity="bottom">
 
             <TextView
                 android:id="@+id/tvRadioFreq"
+                style="@style/TextAppearance.ApexDrive.Display"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="98.5"
-                android:textColor="@color/cockpit_text_primary"
-                android:textSize="88sp"
-                android:fontFamily="@font/atkinson_next_semibold"
-                android:includeFontPadding="false" />
+                android:text="87.5" />
 
             <TextView
                 android:id="@+id/tvRadioFreqUnit"
+                style="@style/TextAppearance.ApexDrive.Label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Mhz · stereo broadcast"
-                android:textColor="@color/ad_accent_text"
-                android:textSize="20sp"
-                android:fontFamily="@font/atkinson_next_semibold" />
+                android:layout_marginStart="8dp"
+                android:layout_marginBottom="10dp"
+                android:textColor="@color/ad_label_2"
+                android:text="MHz" />
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvAudioPresetBadge"
+            style="@style/Widget.ApexDrive.Chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Standby" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
             android:orientation="horizontal">
 
-            <Button
+            <ImageButton
                 android:id="@+id/btnRadioScanDown"
-                android:layout_width="0dp"
-                android:layout_height="62dp"
-                android:layout_weight="1"
-                android:background="@drawable/bg_elevated_btn"
-        android:textAllCaps="false"
-                android:text="Seek down"
-                android:textColor="@color/cockpit_text_primary"
-                android:textSize="20sp"
-                android:fontFamily="@font/atkinson_next_semibold" />
+                style="@style/Widget.ApexDrive.IconButton"
+                android:src="@drawable/ic_sym_chevron_left"
+                android:contentDescription="Tune down 0.1 MHz" />
 
-            <Button
-                android:id="@+id/btnRadioPlay"
+            <View
                 android:layout_width="0dp"
-                android:layout_height="62dp"
-                android:layout_weight="1.2"
-                android:layout_marginStart="14dp"
-                android:background="@drawable/bg_elevated_btn"
-        android:textAllCaps="false"
-                android:text="Play radio"
-                android:textColor="@color/ad_accent_text"
-                android:textSize="20sp"
-                android:fontFamily="@font/atkinson_next_semibold" />
+                android:layout_height="0dp"
+                android:layout_weight="1" />
 
-            <Button
+            <ImageButton
                 android:id="@+id/btnRadioScanUp"
-                android:layout_width="0dp"
-                android:layout_height="62dp"
-                android:layout_weight="1"
-                android:layout_marginStart="14dp"
-                android:background="@drawable/bg_elevated_btn"
-        android:textAllCaps="false"
-                android:text="Seek up"
-                android:textColor="@color/cockpit_text_primary"
-                android:textSize="20sp"
-                android:fontFamily="@font/atkinson_next_semibold" />
+                style="@style/Widget.ApexDrive.IconButton"
+                android:src="@drawable/ic_sym_chevron_right"
+                android:contentDescription="Tune up 0.1 MHz" />
         </LinearLayout>
 
-    </LinearLayout>
+        <com.apexdrive.launcher.ui.CenteredIconButton
+            android:id="@+id/btnRadioPlay"
+            style="@style/Widget.ApexDrive.Button"
+            android:layout_width="match_parent"
+            android:layout_marginTop="12dp"
+            app:drawableStartCompat="@drawable/ic_btn_play_arrow"
+            android:text="Play radio" />
 
+        <Button
+            android:id="@+id/btnOpenRadioApp"
+            style="@style/Widget.ApexDrive.Button.Quiet"
+            android:layout_width="wrap_content"
+            android:layout_marginTop="4dp"
+            android:paddingStart="0dp"
+            android:gravity="start|center_vertical"
+            android:text="Open radio app" />
+    </LinearLayout>
 </LinearLayout>

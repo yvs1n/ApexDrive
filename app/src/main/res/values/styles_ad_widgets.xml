@@ -135,5 +135,9 @@
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>
         <item name="android:background">@drawable/ad_bg_segment_item</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:textColor">@color/ad_label_1</item>
     </style>
 </resources>

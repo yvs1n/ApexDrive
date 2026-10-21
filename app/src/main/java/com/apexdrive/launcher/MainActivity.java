@@ -603,6 +603,7 @@ public class MainActivity extends AppCompatActivity {
                 isRadioPlaying = false;
                 Button btnRadio = viewAudio != null ? viewAudio.findViewById(R.id.btnRadioPlay) : null;
                 if (btnRadio != null) btnRadio.setText("Play radio");
+                setRadioButtonIcon(false);
                 TextView tvPreset = viewAudio != null ? viewAudio.findViewById(R.id.tvAudioPresetBadge) : null;
                 if (tvPreset != null) tvPreset.setText("Standby");
                 sendRadioHardwarePauseBroadcasts();
@@ -612,6 +613,7 @@ public class MainActivity extends AppCompatActivity {
                 isRadioPlaying = true;
                 Button btnRadio = viewAudio != null ? viewAudio.findViewById(R.id.btnRadioPlay) : null;
                 if (btnRadio != null) btnRadio.setText("Pause radio");
+                setRadioButtonIcon(true);
                 TextView tvFreq = viewAudio != null ? viewAudio.findViewById(R.id.tvRadioFreq) : null;
                 String freq = tvFreq != null ? tvFreq.getText().toString() : "87.5";
                 TextView tvPreset = viewAudio != null ? viewAudio.findViewById(R.id.tvAudioPresetBadge) : null;
@@ -875,14 +877,10 @@ public class MainActivity extends AppCompatActivity {
         final Button btnSrcUsb = viewAudio.findViewById(R.id.btnSrcUsb);
         final Button btnRadioPlay = viewAudio.findViewById(R.id.btnRadioPlay);
 
-        int textPrimary = ContextCompat.getColor(this, R.color.cockpit_text_primary);
 
         btnSrcRadio.setOnClickListener(v -> {
-            tvActive.setText("FM radio");
-            btnSrcRadio.setTextColor(accent());
-            btnSrcSpotify.setTextColor(textPrimary);
-            btnSrcBluetooth.setTextColor(textPrimary);
-            btnSrcUsb.setTextColor(textPrimary);
+            tvActive.setText("Radio");
+            selectAudioSource(btnSrcRadio);
             if (tvPreset != null) {
                 tvPreset.setText(isRadioPlaying ? "Active tuner" : "Standby · press play");
             }
@@ -894,6 +892,7 @@ public class MainActivity extends AppCompatActivity {
                 if (!isRadioPlaying) {
                     isRadioPlaying = true;
                     btnRadioPlay.setText("Pause radio");
+                    setRadioButtonIcon(true);
                     if (tvPreset != null) {
                         tvPreset.setText("Active · " + tvFreq.getText() + " MHz");
                     }
@@ -902,14 +901,14 @@ public class MainActivity extends AppCompatActivity {
                     sendRadioHardwareBroadcasts(tvFreq.getText().toString());
 
                     // 2. Update dashboard track display
-                    if (tvTrackTitle != null) tvTrackTitle.setText("Fm " + tvFreq.getText() + " MHz");
-                    if (tvTrackArtist != null) tvTrackArtist.setText("Radio Tuner Broadcast");
+                    setTrackText("FM " + tvFreq.getText() + " MHz", "Radio");
                     if (btnMediaPlayPause != null) setPlayState(true);
 
                     notifier.show(Notifier.Kind.INFO, "Radio playing", tvFreq.getText() + " MHz");
                 } else {
                     isRadioPlaying = false;
                     btnRadioPlay.setText("Play radio");
+                    setRadioButtonIcon(false);
                     if (tvPreset != null) {
                         tvPreset.setText("Standby");
                     }
@@ -931,13 +930,21 @@ public class MainActivity extends AppCompatActivity {
         if (tvFreq != null) {
             tvFreq.setOnClickListener(v -> launchRadioApp());
         }
+        View openRadio = viewAudio.findViewById(R.id.btnOpenRadioApp);
+        if (openRadio != null) openRadio.setOnClickListener(v -> launchRadioApp());
+
+        // Transport mirrors the Home now-playing tile.
+        viewAudio.findViewById(R.id.btnAudioPrev).setOnClickListener(v ->
+                MediaSyncService.sendMediaKey(this, KeyEvent.KEYCODE_MEDIA_PREVIOUS));
+        viewAudio.findViewById(R.id.btnAudioNext).setOnClickListener(v ->
+                MediaSyncService.sendMediaKey(this, KeyEvent.KEYCODE_MEDIA_NEXT));
+        viewAudio.findViewById(R.id.btnAudioPlayPause).setOnClickListener(v -> {
+            if (btnMediaPlayPause != null) btnMediaPlayPause.performClick();
+        });
 
         viewAudio.findViewById(R.id.btnSrcSpotify).setOnClickListener(v -> {
             tvActive.setText("Spotify");
-            btnSrcSpotify.setTextColor(accent());
-            btnSrcRadio.setTextColor(textPrimary);
-            btnSrcBluetooth.setTextColor(textPrimary);
-            btnSrcUsb.setTextColor(textPrimary);
+            selectAudioSource(btnSrcSpotify);
             if (!launchAppPackage("com.spotify.music")) {
                 try {
                     Intent musicIntent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_MUSIC);
@@ -951,11 +958,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         viewAudio.findViewById(R.id.btnSrcBluetooth).setOnClickListener(v -> {
-            tvActive.setText("Bluetooth audio");
-            btnSrcBluetooth.setTextColor(accent());
-            btnSrcRadio.setTextColor(textPrimary);
-            btnSrcSpotify.setTextColor(textPrimary);
-            btnSrcUsb.setTextColor(textPrimary);
+            tvActive.setText("Phone · Bluetooth");
+            selectAudioSource(btnSrcBluetooth);
             if (btWatcher != null && btWatcher.getConnectedDevice() == null) {
                 notifier.show(Notifier.Kind.CAUTION, "No phone connected", "Pair a phone to stream audio");
                 showDeviceSelectorDialog(false);
@@ -966,10 +970,7 @@ public class MainActivity extends AppCompatActivity {
 
         viewAudio.findViewById(R.id.btnSrcUsb).setOnClickListener(v -> {
             tvActive.setText("USB");
-            btnSrcUsb.setTextColor(accent());
-            btnSrcRadio.setTextColor(textPrimary);
-            btnSrcSpotify.setTextColor(textPrimary);
-            btnSrcBluetooth.setTextColor(textPrimary);
+            selectAudioSource(btnSrcUsb);
             String[] usbPackages = {"com.ts.music", "com.microntek.music", "com.syu.music", "com.android.music", "com.android.musicfx"};
             for (String pkg : usbPackages) {
                 if (launchAppPackage(pkg)) return;
@@ -993,7 +994,7 @@ public class MainActivity extends AppCompatActivity {
                     tvPreset.setText("Active · " + freqStr + " MHz");
                 }
                 if (isRadioPlaying && tvTrackTitle != null) {
-                    tvTrackTitle.setText("Fm " + freqStr + " MHz");
+                    setTrackText("FM " + freqStr + " MHz", null);
                 }
                 try {
                     int freqKhz = (int) (Double.parseDouble(freqStr) * 1000);
@@ -1014,7 +1015,7 @@ public class MainActivity extends AppCompatActivity {
                     tvPreset.setText("Active · " + freqStr + " MHz");
                 }
                 if (isRadioPlaying && tvTrackTitle != null) {
-                    tvTrackTitle.setText("Fm " + freqStr + " MHz");
+                    setTrackText("FM " + freqStr + " MHz", null);
                 }
                 try {
                     int freqKhz = (int) (Double.parseDouble(freqStr) * 1000);
@@ -1675,6 +1676,41 @@ public class MainActivity extends AppCompatActivity {
         if (btnMediaPlayPause == null) return;
         btnMediaPlayPause.setImageResource(playing ? R.drawable.ic_sym_pause_fill : R.drawable.ic_sym_play_arrow_fill);
         btnMediaPlayPause.setContentDescription(playing ? "Pause" : "Play");
+        android.widget.ImageButton audio = viewAudio != null ? viewAudio.findViewById(R.id.btnAudioPlayPause) : null;
+        if (audio != null) {
+            audio.setImageResource(playing ? R.drawable.ic_sym_pause_fill : R.drawable.ic_sym_play_arrow_fill);
+            audio.setContentDescription(playing ? "Pause" : "Play");
+        }
+    }
+
+    private void selectAudioSource(View chosen) {
+        int[] ids = {R.id.btnSrcRadio, R.id.btnSrcBluetooth, R.id.btnSrcSpotify, R.id.btnSrcUsb};
+        for (int id : ids) {
+            View src = viewAudio.findViewById(id);
+            if (src != null) src.setSelected(src == chosen);
+        }
+    }
+
+    /** Updates the track on Home and Audio; null keeps the current text. */
+    private void setTrackText(String title, String artist) {
+        TextView audioTitle = viewAudio != null ? viewAudio.findViewById(R.id.tvAudioTrackTitle) : null;
+        TextView audioArtist = viewAudio != null ? viewAudio.findViewById(R.id.tvAudioTrackArtist) : null;
+        if (title != null) {
+            if (tvTrackTitle != null) tvTrackTitle.setText(title);
+            if (audioTitle != null) audioTitle.setText(title);
+        }
+        if (artist != null) {
+            if (tvTrackArtist != null) tvTrackArtist.setText(artist);
+            if (audioArtist != null) audioArtist.setText(artist);
+        }
+    }
+
+    private void setRadioButtonIcon(boolean playing) {
+        TextView btn = viewAudio != null ? viewAudio.findViewById(R.id.btnRadioPlay) : null;
+        if (btn != null) {
+            androidx.core.widget.TextViewCompat.setCompoundDrawablesRelativeWithIntrinsicBounds(btn,
+                    playing ? R.drawable.ic_btn_pause : R.drawable.ic_btn_play_arrow, 0, 0, 0);
+        }
     }
 
     private void setDot(View dot, int colorRes) {
@@ -2345,12 +2381,8 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-                if (tvTrackTitle != null && title != null && !title.trim().isEmpty()) {
-                    tvTrackTitle.setText(title);
-                }
-                if (tvTrackArtist != null && artist != null && !artist.trim().isEmpty()) {
-                    tvTrackArtist.setText(artist);
-                }
+                setTrackText(title != null && !title.trim().isEmpty() ? title : null,
+                        artist != null && !artist.trim().isEmpty() ? artist : null);
                 if (btnMediaPlayPause != null && hasPlayState) {
                     setPlayState(isPlaying);
                 }
