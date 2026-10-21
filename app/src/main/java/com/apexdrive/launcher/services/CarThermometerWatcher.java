@@ -40,7 +40,7 @@ public class CarThermometerWatcher implements SensorEventListener {
     private boolean isMph = false;
     private float currentTempC = 32.0f;
     private float rawTempC = 32.0f;
-    private String currentCondition = "OUTSIDE";
+    private String currentCondition = "Outside";
     private String currentCity = "";
     private long lastOnlineFetchTime = 0;
     private double lastFetchLat = 0.0;
@@ -288,13 +288,13 @@ public class CarThermometerWatcher implements SensorEventListener {
     }
 
     private String mapWeatherCode(int code) {
-        if (code == 0) return "CLEAR";
-        if (code >= 1 && code <= 3) return "PARTLY CLOUDY";
-        if (code == 45 || code == 48) return "FOG";
-        if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return "RAIN";
-        if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return "SNOW";
-        if (code >= 95 && code <= 99) return "THUNDERSTORM";
-        return "OUTSIDE";
+        if (code == 0) return "Clear";
+        if (code >= 1 && code <= 3) return "Partly cloudy";
+        if (code == 45 || code == 48) return "Fog";
+        if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return "Rain";
+        if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return "Snow";
+        if (code >= 95 && code <= 99) return "Thunderstorm";
+        return "Outside";
     }
 
     private void parseCanbusTempIntent(Intent intent) {
@@ -311,7 +311,7 @@ public class CarThermometerWatcher implements SensorEventListener {
                     }
                     if (val != -999f && val > -40f && val < 65f) {
                         currentTempC = val;
-                        currentCondition = "VEHICLE SENSOR";
+                        currentCondition = "Car sensor";
                         prefHelper.setSavedTempCelsius(val);
                         prefHelper.setSavedCondition(currentCondition);
                         notifyTemp(currentTempC);
@@ -381,7 +381,7 @@ public class CarThermometerWatcher implements SensorEventListener {
                         val = (val - 32f) * 5f / 9f;
                     }
                     currentTempC = val;
-                    currentCondition = "VEHICLE SENSOR";
+                    currentCondition = "Car sensor";
                     prefHelper.setSavedTempCelsius(val);
                     prefHelper.setSavedCondition(currentCondition);
                     notifyTemp(currentTempC);
@@ -418,7 +418,7 @@ public class CarThermometerWatcher implements SensorEventListener {
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_AMBIENT_TEMPERATURE && event.values.length > 0) {
             currentTempC = event.values[0];
-            currentCondition = "BUILT-IN SENSOR";
+            currentCondition = "Built-in sensor";
             prefHelper.setSavedTempCelsius(currentTempC);
             prefHelper.setSavedCondition(currentCondition);
             notifyTemp(currentTempC);

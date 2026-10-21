@@ -794,13 +794,12 @@ public class MainActivity extends AppCompatActivity {
 
         // 4. OsmAnd not found - show clear dialog guiding user to install from USB
         new AlertDialog.Builder(this)
-                .setTitle("OSMAND NOT INSTALLED")
-                .setMessage("OsmAnd 4.5.10 APK was not detected on this head unit.\n\n"
-                        + "Please sideload the APK and UAE offline map from your USB drive:\n"
-                        + "1. Copy net.osmand.plus APK & United-arab-emirates_asia.obf to USB\n"
-                        + "2. Insert USB into car head unit\n"
-                        + "3. Open File Manager and install OsmAnd APK")
-                .setPositiveButton("OPEN FILE MANAGER", (dialog, which) -> {
+                .setTitle("No map app installed")
+                .setMessage("Install OsmAnd for offline maps:\n"
+                        + "1. Copy the OsmAnd APK and your region's .obf map file to a USB drive.\n"
+                        + "2. Plug the USB drive into the head unit.\n"
+                        + "3. Open the file manager and install the APK.")
+                .setPositiveButton("Open file manager", (dialog, which) -> {
                     String[] fmPackages = {
                             "com.android.rk", "com.mediatek.filemanager", "com.estrongs.android.pop",
                             "com.android.documentsui", "com.google.android.documentsui", "com.sec.android.app.myfiles"
@@ -814,8 +813,8 @@ public class MainActivity extends AppCompatActivity {
                         notifier.show(Notifier.Kind.INFO, "Open your car's file manager from Apps");
                     }
                 })
-                .setNeutralButton("CHOOSE MAP APP", (dialog, which) -> showMapPicker())
-                .setNegativeButton("DISMISS", null)
+                .setNeutralButton("Choose map app", (dialog, which) -> showMapPicker())
+                .setNegativeButton("Close", null)
                 .show();
     }
 

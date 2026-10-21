@@ -85,7 +85,7 @@ public class PreferenceHelper {
     }
 
     public String getSavedCondition() {
-        return prefs.getString(KEY_SAVED_CONDITION, "OUTSIDE");
+        return prefs.getString(KEY_SAVED_CONDITION, "Outside");
     }
 
     public void setSavedCondition(String condition) {
