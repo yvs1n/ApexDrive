@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rail items: five places plus Settings. Selected state is set from MainActivity.updateRailAppearance. -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <LinearLayout
+        android:id="@+id/railBtnDash"
+        android:layout_width="80dp"
+        android:layout_height="76dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@drawable/ad_bg_rail_item"
+        android:clickable="true"
+        android:focusable="true"
+        android:contentDescription="Home">
+
+        <ImageView
+            android:id="@+id/ivDashIcon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_sym_home"
+            android:importantForAccessibility="no" />
+
+        <TextView
+            android:id="@+id/tvDashLabel"
+            style="@style/TextAppearance.ApexDrive.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/ad_label_1"
+            android:importantForAccessibility="no"
+            android:text="Home" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/railBtnCarPlay"
+        android:layout_width="80dp"
+        android:layout_height="76dp"
+        android:layout_marginTop="4dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@drawable/ad_bg_rail_item"
+        android:clickable="true"
+        android:focusable="true"
+        android:contentDescription="Phone">
+
+        <ImageView
+            android:id="@+id/ivCarPlayIcon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_sym_phone_iphone"
+            android:importantForAccessibility="no" />
+
+        <TextView
+            android:id="@+id/tvCarPlayLabel"
+            style="@style/TextAppearance.ApexDrive.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/ad_label_1"
+            android:importantForAccessibility="no"
+            android:text="Phone" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/railBtnMaps"
+        android:layout_width="80dp"
+        android:layout_height="76dp"
+        android:layout_marginTop="4dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@drawable/ad_bg_rail_item"
+        android:clickable="true"
+        android:focusable="true"
+        android:contentDescription="Maps">
+
+        <ImageView
+            android:id="@+id/ivMapsIcon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_sym_map"
+            android:importantForAccessibility="no" />
+
+        <TextView
+            android:id="@+id/tvMapsLabel"
+            style="@style/TextAppearance.ApexDrive.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/ad_label_1"
+            android:importantForAccessibility="no"
+            android:text="Maps" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/railBtnAudio"
+        android:layout_width="80dp"
+        android:layout_height="76dp"
+        android:layout_marginTop="4dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@drawable/ad_bg_rail_item"
+        android:clickable="true"
+        android:focusable="true"
+        android:contentDescription="Audio">
+
+        <ImageView
+            android:id="@+id/ivAudioIcon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_sym_music_note"
+            android:importantForAccessibility="no" />
+
+        <TextView
+            android:id="@+id/tvAudioLabel"
+            style="@style/TextAppearance.ApexDrive.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/ad_label_1"
+            android:importantForAccessibility="no"
+            android:text="Audio" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/railBtnApps"
+        android:layout_width="80dp"
+        android:layout_height="76dp"
+        android:layout_marginTop="4dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@drawable/ad_bg_rail_item"
+        android:clickable="true"
+        android:focusable="true"
+        android:contentDescription="Apps">
+
+        <ImageView
+            android:id="@+id/ivAppsIcon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_sym_apps"
+            android:importantForAccessibility="no" />
+
+        <TextView
+            android:id="@+id/tvAppsLabel"
+            style="@style/TextAppearance.ApexDrive.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/ad_label_1"
+            android:importantForAccessibility="no"
+            android:text="Apps" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <LinearLayout
+        android:id="@+id/railBtnSetup"
+        android:layout_width="80dp"
+        android:layout_height="76dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@drawable/ad_bg_rail_item"
+        android:clickable="true"
+        android:focusable="true"
+        android:contentDescription="Settings">
+
+        <ImageView
+            android:id="@+id/ivSetupIcon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_sym_settings"
+            android:importantForAccessibility="no" />
+
+        <TextView
+            android:id="@+id/tvSetupLabel"
+            style="@style/TextAppearance.ApexDrive.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/ad_label_1"
+            android:importantForAccessibility="no"
+            android:text="Settings" />
+    </LinearLayout>
+</merge>
