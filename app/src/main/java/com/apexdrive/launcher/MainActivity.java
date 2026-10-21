@@ -862,11 +862,11 @@ public class MainActivity extends AppCompatActivity {
         if (launchAppPackage("com.waze")) return;
 
         new AlertDialog.Builder(this)
-                .setTitle("NAVIGATION APP NOT FOUND")
-                .setMessage("No navigation engine installed for searching \"" + query + "\".\n\nWould you like to install OsmAnd Offline Maps from USB or launch CarPlay Navigation?")
-                .setPositiveButton("LAUNCH CARPLAY", (d, w) -> launchCarPlay())
-                .setNeutralButton("OFFLINE MAP SETUP", (d, w) -> launchOfflineMap())
-                .setNegativeButton("CANCEL", null)
+                .setTitle("No map app found")
+                .setMessage("Install a map app such as OsmAnd to search for \"" + query + "\", or use maps in CarPlay.")
+                .setPositiveButton("Open CarPlay", (d, w) -> launchCarPlay())
+                .setNeutralButton("Map setup", (d, w) -> launchOfflineMap())
+                .setNegativeButton("Cancel", null)
                 .show();
     }
 
@@ -1694,7 +1694,11 @@ public class MainActivity extends AppCompatActivity {
     private void initBluetooth() {
         btWatcher = new BluetoothWatcher(this);
         btWatcher.setListener((isConnected, deviceName, details) -> runOnUiThread(() -> {
+            boolean wasConnected = isCarPlayConnected;
             isCarPlayConnected = isConnected;
+            if (isConnected && !wasConnected && isAutoOpenCarPlay() && isSavedPhoneConnected()) {
+                launchCarPlay();
+            }
             if (isConnected) {
                 updateConnectedPhoneUi(deviceName, details);
             } else {
@@ -1702,6 +1706,14 @@ public class MainActivity extends AppCompatActivity {
             }
         }));
         btWatcher.start();
+    }
+
+    @SuppressLint("MissingPermission")
+    private boolean isSavedPhoneConnected() {
+        String saved = prefHelper.getSelectedDriverDevice();
+        if (saved == null || saved.isEmpty() || btWatcher == null) return false;
+        BluetoothDevice dev = btWatcher.getConnectedDevice();
+        return dev != null && saved.equalsIgnoreCase(dev.getAddress());
     }
 
     private void updateConnectedPhoneUi(String deviceName, String details) {
@@ -2183,8 +2195,6 @@ public class MainActivity extends AppCompatActivity {
 
                                     View.OnClickListener launchAnywayListener = fl -> {
                                         prefHelper.setSelectedDriverDevice(device.getAddress());
-                                        isCarPlayConnected = true;
-                                        updateConnectedPhoneUi(name, "Connected");
                                         if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
                                             deviceSelectorDialog.dismiss();
                                         }
@@ -2269,11 +2279,10 @@ public class MainActivity extends AppCompatActivity {
 
                 String action = intent.getAction();
                 boolean isCarPlaySource = action != null && (action.startsWith("com.zlink") || action.startsWith("zjinnova") || action.contains("diplay"));
-                if (isCarPlaySource || (isPlaying && title != null && !title.trim().isEmpty() && !title.startsWith("FM "))) {
+                if (isCarPlaySource && isPlaying) {
                     isCarPlayConnected = true;
-                    String saved = prefHelper.getSelectedDriverDevice();
-                    String savedName = getDeviceNameFromAddress(saved);
-                    updateConnectedPhoneUi(savedName != null ? savedName : "CARPLAY", "WIRELESS PROJECTION ACTIVE");
+                    String savedName = getDeviceNameFromAddress(prefHelper.getSelectedDriverDevice());
+                    updateConnectedPhoneUi(savedName != null ? savedName : "Phone", "CarPlay active");
                 }
             }
         };
@@ -2306,27 +2315,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void launchCarPlay() {
-        isCarPlayConnected = true;
-        String savedAddr = prefHelper.getSelectedDriverDevice();
-        String savedName = getDeviceNameFromAddress(savedAddr);
-        updateConnectedPhoneUi(savedName != null ? savedName : "CARPLAY", "LAUNCHING PROJECTION...");
+        // 1. The app the user chose in Settings.
+        if (launchAppPackage(prefHelper.getCarPlayPackage())) return;
 
-        String pkg = prefHelper.getCarPlayPackage();
-
-        // 1. Try launching Zlink via its explicit intent first
+        // 2. Zlink's explicit entry point.
         try {
             Intent zlinkIntent = new Intent("zjinnova.android.intent.action.ZLINK_MAIN");
             zlinkIntent.putExtra("page", "LINK");
             zlinkIntent.putExtra("feature", "carplay");
             zlinkIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(zlinkIntent);
-            return;
+            if (zlinkIntent.resolveActivity(getPackageManager()) != null) {
+                startActivity(zlinkIntent);
+                return;
+            }
         } catch (Exception ignored) {}
 
-        // 2. Try launching package selected by user
-        if (launchAppPackage(pkg)) return;
-
-        // 3. Fallback to common CarPlay packages
+        // 3. Common CarPlay bridge apps; remember the one that worked.
         String[] commonCarPlayPackages = {
                 "com.zjinnova.zlink",
                 "com.zlink.carplay",
@@ -2337,27 +2341,27 @@ public class MainActivity extends AppCompatActivity {
                 "com.autokit",
                 "com.carlinke"
         };
-        boolean launched = false;
         for (String fallback : commonCarPlayPackages) {
             if (launchAppPackage(fallback)) {
                 prefHelper.setCarPlayPackage(fallback);
-                prefHelper.setCarPlayName("TLink 5.3");
-                launched = true;
-                break;
+                prefHelper.setCarPlayName(appLabel(fallback));
+                return;
             }
         }
-        if (!launched) {
-            new AlertDialog.Builder(this)
-                    .setTitle("CARPLAY APP NOT FOUND")
-                    .setMessage("Could not find " + prefHelper.getCarPlayName() + " or any standard CarPlay projection app (Zlink, SpeedPlay, AutoKit).\n\nSelect a projection bridge from your installed apps or open Android Settings.")
-                    .setPositiveButton("SELECT APP", (dialog, which) -> showCarPlayPicker())
-                    .setNeutralButton("OPEN SETTINGS", (dialog, which) -> {
-                        try {
-                            startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                        } catch (Exception ignored) {}
-                    })
-                    .setNegativeButton("CANCEL", null)
-                    .show();
+        new AlertDialog.Builder(this)
+                .setTitle("No CarPlay app found")
+                .setMessage("Couldn't open " + prefHelper.getCarPlayName() + " or another CarPlay app. Choose the app that runs CarPlay on this head unit.")
+                .setPositiveButton("Choose app", (dialog, which) -> showCarPlayPicker())
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private String appLabel(String pkg) {
+        try {
+            PackageManager pm = getPackageManager();
+            return pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString();
+        } catch (Exception e) {
+            return pkg;
         }
     }
 
