@@ -24,11 +24,10 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="LIVE GPS TELEMETRY &amp; NAVIGATION"
+                android:text="Live GPS telemetry &amp; navigation"
                 android:textColor="@color/cockpit_text_secondary"
-                android:textSize="10sp"
-                android:fontFamily="sans-serif-medium"
-                android:letterSpacing="0.08" />
+                android:textSize="20sp"
+                android:fontFamily="@font/atkinson_next_medium" />
 
             <View
                 android:layout_width="0dp"
@@ -46,8 +45,8 @@
                 android:paddingBottom="2dp"
                 android:text="● 3D Fix · ±3m"
                 android:textColor="@color/status_active"
-                android:textSize="10sp"
-                android:fontFamily="sans-serif-bold" />
+                android:textSize="20sp"
+                android:fontFamily="@font/atkinson_next_semibold" />
         </LinearLayout>
 
         <View
@@ -71,11 +70,10 @@
                 android:id="@+id/tvNavHeadingBig"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="NORTH 0°"
-                android:textColor="@color/accent_amber"
+                android:text="North 0°"
+                android:textColor="@color/ad_accent_text"
                 android:textSize="32sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.04" />
+                android:fontFamily="@font/atkinson_next_semibold" />
 
             <TextView
                 android:id="@+id/tvNavCoordinates"
@@ -84,8 +82,8 @@
                 android:layout_marginTop="6dp"
                 android:text="Searching Satellite Coordinates..."
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="12sp"
-                android:fontFamily="sans-serif-medium" />
+                android:textSize="20sp"
+                android:fontFamily="@font/atkinson_next_medium" />
 
             <TextView
                 android:id="@+id/tvNavAltitude"
@@ -94,8 +92,8 @@
                 android:layout_marginTop="3dp"
                 android:text="Altitude: -- m  ·  Speed: 0 KM/H"
                 android:textColor="@color/cockpit_text_secondary"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif" />
+                android:textSize="20sp"
+                android:fontFamily="@font/atkinson_next_regular" />
 
             <!-- Direct Launch into CarPlay Navigation (Big Finger Friendly 60dp) -->
             <Button
@@ -104,11 +102,11 @@
                 android:layout_height="60dp"
                 android:layout_marginTop="16dp"
                 android:background="@drawable/bg_elevated_btn"
-                android:text="OPEN CARPLAY NAVIGATION"
+        android:textAllCaps="false"
+                android:text="Open CarPlay navigation"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="14sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.05"
+                android:textSize="20sp"
+                android:fontFamily="@font/atkinson_next_semibold"
                 android:paddingStart="32dp"
                 android:paddingEnd="32dp" />
 
@@ -130,21 +128,19 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="TRIP: 0.0 KM"
+                android:text="Trip: 0.0 km"
                 android:textColor="@color/cockpit_text_secondary"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-bold"
-                android:letterSpacing="0.05" />
+                android:textSize="20sp"
+                android:fontFamily="@font/atkinson_next_semibold" />
 
             <TextView
                 android:id="@+id/tvNavTripDuration"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="DURATION: 0 MIN"
+                android:text="Duration: 0 min"
                 android:textColor="@color/cockpit_text_secondary"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-bold"
-                android:letterSpacing="0.05" />
+                android:textSize="20sp"
+                android:fontFamily="@font/atkinson_next_semibold" />
         </LinearLayout>
 
     </LinearLayout>
@@ -166,11 +162,10 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="QUICK DESTINATIONS &amp; APPS"
+            android:text="Quick destinations &amp; apps"
             android:textColor="@color/cockpit_text_secondary"
-            android:textSize="10sp"
-            android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.08" />
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_medium" />
 
         <View
             android:layout_width="match_parent"
@@ -191,11 +186,11 @@
                 android:layout_height="58dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_elevated_btn"
-                android:text="FUEL STATION"
+        android:textAllCaps="false"
+                android:text="Fuel station"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="13sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.08" />
+                android:textSize="20sp"
+                android:fontFamily="@font/atkinson_next_semibold" />
 
             <Button
                 android:id="@+id/btnNavParking"
@@ -204,11 +199,11 @@
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/bg_elevated_btn"
-                android:text="PARKING"
+        android:textAllCaps="false"
+                android:text="Parking"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="13sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.08" />
+                android:textSize="20sp"
+                android:fontFamily="@font/atkinson_next_semibold" />
         </LinearLayout>
 
         <LinearLayout
@@ -223,11 +218,11 @@
                 android:layout_height="58dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_elevated_btn"
-                android:text="REST AREA"
+        android:textAllCaps="false"
+                android:text="Rest area"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="13sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.08" />
+                android:textSize="20sp"
+                android:fontFamily="@font/atkinson_next_semibold" />
 
             <Button
                 android:id="@+id/btnNavHospital"
@@ -236,22 +231,21 @@
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
                 android:background="@drawable/bg_elevated_btn"
-                android:text="HOSPITAL"
+        android:textAllCaps="false"
+                android:text="Hospital"
                 android:textColor="@color/cockpit_text_primary"
-                android:textSize="13sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.08" />
+                android:textSize="20sp"
+                android:fontFamily="@font/atkinson_next_semibold" />
         </LinearLayout>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
-            android:text="PRIMARY NAVIGATION ENGINE"
+            android:text="Primary navigation engine"
             android:textColor="@color/cockpit_text_secondary"
-            android:textSize="10sp"
-            android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.08" />
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_medium" />
 
         <View
             android:layout_width="match_parent"
@@ -266,11 +260,11 @@
             android:layout_height="64dp"
             android:layout_marginTop="10dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="LAUNCH OSMAND OFFLINE"
-            android:textColor="@color/accent_amber"
-            android:textSize="14sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.08" />
+        android:textAllCaps="false"
+            android:text="Launch OsmAnd offline"
+            android:textColor="@color/ad_accent_text"
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_semibold" />
 
         <TextView
             android:id="@+id/tvMapStatusBadge"
@@ -278,11 +272,10 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:gravity="center"
-            android:text="● RADARS · ROAD BUMPS · OFFLINE LANES ACTIVE"
+            android:text="● radars · road bumps · offline lanes active"
             android:textColor="@color/status_active"
-            android:textSize="10sp"
-            android:fontFamily="sans-serif-bold"
-            android:letterSpacing="0.05" />
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_semibold" />
 
         <Button
             android:id="@+id/btnChooseMapApp"
@@ -290,11 +283,11 @@
             android:layout_height="50dp"
             android:layout_marginTop="8dp"
             android:background="@drawable/bg_elevated_btn"
-            android:text="CHANGE DEFAULT MAP ENGINE"
+        android:textAllCaps="false"
+            android:text="Change default map engine"
             android:textColor="@color/cockpit_text_secondary"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.06" />
+            android:textSize="20sp"
+            android:fontFamily="@font/atkinson_next_semibold" />
 
     </LinearLayout>
 
