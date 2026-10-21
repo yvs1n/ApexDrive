@@ -395,3 +395,65 @@ Target: Allwinner T3L (quad Cortex-A7 class), 2 GB RAM, Mali-400 GPU, 1024x600. 
 - **What happens:** `currentTempC`, `rawTempC`, `currentCondition` and `currentCity` are written from worker threads and read from the main thread without `volatile` or synchronisation.
 - **Why it matters:** Visibility bugs are unlikely to bite, but the code is one refactor away from showing a half-updated pair.
 - **Fix:** Post results to the main thread through one method that sets all fields together (the `pollHandler.post` at `:256` already exists; do the field writes inside it).
+
+---
+
+## F. Build, release and process
+
+The repository is built only by GitHub Actions (`.github/workflows/build.yml`). The findings below were checked against the file list of `6b31f21` (`git ls-files`) and the workflow; the build itself was not run.
+
+**P-62 · High · `gradle/wrapper/gradle-wrapper.properties:4`, `.github/workflows/build.yml:35`, `README.md:33`, `AGENT_HANDOFF.md:24`, `:124`**
+- **What happens:** The repo has `gradle-wrapper.properties` (Gradle **7.5.1**) but no `gradlew`, no `gradlew.bat` and no `gradle-wrapper.jar`. CI ignores the wrapper and installs Gradle **8.2** (`gradle-version: '8.2'`). The README and handoff tell contributors to run `./gradlew assembleDebug`, which does not exist, and the handoff says the build system is "Gradle 8.2".
+- **Why it matters:** A contributor cannot reproduce the CI build locally, and three documents disagree about the Gradle version.
+- **Fix:** Commit a wrapper generated with the version CI is known to pass on (`gradle wrapper --gradle-version 8.2` with Android Gradle Plugin 7.4.2 as in `build.gradle:8`), make CI call `./gradlew`, and drop the `gradle-version` input.
+
+**P-63 · High · `.github/workflows/build.yml:38-47`** `[verify by installing two CI builds]`
+- **What happens:** CI builds `assembleDebug` and uploads the debug APK. A fresh GitHub runner generates a new `~/.android/debug.keystore`, so every CI build is signed with a different key.
+- **Why it matters:** Installing build N+1 over build N on the head unit fails with a signature mismatch ("App not installed"), so each update means uninstalling first and losing preferences (driver phone, map, accent colour).
+- **Fix:** Sign with one stable key. For an open-source project the usual options are a keystore in repository secrets with a `release` signing config, or a committed, clearly labelled debug keystore referenced by `signingConfigs.debug.storeFile`.
+
+**P-64 · Med · `app/build.gradle:13-14`, `:19-24`; no `app/proguard-rules.pro`**
+- **What happens:** `versionCode 1` and `versionName "1.0.0"` are literals. `release` has `minifyEnabled false`, references `proguard-rules.pro` (`:22`) which is not in the repository, and has no signing config, so `assembleRelease` would produce an unsigned APK that cannot be installed. CI never builds release.
+- **Why it matters:** Installers on head units often refuse or ignore a package whose `versionCode` has not increased, and there is nowhere to ship a signed, versioned build from. Turning on minify later fails on the missing file.
+- **Fix:** Derive `versionCode` from `GITHUB_RUN_NUMBER` or the commit count, add an empty `proguard-rules.pro`, add the signing config from P-63, and publish tagged releases (GitHub Releases) instead of build artifacts only. R8 is optional; the reflection in this app targets framework classes, which R8 does not rename.
+
+**P-65 · Med · `.github/workflows/build.yml:3-6`, `:14`, `:17`, `:23`, `:32`, `:42`**
+- **What happens:** The workflow runs on `push` to any branch and `workflow_dispatch`, with no `pull_request` trigger, no lint, no unit tests, no APK name or retention policy, and all actions pinned by tag (`@v3`, `@v4`) rather than by commit.
+- **Why it matters:** Pull requests from forks do not run the base repository's workflow on push, so outside contributors get no CI signal. Nothing checks style, lint or tests before merge. The handoff says "Automatically builds on push to `main`" (`AGENT_HANDOFF.md:25`), which understates what the file does.
+- **Fix:** Add `pull_request`, run `./gradlew lintDebug testDebugUnitTest assembleDebug`, pin actions by SHA with Dependabot for updates, set `retention-days`, and require the check on `main`.
+
+**P-66 · High · repository root**
+- **What happens:** There is no `.gitignore`, `LICENSE`, `CONTRIBUTING.md`, `SECURITY.md` or pull-request template.
+- **Why it matters:** The first Android Studio sync would stage `build/`, `.gradle/`, `.idea/` and `local.properties` (which holds a developer's SDK path). Without a license the code is legally "all rights reserved", so outside contributions have no stated terms. The project is meant to be open source.
+- **Fix:** Add the standard Android `.gitignore`, a license chosen by the owner, and a short `CONTRIBUTING.md` with the commit and branch rules (Conventional Commits, one branch per change, CI must pass).
+
+**P-67 · Low · `app/build.gradle:31-33`, `:38-40`; `gradle.properties:3`**
+- **What happens:** Material 1.6.1, ConstraintLayout 2.1.4 and CardView 1.0.0 are declared, but no Java or XML file references `Material`, `ConstraintLayout` or `CardView`, and the theme parent is `Theme.AppCompat.NoActionBar` (`styles.xml:2`). `viewBinding true` is on but no binding class is used (everything is `findViewById`), while the README and handoff both advertise ViewBinding. `android.enableJetifier=true` has nothing left to convert.
+- **Why it matters:** Larger APK, slower CI, and the docs describe code that is not there.
+- **Fix:** Remove the three libraries and Jetifier (AppCompat 1.4.2 alone covers everything used on API 21 to 28), then either adopt ViewBinding or switch it off and correct the docs. If Material is wanted for dialogs later, 1.6.1 is the right version for this `compileSdk`.
+
+**P-68 · Med · `AGENT_HANDOFF.md`, `README.md`, `launcher_preview.html`, `anti-slop/`**
+- **What happens:** Documentation has drifted:
+  - `AGENT_HANDOFF.md:57-62` lists `view_cockpit_dashboard.xml`, `view_cockpit_maps.xml`, `view_cockpit_media.xml`, `view_cockpit_apps.xml` and `view_cockpit_settings.xml`, none of which exist. The real files are `view_dashboard`, `view_carplay`, `view_maps`, `view_audio`, `view_apps` and `view_setup`.
+  - `AGENT_HANDOFF.md:24` says Gradle 8.2; the wrapper says 7.5.1 (P-62).
+  - `README.md:13` says "8-point compass"; the code has 16 directions (`GpsTelemetryManager.java:162`).
+  - `README.md:61` promises album art (P-13); `:59` says "Allow all the time" (P-44); `:17` claims "<35 MB RAM" with no measurement.
+  - `launcher_preview.html` (52 KB, last touched 2026-10-13) is a hand-made mock that mentions "Santa Fe" five times and is not generated from the app.
+  - The two `anti-slop` audits self-certify items that are false (P-35).
+- **Why it matters:** The docs steer new contributors and AI agents to files and behaviours that do not exist.
+- **Fix:** Correct the docs when the code changes, delete or clearly mark `launcher_preview.html` and `anti-slop/` as historical, and see the personal-data cleanup in P-73.
+
+**P-69 · Med · repository (no `src/test`, no `src/androidTest`)**
+- **What happens:** There are zero tests. `build.gradle:16` sets `AndroidJUnitRunner` but no `androidx.test` dependency exists.
+- **Why it matters:** Every fix in this audit is unverifiable without the unit.
+- **Fix:** Start with plain JVM unit tests that need no Android SDK mocking: bearing-to-compass conversion (`GpsTelemetryManager.bearingToDirection`, currently private), temperature parsing (`parseAndSetTemp`), the recents-list codec in `PreferenceHelper`, the speed and distance conversions, and the future profile loader (P-76). Add `testImplementation 'junit:junit:4.13.2'`.
+
+**P-70 · Low · `MainActivity.java` (2,476 lines)**
+- **What happens:** One class owns navigation, wiring for six screens, Bluetooth UI, the task switcher, radio, maps, pickers, calibration and dialogs.
+- **Why it matters:** Contributors will conflict on every change and nothing is unit-testable. It is also why single findings in this audit span hundreds of lines.
+- **Fix:** Split by responsibility, not all at once: extract `CarPlayLauncher`, `AppRepository`, `RadioController` and a `TaskSwitcherDialog` first (each is called from several places), then one controller per screen.
+
+**P-71 · Low · `app/build.gradle:7`, `:12`**
+- **What happens:** `compileSdk 33` with `targetSdk 28` is deliberate (it keeps the legacy permission and background rules) but is documented nowhere.
+- **Why it matters:** The next contributor raising `targetSdk` will break the app in ways this audit already lists: background location (29), package visibility (30), `BLUETOOTH_CONNECT` and mandatory explicit `exported` (31), notification permission (33).
+- **Fix:** Add a short "Why targetSdk 28" paragraph to the README with this list.
