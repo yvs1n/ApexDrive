@@ -20,9 +20,9 @@
 | :--- | :--- | :--- |
 | **Language** | Java 8 / Java 17 | Clean, low-overhead native Android code |
 | **Target OS** | Android (API 21 to 33) | `minSdk 21`, `targetSdk 28`, `compileSdk 33` |
-| **UI Framework** | Native Android XML Views + ViewBinding | Zero heavy third-party UI dependencies |
+| **UI Framework** | Native Android XML Views (`findViewById`) | AppCompat only; ViewBinding is not used |
 | **Build System** | Gradle 8.2 & AGP 7.4.2 | Single unified flavor: `ApexDrive-APK` |
-| **CI / CD Pipeline** | GitHub Actions (`.github/workflows/build.yml`) | Automatically builds on push to `main` |
+| **CI / CD Pipeline** | GitHub Actions (`.github/workflows/build.yml`) | Builds on every push and pull request; the wrapper pins Gradle 8.2 |
 | **Repository** | `https://github.com/yvs1n/ApexDrive` | Public GitHub repo |
 
 ---
@@ -35,6 +35,7 @@ ApexDrive/
 │   └── build.yml               # Automated CI build producing ApexDrive-APK artifact
 ├── app/
 │   ├── build.gradle            # App-level build configs (minSdk 21, compileSdk 33)
+│   └── src/test/               # JVM unit tests (run with ./gradlew testDebugUnitTest)
 │   └── src/main/
 │       ├── AndroidManifest.xml # Single launcher activity (android.intent.category.HOME)
 │       ├── java/com/apexdrive/launcher/
@@ -54,11 +55,14 @@ ApexDrive/
 │       └── res/
 │           ├── layout/
 │           │   ├── activity_main.xml            # Shell container with side navigation rail
-│           │   ├── view_cockpit_dashboard.xml   # Gauges, speed, clock, Bluetooth status card
-│           │   ├── view_cockpit_maps.xml        # Offline navigation view (OsmAnd integration)
-│           │   ├── view_cockpit_media.xml       # Media controller / radio tuner
-│           │   ├── view_cockpit_apps.xml        # App drawer grid
-│           │   ├── view_cockpit_settings.xml    # Theme accents, driver device selector
+│           │   ├── view_dashboard.xml           # Gauges, speed, clock, Bluetooth status card
+│           │   ├── view_carplay.xml             # CarPlay / dongle launch screen
+│           │   ├── view_maps.xml                # Offline navigation view (OsmAnd integration)
+│           │   ├── view_audio.xml               # Media controller / radio tuner
+│           │   ├── view_apps.xml                # App drawer grid
+│           │   ├── view_setup.xml               # Theme accents, driver device selector
+│           │   ├── dialog_device_selector.xml / dialog_task_switcher.xml
+│           │   ├── item_app_tile.xml / item_task_card.xml
 │           │   └── item_device_card.xml         # Bluetooth device card with LAUNCH / CONNECT pill
 │           └── values/
 │               ├── colors.xml                   # Cockpit surfaces, status colors, gauge accents
@@ -74,7 +78,7 @@ When working on this codebase, **do not assume standard Android phone behavior**
 ### A. Proprietary UART Bluetooth
 * **The Quirk:** Most Chinese automotive head units (Allwinner T3, TS9, FYT, Topway, Microntek) do **not** route Bluetooth through the Android Linux HAL. Instead, Bluetooth is handled by a separate MCU hardware chip communicating over internal serial UART.
 * **The Pitfall:** Standard Android API calls like `BluetoothDevice.isConnected()` throw `NoSuchMethodException` or return `false` even while audio is actively streaming. Furthermore, when a phone is manually connected, the system rarely fires `BluetoothDevice.ACTION_ACL_CONNECTED`.
-* **The Solution ([`BluetoothWatcher.java`](file:///c:/Users/yassi/Documents/Android%20Launcher/app/src/main/java/com/apexdrive/launcher/services/BluetoothWatcher.java)):**
+* **The Solution ([`BluetoothWatcher.java`](app/src/main/java/com/apexdrive/launcher/services/BluetoothWatcher.java)):**
   1. Persistent `BluetoothA2dp` and `BluetoothHeadset` profile proxies via `getProfileProxy()`.
   2. Active audio stream verification: `AudioManager.isBluetoothA2dpOn()` and `isBluetoothScoOn()`.
   3. Head unit system property checks via reflection: `sys.bt.connected`, `persist.sys.bt.connected`, `ts.bt.state`, `goc.bt.connected`, `bt.connected.name`, `bt.connected.mac`.
@@ -89,12 +93,12 @@ When working on this codebase, **do not assume standard Android phone behavior**
 * Always annotate Bluetooth classes and card rendering methods with `@SuppressLint("MissingPermission")` because runtime permissions on car units are managed system-level or pre-granted.
 
 ### C. Boot Receiver & Launch Hijacking
-* **Rule:** [`BootReceiver.java`](file:///c:/Users/yassi/Documents/Android%20Launcher/app/src/main/java/com/apexdrive/launcher/services/BootReceiver.java) must **never** call `context.startActivity()` on `ACTION_BOOT_COMPLETED`.
+* **Rule:** [`BootReceiver.java`](app/src/main/java/com/apexdrive/launcher/services/BootReceiver.java) must **never** call `context.startActivity()` on `ACTION_BOOT_COMPLETED`.
 * Android's window manager already boots the app via the `android.intent.category.HOME` intent filter in `AndroidManifest.xml`. Calling `startActivity` in the receiver triggers a jarring double-launch reload.
 
 ### D. Apple CarPlay / Android Auto Integration
 * The launcher does not implement the CarPlay protocol directly; it interfaces with companion USB/Wireless dongles and their apps.
-* Target packages launched by [`MainActivity.java`](file:///c:/Users/yassi/Documents/Android%20Launcher/app/src/main/java/com/apexdrive/launcher/MainActivity.java):
+* Target packages launched by [`MainActivity.java`](app/src/main/java/com/apexdrive/launcher/MainActivity.java):
   * **AutoKit / Box:** `cn.manstep.phonemirrorbox`
   * **ZLink:** `com.zjinnova.zlink`
   * **CarLink / SpeedPlay:** `com.android.ecar`, `com.ts.bt`
@@ -133,11 +137,11 @@ If you have Android Studio or Gradle installed locally:
 
 | File | Purpose |
 | :--- | :--- |
-| [`MainActivity.java`](file:///c:/Users/yassi/Documents/Android%20Launcher/app/src/main/java/com/apexdrive/launcher/MainActivity.java) | Orchestrates navigation rail switching, telemetry cards, driver selection dialog, and CarPlay launch gating. |
-| [`BluetoothWatcher.java`](file:///c:/Users/yassi/Documents/Android%20Launcher/app/src/main/java/com/apexdrive/launcher/services/BluetoothWatcher.java) | Multi-channel automotive Bluetooth link detector and head unit broadcast dispatcher. |
-| [`GpsTelemetryManager.java`](file:///c:/Users/yassi/Documents/Android%20Launcher/app/src/main/java/com/apexdrive/launcher/services/GpsTelemetryManager.java) | Manages GPS location updates, real-time speed smoothing, trip distance, and heading calculation. |
-| [`PreferenceHelper.java`](file:///c:/Users/yassi/Documents/Android%20Launcher/app/src/main/java/com/apexdrive/launcher/utils/PreferenceHelper.java) | Persists user settings (selected driver device MAC, theme accent color, map choice, speed units). |
-| [`build.yml`](file:///c:/Users/yassi/Documents/Android%20Launcher/.github/workflows/build.yml) | GitHub Actions workflow ensuring reliable cloud APK compilation with build failure log uploads. |
+| [`MainActivity.java`](app/src/main/java/com/apexdrive/launcher/MainActivity.java) | Orchestrates navigation rail switching, telemetry cards, driver selection dialog, and CarPlay launch gating. |
+| [`BluetoothWatcher.java`](app/src/main/java/com/apexdrive/launcher/services/BluetoothWatcher.java) | Multi-channel automotive Bluetooth link detector and head unit broadcast dispatcher. |
+| [`GpsTelemetryManager.java`](app/src/main/java/com/apexdrive/launcher/services/GpsTelemetryManager.java) | Manages GPS location updates, real-time speed smoothing, trip distance, and heading calculation. |
+| [`PreferenceHelper.java`](app/src/main/java/com/apexdrive/launcher/utils/PreferenceHelper.java) | Persists user settings (selected driver device MAC, theme accent color, map choice, speed units). |
+| [`build.yml`](.github/workflows/build.yml) | GitHub Actions workflow ensuring reliable cloud APK compilation with build failure log uploads. |
 
 ---
 

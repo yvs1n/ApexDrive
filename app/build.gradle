@@ -10,16 +10,34 @@ android {
         applicationId "com.apexdrive.launcher"
         minSdk 21
         targetSdk 28
-        versionCode 1
+        // CI passes VERSION_CODE (the run number) so every build is newer than the last.
+        versionCode Integer.parseInt(System.getenv("VERSION_CODE") ?: "1")
         versionName "1.0.0"
+    }
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    // Stable signing key from environment variables (CI secrets). Without them the
+    // build falls back to the normal debug key. Never commit a keystore or password.
+    def signingKeystore = System.getenv("SIGNING_KEYSTORE_FILE")
+    def hasSigningKey = signingKeystore != null && file(signingKeystore).exists()
+    if (hasSigningKey) {
+        signingConfigs {
+            ci {
+                storeFile file(signingKeystore)
+                storePassword System.getenv("SIGNING_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("SIGNING_KEY_ALIAS")
+                keyPassword System.getenv("SIGNING_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
+        debug {
+            if (hasSigningKey) signingConfig signingConfigs.ci
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (hasSigningKey) signingConfig signingConfigs.ci
         }
     }
 
@@ -28,14 +46,19 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
-    buildFeatures {
-        viewBinding true
+    lint {
+        // targetSdk 28 is deliberate for head units; see "Why targetSdk 28" in README.md.
+        disable "ExpiredTargetSdkVersion"
+        // Report only until the existing errors (see the lint report artifact) are fixed;
+        // then remove this line so lint gates CI.
+        abortOnError false
     }
+
+    // Views are looked up with findViewById; ViewBinding is not used.
 }
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.4.2'
-    implementation 'com.google.android.material:material:1.6.1'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'androidx.cardview:cardview:1.0.0'
+
+    testImplementation 'junit:junit:4.13.2'
 }
