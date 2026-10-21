@@ -102,13 +102,13 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvBtDeviceName, tvBtProfileDetail, tvBtStatusBadge;
     private TextView tvTrackTitle, tvTrackArtist, tvCarPlayProtocol;
     private android.widget.ImageButton btnMediaPlayPause;
-    private Button btnSelectCarPlayApp;
-    private Button btnSelectRadioApp;
-    private Button btnSelectMapApp;
+    private TextView btnSelectCarPlayApp;
+    private TextView btnSelectRadioApp;
+    private TextView btnSelectMapApp;
     private Button btnOpenOsmAnd;
     private Button btnChooseMapApp;
-    private Button btnToggleUnit;
-    private Button btnSelectDriverPhone;
+    private TextView btnSelectDriverPhone;
+    private String settingsGroup = "Phone";
     private boolean isRadioPlaying = false;
 
     private TextView tvNavHeadingBig, tvNavCoordinates, tvNavAltitude, tvNavAccuracy, tvNavTripDist, tvNavTripDuration;
@@ -139,10 +139,7 @@ public class MainActivity extends AppCompatActivity {
             if (chip != null) chip.setVisibility(driving ? View.VISIBLE : View.GONE);
             updatePairRow();
             applyAppsDrivingMode(driving);
-            if (driving && currentActiveRailBtn == railBtnSetup) {
-                showView(viewDash, railBtnDash);
-                notifier.show(Notifier.Kind.INFO, "Settings are available when parked");
-            }
+            applySettingsDrivingMode(driving);
         }));
 
         initViews();
@@ -155,6 +152,11 @@ public class MainActivity extends AppCompatActivity {
         initMediaReceiver();
 
         showView(viewDash, railBtnDash);
+        android.content.SharedPreferences display = getSharedPreferences("ad_display", MODE_PRIVATE);
+        if (display.getBoolean("reopen_settings", false)) {
+            display.edit().remove("reopen_settings").apply();
+            showView(viewSetup, railBtnSetup);
+        }
 
         // Instant Cockpit Display: Hide startup loader immediately so interface is ready without delay
         if (layoutStartupLoader != null) {
@@ -1102,61 +1104,150 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
+    private static final String[] SETTINGS_GROUPS = {"Phone", "Navigation", "Audio", "Display", "Advanced", "About"};
+
     private void setupSetupWidgets() {
-
-        btnSelectDriverPhone = viewSetup.findViewById(R.id.btnSelectDriverPhone);
-        if (btnSelectDriverPhone != null) {
-            btnSelectDriverPhone.setOnClickListener(v -> { if (!lockedWhileDriving()) showDeviceSelectorDialog(false); });
+        for (String key : SETTINGS_GROUPS) {
+            View item = settingsView("setGrp" + key);
+            if (item != null) item.setOnClickListener(v -> showSettingsGroup(key));
         }
+        showSettingsGroup(getSharedPreferences("ad_display", MODE_PRIVATE).getString("settings_group", "Phone"));
 
-        btnSelectCarPlayApp = viewSetup.findViewById(R.id.btnSelectCarPlayApp);
+        // Phone and CarPlay
+        btnSelectDriverPhone = settingsView("tvSetDriverPhone");
+        String driver = getDeviceNameFromAddress(prefHelper.getSelectedDriverDevice());
+        if (driver != null) btnSelectDriverPhone.setText(driver);
+        onSettingsRow("rowSetDriverPhone", () -> showDeviceSelectorDialog(false), true);
+        btnSelectCarPlayApp = settingsView("tvSetCarPlayApp");
         btnSelectCarPlayApp.setText(prefHelper.getCarPlayName());
-        btnSelectCarPlayApp.setOnClickListener(v -> { if (!lockedWhileDriving()) showCarPlayPicker(); });
+        onSettingsRow("rowSetCarPlayApp", this::showCarPlayPicker, true);
+        androidx.appcompat.widget.SwitchCompat swAuto = settingsView("switchSetAutoOpen");
+        swAuto.setChecked(isAutoOpenCarPlay());
+        onSettingsRow("rowSetAutoOpen", () -> {
+            boolean next = !isAutoOpenCarPlay();
+            getSharedPreferences("ad_display", MODE_PRIVATE).edit().putBoolean("auto_carplay", next).apply();
+            swAuto.setChecked(next);
+            if (viewCarPlay != null) {
+                androidx.appcompat.widget.SwitchCompat other = viewCarPlay.findViewById(R.id.switchAutoOpen);
+                if (other != null) other.setChecked(next);
+            }
+        }, false);
 
-        btnSelectRadioApp = viewSetup.findViewById(R.id.btnSelectRadioApp);
-        if (btnSelectRadioApp != null) {
-            btnSelectRadioApp.setText(prefHelper.getRadioName());
-            btnSelectRadioApp.setOnClickListener(v -> { if (!lockedWhileDriving()) showRadioPicker(); });
+        // Navigation
+        btnSelectMapApp = settingsView("tvSetMapApp");
+        btnSelectMapApp.setText(prefHelper.getMapName());
+        onSettingsRow("rowSetMapApp", this::showMapPicker, true);
+        onSettingsRow("rowSetGps", () -> {
+            if (gpsManager != null) gpsManager.start();
+            notifier.show(Notifier.Kind.INFO, "GPS restarted");
+        }, false);
+
+        // Audio
+        btnSelectRadioApp = settingsView("tvSetRadioApp");
+        btnSelectRadioApp.setText(prefHelper.getRadioName());
+        onSettingsRow("rowSetRadioApp", this::showRadioPicker, true);
+        onSettingsRow("rowSetEqualiser", this::openAudioEqualizer, false);
+
+        // Display
+        androidx.appcompat.widget.SwitchCompat swNight = settingsView("switchSetNight");
+        swNight.setChecked(isNightTheme());
+        onSettingsRow("rowSetNight", this::toggleTheme, false);
+        View kmh = settingsView("segUnitKmh");
+        View mph = settingsView("segUnitMph");
+        kmh.setOnClickListener(v -> { if (prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH)) toggleSpeedUnit(); });
+        mph.setOnClickListener(v -> { if (!prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH)) toggleSpeedUnit(); });
+        onSettingsRow("rowSetUnits", this::toggleSpeedUnit, false);
+        updateUnitSegment();
+        androidx.appcompat.widget.SwitchCompat swClock = settingsView("switchSetClock");
+        swClock.setChecked(is24HourClock());
+        updateClockDetail();
+        onSettingsRow("rowSetClock", () -> {
+            getSharedPreferences("ad_display", MODE_PRIVATE).edit().putBoolean("clock_24", !is24HourClock()).apply();
+            swClock.setChecked(is24HourClock());
+            updateClockDetail();
+        }, false);
+
+        // Advanced
+        onSettingsRow("rowSetFactory", this::openFactorySettings, true);
+        onSettingsRow("rowSetAndroid", () -> {
+            try {
+                startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (Exception e) {
+                notifier.show(Notifier.Kind.ALERT, "Can't open Android settings");
+            }
+        }, true);
+        onSettingsRow("rowSetBluetooth", this::openBluetoothManager, true);
+        onSettingsRow("rowSetRestart", this::recreate, false);
+
+        // About
+        TextView version = settingsView("tvSetVersion");
+        try {
+            version.setText(getPackageManager().getPackageInfo(getPackageName(), 0).versionName);
+        } catch (Exception ignored) {}
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T extends View> T settingsView(String idName) {
+        return (T) viewSetup.findViewById(getResources().getIdentifier(idName, "id", getPackageName()));
+    }
+
+    private void onSettingsRow(String idName, Runnable action, boolean parkedOnly) {
+        View row = settingsView(idName);
+        if (row == null) return;
+        row.setOnClickListener(v -> { if (!parkedOnly || !lockedWhileDriving()) action.run(); });
+    }
+
+    private void showSettingsGroup(String key) {
+        if (drivingState.isDriving() && "Advanced".equals(key)) key = "Display";
+        settingsGroup = key;
+        getSharedPreferences("ad_display", MODE_PRIVATE).edit().putString("settings_group", key).apply();
+        for (String k : SETTINGS_GROUPS) {
+            View item = settingsView("setGrp" + k);
+            View page = settingsView("setPage" + k);
+            boolean on = k.equals(key);
+            if (item != null) {
+                item.setSelected(on);
+                ((TextView) item).setTypeface(androidx.core.content.res.ResourcesCompat.getFont(this,
+                        on ? R.font.atkinson_next_semibold : R.font.atkinson_next_medium));
+            }
+            if (page != null) page.setVisibility(on ? View.VISIBLE : View.GONE);
         }
+    }
 
-        btnSelectMapApp = viewSetup.findViewById(R.id.btnSelectMapApp);
-        if (btnSelectMapApp != null) {
-            btnSelectMapApp.setText(prefHelper.getMapName());
-            btnSelectMapApp.setOnClickListener(v -> { if (!lockedWhileDriving()) showMapPicker(); });
-        }
+    /** Driving: Advanced is hidden; Phone, Display and Audio stay. */
+    private void applySettingsDrivingMode(boolean driving) {
+        if (viewSetup == null) return;
+        View advanced = settingsView("setGrpAdvanced");
+        if (advanced != null) advanced.setVisibility(driving ? View.GONE : View.VISIBLE);
+        if (driving && "Advanced".equals(settingsGroup)) showSettingsGroup("Display");
+    }
 
-        btnToggleUnit = viewSetup.findViewById(R.id.btnToggleUnit);
-        btnToggleUnit.setText(prefHelper.getSpeedUnit());
-        btnToggleUnit.setOnClickListener(v -> toggleSpeedUnit());
+    private void updateUnitSegment() {
+        if (viewSetup == null) return;
+        boolean mph = prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH);
+        TextView kmh = settingsView("segUnitKmh");
+        TextView mphView = settingsView("segUnitMph");
+        TextView detail = settingsView("tvSetUnits");
+        kmh.setSelected(!mph);
+        mphView.setSelected(mph);
+        detail.setText(mph ? "Miles and °F" : "Kilometres and °C");
+    }
 
-        Button btnGpsRefresh = viewSetup.findViewById(R.id.btnGpsRefreshRate);
-        if (btnGpsRefresh != null) {
-            btnGpsRefresh.setOnClickListener(v -> {
-                if (gpsManager != null) {
-                    gpsManager.start();
-                }
-                notifier.show(Notifier.Kind.INFO, "GPS restarted");
-            });
-        }
+    private boolean is24HourClock() {
+        return getSharedPreferences("ad_display", MODE_PRIVATE)
+                .getBoolean("clock_24", android.text.format.DateFormat.is24HourFormat(this));
+    }
 
-        viewSetup.findViewById(R.id.btnShortcutFactorySettings).setOnClickListener(v -> openFactorySettings());
-        viewSetup.findViewById(R.id.btnShortcutAndroidSettings).setOnClickListener(v ->
-                startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
-        viewSetup.findViewById(R.id.btnShortcutAudioEq).setOnClickListener(v -> openAudioEqualizer());
-        viewSetup.findViewById(R.id.btnShortcutBluetooth).setOnClickListener(v -> showDeviceSelectorDialog(false));
-        Button btnTheme = viewSetup.findViewById(R.id.btnToggleTheme);
-        if (btnTheme != null) {
-            btnTheme.setText(isNightTheme() ? "Theme: Night" : "Theme: Day");
-            btnTheme.setOnClickListener(v -> toggleTheme());
-        }
-        viewSetup.findViewById(R.id.btnRestartLauncher).setOnClickListener(v -> recreate());
+    private void updateClockDetail() {
+        TextView detail = settingsView("tvSetClock");
+        if (detail != null) detail.setText(is24HourClock() ? "Shows 17:30" : "Shows 5:30 PM");
     }
 
     private void toggleSpeedUnit() {
         String current = prefHelper.getSpeedUnit();
         String next = current.equals(PreferenceHelper.UNIT_KMH) ? PreferenceHelper.UNIT_MPH : PreferenceHelper.UNIT_KMH;
         prefHelper.setSpeedUnit(next);
-        if (btnToggleUnit != null) btnToggleUnit.setText(next);
+        updateUnitSegment();
         if (tvSpeedUnit != null) tvSpeedUnit.setText(next.toLowerCase(Locale.US));
         if (gpsManager != null) {
             gpsManager.setUseMph(next.equals(PreferenceHelper.UNIT_MPH));
@@ -1182,9 +1273,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void openFactorySettings() {
         new AlertDialog.Builder(this)
-                .setTitle("Car Factory Settings")
-                .setMessage("Factory PIN: 123456\nAlternative PIN: 7890\n\nCANbus: 03: Simple Soft (XP)\nProfile: 61: Hyundai Kia / 01: 13 All new Santafe")
-                .setPositiveButton("Open Settings", (dialog, which) -> {
+                .setTitle("Open factory settings?")
+                .setMessage("These are the head unit's own setup screens. Wrong values can stop the radio, camera or steering wheel buttons working.")
+                .setPositiveButton("Open", (dialog, which) -> {
                     String[] factoryIntents = {
                             "com.ts.factory",
                             "com.microntek.factorysettings",
@@ -1533,7 +1624,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void toggleTheme() {
-        getSharedPreferences("ad_display", MODE_PRIVATE).edit().putBoolean("night", !isNightTheme()).apply();
+        getSharedPreferences("ad_display", MODE_PRIVATE).edit()
+                .putBoolean("night", !isNightTheme()).putBoolean("reopen_settings", true).apply();
         recreate();
     }
 
@@ -1555,7 +1647,7 @@ public class MainActivity extends AppCompatActivity {
         railBtnMaps.setOnClickListener(v -> showView(viewMaps, railBtnMaps));
         railBtnAudio.setOnClickListener(v -> showView(viewAudio, railBtnAudio));
         railBtnApps.setOnClickListener(v -> showView(viewApps, railBtnApps));
-        railBtnSetup.setOnClickListener(v -> { if (!lockedWhileDriving()) showView(viewSetup, railBtnSetup); });
+        railBtnSetup.setOnClickListener(v -> showView(viewSetup, railBtnSetup));
     }
 
     private void showView(View targetView, View activeRailBtn) {
@@ -1600,11 +1692,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initClock() {
-        final SimpleDateFormat sdf = new SimpleDateFormat("h:mm", Locale.getDefault());
+        final SimpleDateFormat sdf24 = new SimpleDateFormat("H:mm", Locale.getDefault());
+        final SimpleDateFormat sdf12 = new SimpleDateFormat("h:mm a", Locale.getDefault());
         clockHandler.post(new Runnable() {
             @Override
             public void run() {
-                tvClock.setText(sdf.format(new Date()));
+                tvClock.setText((is24HourClock() ? sdf24 : sdf12).format(new Date()));
                 clockHandler.postDelayed(this, 1000);
             }
         });
@@ -1638,6 +1731,12 @@ public class MainActivity extends AppCompatActivity {
             public void onCoordinatesUpdated(double latitude, double longitude, double altitudeMeters, float accuracyMeters) {
                 runOnUiThread(() -> {
                     setDot(findViewById(R.id.ivGpsDot), R.color.ad_ok);
+                    TextView about = viewSetup != null ? viewSetup.findViewById(R.id.tvSetLocation) : null;
+                    if (about != null) {
+                        about.setText(String.format(Locale.US, "%.4f° %s, %.4f° %s · %.0f m · ±%.0f m",
+                                Math.abs(latitude), latitude >= 0 ? "N" : "S",
+                                Math.abs(longitude), longitude >= 0 ? "E" : "W", altitudeMeters, accuracyMeters));
+                    }
                     if (tvNavCoordinates != null) {
                         tvNavCoordinates.setText(String.format(Locale.US, "%.4f° N, %.4f° E", latitude, longitude));
                     }

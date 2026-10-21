@@ -105,4 +105,35 @@
         <item name="android:background">@null</item>
         <item name="showText">false</item>
     </style>
+
+    <!-- Settings group list item: 64 px, 26 px icon, label 22. -->
+    <style name="Widget.ApexDrive.ListItem" parent="TextAppearance.ApexDrive.Label">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">@dimen/ad_target</item>
+        <item name="android:layout_marginBottom">4dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:drawablePadding">16dp</item>
+        <item name="drawableTint">@color/ad_label_2</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:background">@drawable/ad_bg_list_item</item>
+    </style>
+
+    <!-- Segment in a segmented control: 48 px capsule, label 22 semibold. -->
+    <style name="Widget.ApexDrive.Segment" parent="TextAppearance.ApexDrive.Label">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:minWidth">88dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:paddingEnd">20dp</item>
+        <item name="android:fontFamily">@font/atkinson_next_semibold</item>
+        <item name="fontFamily">@font/atkinson_next_semibold</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:background">@drawable/ad_bg_segment_item</item>
+    </style>
 </resources>
