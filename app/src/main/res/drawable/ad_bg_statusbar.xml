@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status bar: solid glass fallback with a bottom hairline. GlassDrawable replaces the fill when blur is ready. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item><shape android:shape="rectangle"><solid android:color="@color/ad_glass_solid" /></shape></item>
+    <item android:gravity="bottom" android:height="1dp"><shape android:shape="rectangle"><solid android:color="@color/ad_glass_edge" /></shape></item>
+</layer-list>
