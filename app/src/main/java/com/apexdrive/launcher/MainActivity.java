@@ -129,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES); // until Day/Night auto lands
+        AppCompatDelegate.setDefaultNightMode(isNightTheme() ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
         super.onCreate(savedInstanceState);
         makeFullScreen();
 
@@ -1037,6 +1037,11 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
         viewSetup.findViewById(R.id.btnShortcutAudioEq).setOnClickListener(v -> openAudioEqualizer());
         viewSetup.findViewById(R.id.btnShortcutBluetooth).setOnClickListener(v -> showDeviceSelectorDialog(false));
+        Button btnTheme = viewSetup.findViewById(R.id.btnToggleTheme);
+        if (btnTheme != null) {
+            btnTheme.setText(isNightTheme() ? "Theme: Night" : "Theme: Day");
+            btnTheme.setOnClickListener(v -> toggleTheme());
+        }
         viewSetup.findViewById(R.id.btnRestartLauncher).setOnClickListener(v -> recreate());
     }
 
@@ -1414,6 +1419,15 @@ public class MainActivity extends AppCompatActivity {
             sendBroadcast(new Intent("action.hct.media.key").putExtra("keycode", KeyEvent.KEYCODE_MEDIA_PAUSE));
             sendBroadcast(new Intent("com.android.fm.stop"));
         } catch (Exception ignored) {}
+    }
+
+    private boolean isNightTheme() {
+        return getSharedPreferences("ad_display", MODE_PRIVATE).getBoolean("night", true);
+    }
+
+    private void toggleTheme() {
+        getSharedPreferences("ad_display", MODE_PRIVATE).edit().putBoolean("night", !isNightTheme()).apply();
+        recreate();
     }
 
     /** True, with a notification, when the action is not allowed while the car is moving. */

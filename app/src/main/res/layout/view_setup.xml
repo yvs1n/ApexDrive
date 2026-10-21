@@ -17,7 +17,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Swiss cockpit accent color"
+            android:text="Display"
             android:textColor="@color/cockpit_text_secondary"
             android:textSize="20sp"
             android:fontFamily="@font/atkinson_next_medium" />
@@ -30,46 +30,14 @@
             android:background="@color/cockpit_surface_border_subtle" />
 
         <!-- Accent swatches are retired; the design system has one accent. -->
-        <LinearLayout android:visibility="gone"
+        <Button
+            android:id="@+id/btnToggleTheme"
+            style="@style/TextAppearance.ApexDrive.Label"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <Button
-                android:id="@+id/btnColorAmber"
-                android:layout_width="56dp"
-                android:layout_height="52dp"
-                android:background="@color/accent_amber" />
-
-            <Button
-                android:id="@+id/btnColorBlue"
-                android:layout_width="56dp"
-                android:layout_height="52dp"
-                android:layout_marginStart="8dp"
-                android:background="@color/accent_hyundai_blue" />
-
-            <Button
-                android:id="@+id/btnColorRed"
-                android:layout_width="56dp"
-                android:layout_height="52dp"
-                android:layout_marginStart="8dp"
-                android:background="@color/accent_sport_red" />
-
-            <Button
-                android:id="@+id/btnColorGreen"
-                android:layout_width="56dp"
-                android:layout_height="52dp"
-                android:layout_marginStart="8dp"
-                android:background="@color/accent_emerald" />
-
-            <Button
-                android:id="@+id/btnColorWhite"
-                android:layout_width="56dp"
-                android:layout_height="52dp"
-                android:layout_marginStart="8dp"
-                android:background="@color/accent_platinum" />
-        </LinearLayout>
+            android:layout_height="@dimen/ad_target"
+            android:background="@drawable/ad_bg_btn_secondary"
+            android:textAllCaps="false"
+            android:text="Theme: Night" />
 
         <View
             android:layout_width="match_parent"
