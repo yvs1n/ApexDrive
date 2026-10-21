@@ -31,3 +31,176 @@ Each finding is one block:
 **What is already fine.** No analytics, ad or crash-reporting SDK, no WebView, no `exec` with user-controlled input, no secrets in the tree, `MediaSyncService` is correctly protected by `BIND_NOTIFICATION_LISTENER_SERVICE`, `BootReceiver` correctly does not call `startActivity`, and `onBackPressed` correctly never leaves the launcher.
 
 <!-- SUMMARY -->
+
+---
+
+## A. Functional bugs
+
+### CarPlay launch and "connected" state
+
+**P-01 · High · `MainActivity.java:2308-2317`**
+- **What happens:** `launchCarPlay()` reads the user's chosen package (`:2304`) but fires `zjinnova.android.intent.action.ZLINK_MAIN` first (`:2308-2313`) and returns on success. The chosen app (`:2317`) is only used when Zlink is not installed.
+- **Why it matters:** On a unit that has Zlink installed, choosing DiPlay, AutoKit or SpeedPlay in Setup (`showCarPlayPicker`, `:1115`) has no effect on the launch path. The Setup button label says one app and the launcher starts another.
+- **Fix:** Resolve in this order: the saved package, then (only if the saved package is Zlink) the `ZLINK_MAIN` intent, then the fallback list. Extract a `CarPlayLauncher` class so this is unit-testable.
+
+**P-02 · Med · `MainActivity.java:2331-2335`, `PreferenceHelper.java:26-27`**
+- **What happens:** When the fallback loop launches any package from `commonCarPlayPackages`, the code saves that package but always saves the name `"TLink 5.3"`. The preference default is `"Zlink 5.3"`, so the same app has two names depending on the path. `tvCarPlayProtocol` and the Setup button are not refreshed on this path.
+- **Why it matters:** Launching DiPlay through the fallback relabels it "TLink 5.3" for the rest of the install.
+- **Fix:** Take the label from `PackageManager.getApplicationLabel()` and call the existing `saveCarPlayApp()` (`:1152`) so the UI refreshes too.
+
+**P-03 · High · `MainActivity.java:2299`, `:2262-2267`, `:1612`**
+- **What happens:** `isCarPlayConnected` is set to `true` unconditionally at the top of `launchCarPlay()`, and again by the media receiver whenever any track is "playing" with a title that does not start with `"FM "` (`:2262`). The only thing that resets it is a Bluetooth callback (`:1612`). Tapping the Bluetooth pill or card launches CarPlay whenever this flag or any Bluetooth guess (P-04) is true (`:251-253`, `:546-548`).
+- **Why it matters:** Playing Spotify from the head unit's own USB player marks "CarPlay connected" and shows the saved driver's name with "WIRELESS PROJECTION ACTIVE" (`:2266`). A single tap on the pill, even to a launch that fails, makes the header read as connected.
+- **Fix:** Keep two separate pieces of state: `phoneLinkState` (from `BluetoothWatcher` only) and `projectionAppLaunchedAt` (timestamp, for the "LAUNCHING..." text only). Do not infer connection from audio metadata.
+
+### Bluetooth detection (`BluetoothWatcher`) `[verify in car]`
+
+**P-04 · High · `BluetoothWatcher.java:369-372`, `:388-417`, `:362-368`, `:710-714`, `:687-723`**
+- **What happens:** Three independent guesses can report "connected" with no evidence about the specific phone:
+  1. `isDeviceCurrentlyConnected()` returns `true` for **any** device when `AudioManager.isBluetoothA2dpOn()` is true (`:369-372`), so with two paired phones both show CONNECTED.
+  2. `checkVendorBtConnected()` returns `true` if the `bluetooth_state` Settings value is 1 or 2 (`:403-404`), or if `bt_device_name` is merely non-empty (`:406-407`). `[inferred]` On many units `bt_device_name` is the **head unit's own** Bluetooth name (the string phones pair to; the app itself says "Pair via SantafemR (PIN 0000)", `:731`), which would make this permanently true.
+  3. When exactly one device is bonded and any adapter-level signal is true, that device is declared connected (`:364`, `:710-714`). With none of the above, a vendor flag alone yields the generic `"Phone Connected"` (`:722`).
+- **Why it matters:** The dashboard, the header pill and the `LAUNCH` pill (`MainActivity.java:2062`) show a connected phone that may be absent, and CarPlay launch is gated on this state.
+- **Fix:** Trust only per-device evidence: profile proxy `getConnectedDevices()` (`:288`, `:303`), `ACL_CONNECTED/DISCONNECTED` and profile state broadcasts. Treat vendor Settings and properties as hints that must match a bonded device's MAC or name before they count. Add a hidden diagnostics line that records which signal fired, so a bug report from a car says why. Verify in car: log every signal while the phone is off, paired but not connected, and connected.
+
+**P-05 · Med · `BluetoothWatcher.java:190-195`, `:161`, `:91-124`**
+- **What happens:** `initProfileProxies()` returns immediately if Bluetooth is off at start (`:191`) and is never called again. `ACTION_STATE_CHANGED` is in the receiver's filter (`:161`) but matches neither the connected nor the disconnected condition (`:100-124`), so it is ignored.
+- **Why it matters:** The code's own comments describe the cold-boot case where the stack is not ready (`MainActivity.java:1989`). In that case the A2DP and Headset proxies stay `null` for the whole session and detection falls back to the guesses in P-04.
+- **Fix:** On `STATE_ON`, call `initProfileProxies()`; on `STATE_OFF`, drop the proxies.
+
+**P-06 · Med · `MainActivity.java:1930-1959`, call sites `:255 :259 :550 :554 :862 :983 :1020`; `dialog_device_selector.xml:31`**
+- **What happens:** `showDeviceSelectorDialog(boolean isAutoDismiss)` is only ever called with `false`. The `CountDownTimer` branch (`:1931-1959`) that would auto-connect the saved driver phone after 8 seconds, and the `"Auto in 8s"` label, are dead code.
+- **Why it matters:** The handoff doc promises a "driver phone" flow, but at ignition nothing reconnects the saved phone. `getSelectedDriverDevice()` is only used to label cards (`:1644`, `:2048`, `:2264`, `:2300`) and by this dead branch (`:1946`).
+- **Fix:** Decide the product behaviour. Either call the auto path from `onCreate` when a saved driver exists and is not connected (with a visible cancel), or delete the branch and the label. Audit 3 owns the product decision.
+
+**P-07 · Med · `MainActivity.java:1904-1909`, `BluetoothWatcher.java:482`**
+- **What happens:** Opening the "Select driver phone" dialog silently calls `BluetoothAdapter.enable()` if Bluetooth is off. `signalConnect()` calls `createBond()` on any unbonded target (`:481-483`), and the auto-connect path passes a saved MAC to it (`:1951-1953`).
+- **Why it matters:** Opening a picker changes system Bluetooth state, and a stale saved MAC can start a pairing request on the phone.
+- **Fix:** Show a prompt with an Enable button (`BluetoothAdapter.ACTION_REQUEST_ENABLE`, works on API 21+), and never `createBond()` from a saved MAC.
+
+**P-08 · Low · `BluetoothWatcher.java:479` and `:572`, `:586-616`**
+- **What happens:** A single connect attempt calls `broadcastHeadUnitConnect()` twice (once from `signalConnect()` at `:479`, once at `:572`): 22 broadcasts. A temporary A2DP proxy is created per attempt when the persistent one is null (`:548-559`) and never closed.
+- **Why it matters:** Duplicate vendor commands, and a Binder proxy leak per retry.
+- **Fix:** Remove one call; call `closeProfileProxy` after use. The broadcast list itself is addressed by P-76.
+
+### Media control and metadata (`MediaSyncService`)
+
+**P-09 · High · `MediaSyncService.java:223-276`, callers `MainActivity.java:568-603`** `[verify in car]`
+- **What happens:** Every key press (prev, next, play, pause) is delivered five ways: `AudioManager.dispatchMediaKeyEvent` down and up (`:230-231`); two `ACTION_MEDIA_BUTTON` broadcasts (`:237-243`); three string-command broadcasts to Zlink, DiPlay and GOC (`:256-258`); four vendor key broadcasts (`:264-267`); and `Runtime.exec("input keyevent N")` (`:271-275`).
+- **Why it matters:** A player that listens to a media session and to the `MEDIA_BUTTON` broadcast can receive NEXT twice and skip two tracks. The `input` binary is a separate Java VM start (hundreds of ms on this SoC) and cannot inject events from an app uid anyway. The event times use `System.currentTimeMillis()` (`:225`) but `KeyEvent` expects `SystemClock.uptimeMillis()`, so some receivers may treat events as stale.
+- **Fix:** One path. Use `MediaController.getTransportControls()` when a session exists; otherwise one `dispatchMediaKeyEvent` down and up pair using `uptimeMillis()`. Anything vendor-specific moves into the profile (P-76).
+
+**P-10 · High · `MediaSyncService.java:196-202`** `[verify in car]`
+- **What happens:** Starting playback calls `controller.play()`, then `sendMediaKey(KEYCODE_MEDIA_PLAY)` (126), then `sendMediaKey(KEYCODE_MEDIA_PLAY_PAUSE)` (85), plus the vendor and string broadcasts.
+- **Why it matters:** PLAY_PAUSE is a toggle. A player that honours PLAY and then PLAY_PAUSE ends up paused again. `sIsPlaying` is flipped optimistically (`:191`, `:218-220`), so the button text shows PAUSE while audio may be stopped.
+- **Fix:** Send one command only. Derive the button text from `PlaybackState`, not from the tap.
+
+**P-11 · Med · `MediaSyncService.java:55-71`**
+- **What happens:** `updateActiveController()` registers a new `MediaController.Callback` on every session-list change and never unregisters the old one (`:58`). It always uses `controllers.get(0)` rather than the controller that is `STATE_PLAYING`, and stores it in a `static` field (`:26`) that is never cleared.
+- **Why it matters:** After a few session changes each metadata event fires several broadcasts. Controls can target a session that is not the one playing.
+- **Fix:** Keep one callback instance, unregister it from the previous controller before switching, pick the playing session, and clear the static in `onDestroy` / `onListenerDisconnected`.
+
+**P-12 · Med · `MediaSyncService.java:128-151`, `:61-66`, `:99`**
+- **What happens:** `broadcastMetadata()` starts from the placeholders `"Track / Radio"` and `"Tap Play to resume Spotify, Radio or CarPlay"` (`:129-130`). A playback-state callback while `sActiveController` is null (`:66`) passes `null` metadata and overwrites a real title with the placeholder. The vendor-broadcast path invents the artist `"Bluetooth / CarPlay Audio"` (`:99`).
+- **Why it matters:** Now-playing text flickers back to a placeholder, and invented artist text looks like data.
+- **Fix:** Send only fields that changed, and show an empty state in the UI instead of fake text.
+
+**P-13 · Med · `MediaSyncService.java:134-135`, `README.md:61-62`**
+- **What happens:** Only `METADATA_KEY_TITLE` and `METADATA_KEY_ARTIST` are read. Album art (`METADATA_KEY_ALBUM_ART`, `METADATA_KEY_ART`, `METADATA_KEY_ART_URI`) is available from the same `MediaMetadata` but unused, although the README promises "album art".
+- **Why it matters:** Feature gap versus the docs, and a visible one on a 1024x600 dash.
+- **Fix:** Art cannot travel in the broadcast: a `Bitmap` extra would hit the roughly 1 MB Binder transaction limit and `TransactionTooLargeException`. `NotificationListenerService` runs in the app's own process, so replace the broadcast with an in-process observer (a singleton with a listener list) and downscale to 256 px before handing it over. This also removes the leak in P-40.
+
+**P-14 · Med · `MainActivity.java:2294`, `MediaSyncService.java:50-52`, `README.md:60-62`**
+- **What happens:** `startService()` on a `NotificationListenerService` starts the object but does not grant notification access. Without that grant `getActiveSessions()` throws `SecurityException`, which is swallowed (`:50`). Nothing in the UI shows or requests the grant; only the README mentions it.
+- **Why it matters:** The "live media" feature is silently off on a fresh install and the user has no hint why.
+- **Fix:** Add a Setup row showing grant state (`NotificationManagerCompat.getEnabledListenerPackages(ctx)`, `androidx.core`, already on the classpath) with a button that opens `android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS` (the constant exists from API 22; use the string literal on API 21). `[verify in car]` many units remove that settings page; the row should then explain the `adb` alternative.
+
+### Task switcher
+
+**P-15 · High · `MainActivity.java:296-308`, `:372-377`, `:418-423`, `:383`, `:430`**
+- **What happens:**
+  - `getRunningAppProcesses()` returns only the caller's own processes for non-system apps from API 22, so the "RUNNING IN BACKGROUND" list is mostly empty or only the stored recents.
+  - `Runtime.exec("am force-stop " + pkg)` cannot work from an app uid (it needs `FORCE_STOP_PACKAGES`, a signature permission) and the process result is never read.
+  - `killBackgroundProcesses()` only kills cached, non-foreground processes.
+  - The toasts still say "Memory released" and "Head unit RAM freed".
+  - `CLOSE ALL` kills every package in the list (`:416-423`) with no exclusion for the current CarPlay bridge, media player or radio app.
+- **Why it matters:** A false claim on screen, and `CLOSE ALL` can drop an active projection session or audio when it does run. `[verify in car]` the platform may be rooted or signed with the system key, which would change the first two points; the code should not depend on that.
+- **Fix:** Drop the `exec` calls and the "RAM freed" wording. Show only what is knowable (recents the launcher itself started). Exclude the saved CarPlay, radio and map packages from `CLOSE ALL`. See P-35 for the labels.
+
+**P-16 · Med · `MainActivity.java:470-475`, `MediaSyncService.java:271-275`**
+- **What happens:** `triggerSystemRecents()` runs `Runtime.exec("input keyevent 187")` and `return`s. `exec` throws only when the binary cannot be spawned, so the code on `:477-507` (status-bar service reflection and six vendor broadcasts) is unreachable even when the key event is rejected.
+- **Why it matters:** The "SYSTEM UI" button can silently do nothing, and every press spawns a VM.
+- **Fix:** Remove `exec`. Try the vendor broadcasts from the profile (P-76) first, or use an `AccessibilityService` with `GLOBAL_ACTION_RECENTS` (API 21+) behind an explicit user opt-in. Otherwise remove the button.
+
+### Clock, GPS and units
+
+**P-17 · Med · `MainActivity.java:1529-1536`**
+- **What happens:** The clock uses the fixed pattern `"h:mm"` (12-hour, no AM/PM) with a `SimpleDateFormat` built once. Time-zone changes are not reflected, and the user's 24-hour setting is ignored.
+- **Why it matters:** Wrong in most of the world; `12:45` could mean midnight or noon. A trip across zones shows the old zone until restart.
+- **Fix:** `android.text.format.DateFormat.getTimeFormat(context)` re-created on `ACTION_TIME_CHANGED` / `ACTION_TIMEZONE_CHANGED`, refreshed on `ACTION_TIME_TICK` (see P-47).
+
+**P-18 · Low · `MainActivity.java:1565`**
+- **What happens:** Coordinates are printed as `"%.4f° N, %.4f° E"` for any sign, so a position in the southern or western hemisphere reads, for example, `-33.8688° N`.
+- **Why it matters:** Wrong data on screen for roughly half the planet.
+- **Fix:** Use sign to choose N/S and E/W and print the absolute value.
+
+**P-19 · Med · `GpsTelemetryManager.java:62-78`, `:108-115`, `:147-153`**
+- **What happens:** GPS and network fixes feed the same handler. Network fixes have no speed, so speed is derived from the distance to `lastLocation`, which may be a GPS fix (`:109-115`). The trip odometer also adds distance between fixes from different providers (`:147-153`). Integer-second `timeDeltaSec` (`:111`) makes small deltas coarse.
+- **Why it matters:** Mixed-provider hops of tens of metres add phantom distance and produce speed spikes. A network fix can also overwrite a better GPS `lastLocation`.
+- **Fix:** Use `GPS_PROVIDER` only for speed, heading and trip. Use network or passive fixes only for the coarse weather location (see P-38). Reject fixes with `accuracy` worse than a threshold or older than a few seconds.
+
+**P-20 · Med · `GpsTelemetryManager.java:25-27`, `:149`, `:155`; `MainActivity.java:1021`, `:1540`**
+- **What happens:** The trip total and start time live only in `GpsTelemetryManager` fields. A gap of more than 300 m between consecutive fixes is dropped (`:149`), so a tunnel or a dropout loses that distance. `elapsedMinutes` is wall-clock since the manager started or was reset, not driving time. Process death, or the "RESTART APEXDRIVE" button (`recreate()` creates a new manager), zeroes the trip.
+- **Why it matters:** On a 2 GB unit the launcher process is a likely victim of the low-memory killer, so the trip meter resets without warning.
+- **Fix:** Persist `totalDistanceMeters` and `tripStartTime` in `PreferenceHelper` every few seconds and on pause, restore on start. Count gaps with `Location.distanceTo` when the time delta is consistent with a plausible speed.
+
+**P-21 · Med · `MainActivity.java:1033-1034`, `CarThermometerWatcher.java:40`, `:59`**
+- **What happens:** `toggleSpeedUnit()` also switches temperature to Fahrenheit (the thermometer field is literally named `isMph`). Km/h with °F or mph with °C is impossible.
+- **Why it matters:** Common real-world combination (UK: mph and °C) cannot be set.
+- **Fix:** Separate preference and Setup row for temperature unit.
+
+### Thermometer (`CarThermometerWatcher`) `[verify in car]`
+
+**P-22 · Med · `CarThermometerWatcher.java:245-247`, `:313`, `:383`, `:420`, `:95-98`; `MainActivity.java:1835-1838`**
+- **What happens:**
+  - The calibration offset is applied only to the weather result (`:246-247`). CAN broadcast (`:313`), Settings/property (`:383`) and built-in sensor (`:420`) readings ignore it.
+  - The calibration dialog computes `offset = target - getRawTempCelsius()`, but `rawTempC` is only updated by the weather path (`:245`). If the only source is CAN or sensor, `raw` is the stale default 32.0 and the offset is wrong.
+  - Every source overwrites the others with no priority, so a 10-minute weather refresh replaces a CAN reading (`:245-248`).
+  - `clearManualCalibration()` resets the offset but does not recompute `currentTempC`.
+- **Why it matters:** The value the driver calibrated against the instrument cluster is lost whenever a different source reports.
+- **Fix:** One `TempSource` priority (CAN, then sensor, then weather), keep the raw value per source, apply the offset once in `notifyTemp`, and compute the dialog offset from the currently displayed source.
+
+**P-23 · Med · `CarThermometerWatcher.java:302`, `:312`, `:379-382`**
+- **What happens:** Generic extra keys `"temp"`, `"temperature"`, `"celsius"` and `"car_temp"` are accepted from any CAN or vendor broadcast (`:302`), so coolant or cabin temperature would be shown as outside temperature. Anything between 55 and 130 from Settings or properties is converted as Fahrenheit (`:380-382`); a genuine 56 °C hot-surface reading becomes 13 °C. The intent path accepts -40 to 65 (`:312`).
+- **Why it matters:** A plausible-looking wrong number is worse than "--".
+- **Fix:** Units and key names come from the vehicle/head-unit profile (P-76); unknown keys are ignored.
+
+**P-24 · Med · `CarThermometerWatcher.java:215`, `:213-261`**
+- **What happens:** `lastOnlineFetchTime` is set when a fetch starts, not when it succeeds (`:215`). A failed fetch (no signal, tunnel) suppresses retries for 10 minutes (`:176`) while the last value stays on screen, with the city name, as if live.
+- **Why it matters:** Stale weather looks current.
+- **Fix:** Record success time, retry with backoff, and show an age or grey the value after a threshold.
+
+### Apps, pickers and radio
+
+**P-25 · Med · `MainActivity.java:941`, `:959`, `:963-972`**
+- **What happens:** The app list loads once in `setupAppsWidgets()` and again only after a failed launch. There is no package-change receiver.
+- **Why it matters:** The app itself tells the user to sideload OsmAnd from USB (`:697-701`); after installing it the app does not appear until restart.
+- **Fix:** Register for `ACTION_PACKAGE_ADDED/REMOVED/REPLACED` (with `addDataScheme("package")`) and refresh.
+
+**P-26 · Low · `MainActivity.java:1146`, `:1201`, `:1280`; `AppsGridAdapter.java:76-80`, `MainActivity.java:938-939`**
+- **What happens:** Pickers store `names.get(which).split(" \\(")[0]` as the label, so an app named `Maps (Go)` is saved as `Maps`. The grid sets a click listener on each tile (`AppsGridAdapter.java:76`) and also an `OnItemClickListener` (`MainActivity.java:939`); the second never fires because the tile consumes the click.
+- **Why it matters:** Wrong labels persisted; dead code.
+- **Fix:** Keep a parallel list of labels; remove one of the two listeners.
+
+**P-27 · Med · `MainActivity.java:899-905`, `:920-926`, `:1368`, `:1391`, `:888-928`** `[verify in car]`
+- **What happens:**
+  - Frequency up/down buttons send four tune broadcasts on every press even when the radio is stopped (the `try` at `:899` is outside the `isRadioPlaying` checks).
+  - `com.microntek.radio.power` is sent in both the start (`:1368`) and the stop (`:1391`) paths; by its name it is a power toggle, so "pause" could power the tuner on.
+  - The frequency is clamped to 87.5 to 108.0 MHz (`:891`, `:912`) in 0.1 steps and nothing is ever read back from the tuner.
+- **Why it matters:** The on-screen frequency can differ from the real tuner, and the labels say "SEEK" (`view_audio.xml:159`, `:185`) for what is a manual step. See P-31.
+- **Fix:** Gate tune broadcasts behind a playing radio, send only the active profile's actions, and rename the buttons "TUNE -/+" until a real seek exists.
+
+**P-28 · Low · `view_maps.xml:226`, `MainActivity.java:635`**
+- **What happens:** The button labelled REST AREA runs `launchPoiSearch("coffee")`. Search terms are English literals (`:633-636`).
+- **Why it matters:** Label and action disagree; the query is wrong in non-English map apps.
+- **Fix:** Pick one meaning, and pass `geo:` queries through string resources.
