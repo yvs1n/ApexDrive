@@ -65,13 +65,13 @@ public class CarThermometerWatcher implements SensorEventListener {
     // Per-source raw readings (indexed by Source.ordinal()).
     private final float[] rawC = {Float.NaN, Float.NaN, Float.NaN, Float.NaN};
     private final long[] readAt = new long[4];
-    private final String[] label = {"MANUAL", "VEHICLE SENSOR", "BUILT-IN SENSOR", "OUTSIDE"};
+    private final String[] label = {"Manual", "Car sensor", "Built-in sensor", "Outside"};
     private float offsetC;
 
     // What is currently shown. Volatile so the getters are safe from any thread.
     private volatile float displayedC = Float.NaN;
     private volatile float displayedRawC = Float.NaN;
-    private volatile String displayedCondition = "NO DATA";
+    private volatile String displayedCondition = "No data";
     private volatile String displayedCity = "";
 
     private static final long POLL_INTERVAL_MS = 60 * 1000L;
@@ -394,13 +394,13 @@ public class CarThermometerWatcher implements SensorEventListener {
     }
 
     private String mapWeatherCode(int code) {
-        if (code == 0) return "CLEAR";
-        if (code >= 1 && code <= 3) return "PARTLY CLOUDY";
-        if (code == 45 || code == 48) return "FOG";
-        if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return "RAIN";
-        if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return "SNOW";
-        if (code >= 95 && code <= 99) return "THUNDERSTORM";
-        return "OUTSIDE";
+        if (code == 0) return "Clear";
+        if (code >= 1 && code <= 3) return "Partly cloudy";
+        if (code == 45 || code == 48) return "Fog";
+        if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return "Rain";
+        if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return "Snow";
+        if (code >= 95 && code <= 99) return "Thunderstorm";
+        return "Outside";
     }
 
     /**
@@ -544,7 +544,7 @@ public class CarThermometerWatcher implements SensorEventListener {
         if (active == null) {
             displayedRawC = Float.NaN;
             displayedC = Float.NaN;
-            displayedCondition = "NO DATA";
+            displayedCondition = "No data";
         } else {
             float raw = rawC[active.ordinal()];
             displayedRawC = raw;

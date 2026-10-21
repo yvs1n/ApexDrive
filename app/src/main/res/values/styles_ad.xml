@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Design system text appearances. Weights map to one font file each so API 21-25 never has to pick a weight from a family. -->
+<resources>
+    <style name="TextAppearance.ApexDrive" parent="TextAppearance.AppCompat">
+        <item name="android:textColor">@color/ad_label_1</item>
+        <item name="android:fontFamily">@font/atkinson_next_regular</item>
+        <item name="fontFamily">@font/atkinson_next_regular</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+    <style name="TextAppearance.ApexDrive.Speed">
+        <item name="android:textSize">@dimen/ad_text_speed</item>
+        <item name="android:fontFamily">@font/atkinson_next_semibold</item>
+        <item name="fontFamily">@font/atkinson_next_semibold</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:letterSpacing">-0.02</item>
+    </style>
+    <style name="TextAppearance.ApexDrive.Display">
+        <item name="android:textSize">@dimen/ad_text_display</item>
+        <item name="android:fontFamily">@font/atkinson_next_semibold</item>
+        <item name="fontFamily">@font/atkinson_next_semibold</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+    </style>
+    <style name="TextAppearance.ApexDrive.Title">
+        <item name="android:textSize">@dimen/ad_text_title</item>
+        <item name="android:fontFamily">@font/atkinson_next_semibold</item>
+        <item name="fontFamily">@font/atkinson_next_semibold</item>
+    </style>
+    <style name="TextAppearance.ApexDrive.Glance">
+        <item name="android:textSize">@dimen/ad_text_glance</item>
+        <item name="android:fontFamily">@font/atkinson_next_medium</item>
+        <item name="fontFamily">@font/atkinson_next_medium</item>
+    </style>
+    <style name="TextAppearance.ApexDrive.Label">
+        <item name="android:textSize">@dimen/ad_text_label</item>
+        <item name="android:fontFamily">@font/atkinson_next_semibold</item>
+        <item name="fontFamily">@font/atkinson_next_semibold</item>
+    </style>
+    <style name="TextAppearance.ApexDrive.Body">
+        <item name="android:textSize">@dimen/ad_text_body</item>
+        <item name="android:fontFamily">@font/atkinson_next_regular</item>
+        <item name="fontFamily">@font/atkinson_next_regular</item>
+    </style>
+    <style name="TextAppearance.ApexDrive.Caption">
+        <item name="android:textSize">@dimen/ad_text_caption</item>
+        <item name="android:fontFamily">@font/atkinson_next_medium</item>
+        <item name="fontFamily">@font/atkinson_next_medium</item>
+        <item name="android:textColor">@color/ad_label_2</item>
+    </style>
+</resources>

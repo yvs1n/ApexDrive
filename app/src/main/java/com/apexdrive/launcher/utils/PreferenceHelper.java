@@ -86,7 +86,7 @@ public class PreferenceHelper {
     }
 
     public String getSavedCondition() {
-        return prefs.getString(KEY_SAVED_CONDITION, "MANUAL");
+        return prefs.getString(KEY_SAVED_CONDITION, "Manual");
     }
 
     public void setSavedCondition(String condition) {

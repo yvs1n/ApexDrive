@@ -21,7 +21,6 @@ import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -40,12 +39,12 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
 
 import com.apexdrive.launcher.adapters.AppsGridAdapter;
@@ -55,6 +54,8 @@ import com.apexdrive.launcher.services.CarThermometerWatcher;
 import com.apexdrive.launcher.services.GpsTelemetryManager;
 import com.apexdrive.launcher.services.MediaStateHolder;
 import com.apexdrive.launcher.services.MediaSyncService;
+import com.apexdrive.launcher.utils.DrivingState;
+import com.apexdrive.launcher.utils.Notifier;
 import com.apexdrive.launcher.utils.PreferenceHelper;
 
 import java.lang.reflect.Method;
@@ -77,7 +78,6 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothWatcher btWatcher;
     private CarThermometerWatcher thermometerWatcher;
 
-    private CountDownTimer deviceSelectorTimer;
     private AlertDialog deviceSelectorDialog;
     private boolean isBtConnecting = false;
     private boolean isCarPlayConnected = false;
@@ -102,18 +102,20 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvSpeed, tvSpeedUnit, tvHeading, tvTripDistance, tvTripTime;
     private TextView tvBtDeviceName, tvBtProfileDetail, tvBtStatusBadge;
     private TextView tvTrackTitle, tvTrackArtist, tvCarPlayProtocol;
-    private Button btnMediaPlayPause;
-    private Button btnSelectCarPlayApp;
-    private Button btnSelectRadioApp;
-    private Button btnSelectMapApp;
+    private android.widget.ImageButton btnMediaPlayPause;
+    private TextView btnSelectCarPlayApp;
+    private TextView btnSelectRadioApp;
+    private TextView btnSelectMapApp;
     private Button btnOpenOsmAnd;
     private Button btnChooseMapApp;
-    private Button btnToggleUnit;
-    private Button btnSelectDriverPhone;
+    private TextView btnSelectDriverPhone;
+    private String settingsGroup = "Phone";
     private boolean isRadioPlaying = false;
 
-    private TextView tvNavHeadingBig, tvNavCoordinates, tvNavAltitude, tvNavAccuracy, tvNavTripDist, tvNavTripDuration;
+    private TextView tvNavHeadingBig, tvNavAccuracy, tvNavTripDist, tvNavTripDuration;
 
+    private Notifier notifier;
+    private final DrivingState drivingState = new DrivingState();
     private final Handler clockHandler = new Handler(Looper.getMainLooper());
     private BroadcastReceiver mediaReceiver;
 
@@ -126,11 +128,20 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        AppCompatDelegate.setDefaultNightMode(isNightTheme() ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
         super.onCreate(savedInstanceState);
         makeFullScreen();
 
         prefHelper = new PreferenceHelper(this);
         setContentView(R.layout.activity_main);
+        notifier = new Notifier(this);
+        drivingState.setListener(driving -> runOnUiThread(() -> {
+            View chip = findViewById(R.id.chipDriving);
+            if (chip != null) chip.setVisibility(driving ? View.VISIBLE : View.GONE);
+            updatePairRow();
+            applyAppsDrivingMode(driving);
+            applySettingsDrivingMode(driving);
+        }));
 
         initViews();
         initNavigation();
@@ -142,7 +153,11 @@ public class MainActivity extends AppCompatActivity {
         initMediaReceiver();
 
         showView(viewDash, railBtnDash);
-        applyAccentColor(prefHelper.getAccentColor());
+        android.content.SharedPreferences display = getSharedPreferences("ad_display", MODE_PRIVATE);
+        if (display.getBoolean("reopen_settings", false)) {
+            display.edit().remove("reopen_settings").apply();
+            showView(viewSetup, railBtnSetup);
+        }
 
         // Instant Cockpit Display: Hide startup loader immediately so interface is ready without delay
         if (layoutStartupLoader != null) {
@@ -270,22 +285,17 @@ public class MainActivity extends AppCompatActivity {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_task_switcher, null);
         builder.setView(dialogView);
         AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+            dialog.getWindow().setDimAmount(0.5f);
+        }
 
-        ImageView ivSwitcherIcon = dialogView.findViewById(R.id.ivSwitcherIcon);
         TextView tvRecentsBadge = dialogView.findViewById(R.id.tvRecentsBadge);
         TextView tvNoRecentTasks = dialogView.findViewById(R.id.tvNoRecentTasks);
         LinearLayout llTasksList = dialogView.findViewById(R.id.llTasksList);
         Button btnCloseAllTasks = dialogView.findViewById(R.id.btnCloseAllTasks);
         Button btnSystemRecents = dialogView.findViewById(R.id.btnSystemRecents);
-        Button btnDismissSwitcher = dialogView.findViewById(R.id.btnDismissSwitcher);
-
-        int accentColor = prefHelper.getAccentColor();
-        if (ivSwitcherIcon != null) {
-            ivSwitcherIcon.setColorFilter(accentColor, PorterDuff.Mode.SRC_IN);
-        }
-        if (tvRecentsBadge != null) {
-            tvRecentsBadge.setTextColor(accentColor);
-        }
+        View btnDismissSwitcher = dialogView.findViewById(R.id.btnDismissSwitcher);
 
         ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         PackageManager pm = getPackageManager();
@@ -349,16 +359,13 @@ public class MainActivity extends AppCompatActivity {
                 if (tvName != null) tvName.setText(label);
                 if (tvStatus != null) {
                     if (isRunning) {
-                        tvStatus.setText("RUNNING IN BACKGROUND");
-                        tvStatus.setTextColor(accentColor);
+                        tvStatus.setText("Running");
                     } else {
-                        tvStatus.setText("RECENT TASK · READY");
-                        tvStatus.setTextColor(ContextCompat.getColor(this, R.color.cockpit_text_secondary));
+                        tvStatus.setText("Recent");
                     }
                 }
 
                 if (btnSwitch != null) {
-                    btnSwitch.setTextColor(accentColor);
                     btnSwitch.setOnClickListener(v -> {
                         dialog.dismiss();
                         recordRecentApp(pkg);
@@ -381,14 +388,13 @@ public class MainActivity extends AppCompatActivity {
                         } catch (Exception ignored) {}
                         prefHelper.removeRecentApp(pkg);
                         llTasksList.removeView(cardView);
-                        Toast.makeText(this, label + " closed · Memory released", Toast.LENGTH_SHORT).show();
                         if (llTasksList.getChildCount() == 0) {
                             if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.VISIBLE);
-                            if (tvRecentsBadge != null) tvRecentsBadge.setText("OPTIMIZED");
+                            if (tvRecentsBadge != null) tvRecentsBadge.setText("");
                             if (btnCloseAllTasks != null) btnCloseAllTasks.setEnabled(false);
                         } else {
                             if (tvRecentsBadge != null) {
-                                tvRecentsBadge.setText(llTasksList.getChildCount() + " TASKS");
+                                tvRecentsBadge.setText(llTasksList.getChildCount() + " recent");
                             }
                         }
                     });
@@ -402,12 +408,12 @@ public class MainActivity extends AppCompatActivity {
 
         if (llTasksList.getChildCount() == 0) {
             if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.VISIBLE);
-            if (tvRecentsBadge != null) tvRecentsBadge.setText("OPTIMIZED");
+            if (tvRecentsBadge != null) tvRecentsBadge.setText("");
             if (btnCloseAllTasks != null) btnCloseAllTasks.setEnabled(false);
         } else {
             if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.GONE);
             if (tvRecentsBadge != null) {
-                tvRecentsBadge.setText(activeCount > 0 ? activeCount + " RUNNING" : llTasksList.getChildCount() + " RECENT");
+                tvRecentsBadge.setText(activeCount > 0 ? activeCount + " running" : llTasksList.getChildCount() + " recent");
             }
             if (btnCloseAllTasks != null) {
                 btnCloseAllTasks.setEnabled(true);
@@ -426,9 +432,9 @@ public class MainActivity extends AppCompatActivity {
                     prefHelper.clearRecentApps();
                     llTasksList.removeAllViews();
                     if (tvNoRecentTasks != null) tvNoRecentTasks.setVisibility(View.VISIBLE);
-                    if (tvRecentsBadge != null) tvRecentsBadge.setText("RAM OPTIMIZED");
+                    if (tvRecentsBadge != null) tvRecentsBadge.setText("");
                     btnCloseAllTasks.setEnabled(false);
-                    Toast.makeText(this, "All background tasks closed · Head unit RAM freed", Toast.LENGTH_SHORT).show();
+                    notifier.show(Notifier.Kind.OK, "Background apps closed");
                 });
             }
         }
@@ -516,8 +522,24 @@ public class MainActivity extends AppCompatActivity {
         tvTripTime = viewDash.findViewById(R.id.tvTripTime);
         tvCarPlayProtocol = viewDash.findViewById(R.id.tvCarPlayProtocol);
 
+        View tileNowPlaying = viewDash.findViewById(R.id.tileNowPlaying);
+        if (tileNowPlaying != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            tileNowPlaying.setClipToOutline(true);
+            tileNowPlaying.setOutlineProvider(android.view.ViewOutlineProvider.BACKGROUND);
+        }
+        View placeHome = viewDash.findViewById(R.id.btnPlaceHome);
+        if (placeHome != null) placeHome.setOnClickListener(v -> launchPoiSearch("Home"));
+        View placeWork = viewDash.findViewById(R.id.btnPlaceWork);
+        if (placeWork != null) placeWork.setOnClickListener(v -> launchPoiSearch("Work"));
+        View placeFuel = viewDash.findViewById(R.id.btnPlaceFuel);
+        if (placeFuel != null) placeFuel.setOnClickListener(v -> launchPoiSearch("fuel"));
+        View btnOpenMapsHome = viewDash.findViewById(R.id.btnOpenMapsHome);
+        if (btnOpenMapsHome != null) {
+            btnOpenMapsHome.setOnClickListener(v -> launchOfflineMap());
+        }
+
         if (tvCarPlayProtocol != null) {
-            tvCarPlayProtocol.setText(prefHelper.getCarPlayName().toUpperCase());
+            tvCarPlayProtocol.setText(prefHelper.getCarPlayName());
         }
 
         if (tvSpeed != null) {
@@ -573,22 +595,24 @@ public class MainActivity extends AppCompatActivity {
             if (isRadioPlaying) {
                 isRadioPlaying = false;
                 Button btnRadio = viewAudio != null ? viewAudio.findViewById(R.id.btnRadioPlay) : null;
-                if (btnRadio != null) btnRadio.setText("PLAY RADIO");
+                if (btnRadio != null) btnRadio.setText("Play radio");
+                setRadioButtonIcon(false);
                 TextView tvPreset = viewAudio != null ? viewAudio.findViewById(R.id.tvAudioPresetBadge) : null;
-                if (tvPreset != null) tvPreset.setText("STANDBY");
+                if (tvPreset != null) tvPreset.setText("Standby");
                 sendRadioHardwarePauseBroadcasts();
                 MediaSyncService.pauseAllMedia(this);
-                btnMediaPlayPause.setText("PLAY");
+                setPlayState(false);
             } else if (tvTrackTitle != null && tvTrackTitle.getText() != null && tvTrackTitle.getText().toString().startsWith("FM ")) {
                 isRadioPlaying = true;
                 Button btnRadio = viewAudio != null ? viewAudio.findViewById(R.id.btnRadioPlay) : null;
-                if (btnRadio != null) btnRadio.setText("PAUSE RADIO");
+                if (btnRadio != null) btnRadio.setText("Pause radio");
+                setRadioButtonIcon(true);
                 TextView tvFreq = viewAudio != null ? viewAudio.findViewById(R.id.tvRadioFreq) : null;
                 String freq = tvFreq != null ? tvFreq.getText().toString() : "87.5";
                 TextView tvPreset = viewAudio != null ? viewAudio.findViewById(R.id.tvAudioPresetBadge) : null;
-                if (tvPreset != null) tvPreset.setText("ACTIVE · " + freq + " MHZ");
+                if (tvPreset != null) tvPreset.setText("Active · " + freq + " MHz");
                 sendRadioHardwareBroadcasts(freq);
-                btnMediaPlayPause.setText("PAUSE");
+                setPlayState(true);
             } else {
                 MediaSyncService.togglePlayPause(this);
             }
@@ -596,7 +620,7 @@ public class MainActivity extends AppCompatActivity {
 
         btnMediaPlayPause.setOnLongClickListener(v -> {
             MediaSyncService.pauseAllMedia(this);
-            Toast.makeText(this, "Paused all media", Toast.LENGTH_SHORT).show();
+            notifier.show(Notifier.Kind.INFO, "Media paused");
             return true;
         });
 
@@ -609,28 +633,96 @@ public class MainActivity extends AppCompatActivity {
         if (btnLaunch != null) {
             btnLaunch.setOnClickListener(v -> launchCarPlay());
         }
+        View rowAuto = viewCarPlay.findViewById(R.id.rowAutoOpen);
+        androidx.appcompat.widget.SwitchCompat swAuto = viewCarPlay.findViewById(R.id.switchAutoOpen);
+        if (swAuto != null) swAuto.setChecked(isAutoOpenCarPlay());
+        if (rowAuto != null) {
+            rowAuto.setOnClickListener(v -> {
+                boolean next = !isAutoOpenCarPlay();
+                getSharedPreferences("ad_display", MODE_PRIVATE).edit().putBoolean("auto_carplay", next).apply();
+                if (swAuto != null) swAuto.setChecked(next);
+            });
+        }
+        View rowSettings = viewCarPlay.findViewById(R.id.rowPhoneSettings);
+        if (rowSettings != null) rowSettings.setOnClickListener(v -> openBluetoothManager());
+        View rowPair = viewCarPlay.findViewById(R.id.rowPairPhone);
+        if (rowPair != null) rowPair.setOnClickListener(v -> { if (!lockedWhileDriving()) openBluetoothManager(); });
+        View steps = viewCarPlay.findViewById(R.id.btnShowSteps);
+        if (steps != null) steps.setOnClickListener(v -> showCarPlaySteps());
+        refreshOtherPhones();
+        updatePairRow();
+    }
+
+    private boolean isAutoOpenCarPlay() {
+        return getSharedPreferences("ad_display", MODE_PRIVATE).getBoolean("auto_carplay", false);
+    }
+
+    private void showCarPlaySteps() {
+        new AlertDialog.Builder(this)
+                .setTitle("CarPlay not starting?")
+                .setMessage("1. Unlock your phone.\n"
+                        + "2. Check that Bluetooth is on and the phone is connected.\n"
+                        + "3. If CarPlay uses a cable, plug it in again.\n"
+                        + "4. Choose your CarPlay app in Settings, then try Open CarPlay.")
+                .setPositiveButton("Done", null)
+                .show();
+    }
+
+    /** Lists paired phones other than the current one in the Phone screen. */
+    @SuppressLint("MissingPermission")
+    private void refreshOtherPhones() {
+        if (viewCarPlay == null) return;
+        LinearLayout list = viewCarPlay.findViewById(R.id.llOtherPhones);
+        if (list == null) return;
+        list.removeAllViews();
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        if (adapter == null || !adapter.isEnabled()) return;
+        String current = prefHelper.getSelectedDriverDevice();
+        int shown = 0;
+        try {
+            for (BluetoothDevice dev : adapter.getBondedDevices()) {
+                if (shown >= 3) break;
+                if (current != null && current.equalsIgnoreCase(dev.getAddress())) continue;
+                String name = dev.getName();
+                if (name == null || name.isEmpty()) continue;
+                View row = getLayoutInflater().inflate(R.layout.item_phone_row, list, false);
+                ((TextView) row.findViewById(R.id.tvPhoneRowName)).setText(name);
+                ((TextView) row.findViewById(R.id.tvPhoneRowDetail)).setText("Paired");
+                row.setOnClickListener(v -> showDeviceSelectorDialog(false));
+                list.addView(row);
+                shown++;
+            }
+        } catch (Exception ignored) {}
+    }
+
+    /** Pairing is locked while driving, as the design system shows. */
+    private void updatePairRow() {
+        if (viewCarPlay == null) return;
+        boolean locked = drivingState.isDriving();
+        ImageView icon = viewCarPlay.findViewById(R.id.ivPairIcon);
+        TextView title = viewCarPlay.findViewById(R.id.tvPairTitle);
+        TextView detail = viewCarPlay.findViewById(R.id.tvPairDetail);
+        if (icon != null) icon.setImageResource(locked ? R.drawable.ic_sym_lock : R.drawable.ic_sym_add);
+        int dim = ContextCompat.getColor(this, R.color.ad_label_4);
+        if (title != null) title.setTextColor(locked ? dim : ContextCompat.getColor(this, R.color.ad_label_1));
+        if (detail != null) {
+            detail.setText(locked ? "Available when parked" : "About 1 minute");
+            detail.setTextColor(locked ? dim : ContextCompat.getColor(this, R.color.ad_label_2));
+        }
     }
 
     private void setupMapsWidgets() {
         tvNavHeadingBig = viewMaps.findViewById(R.id.tvNavHeadingBig);
-        tvNavCoordinates = viewMaps.findViewById(R.id.tvNavCoordinates);
-        tvNavAltitude = viewMaps.findViewById(R.id.tvNavAltitude);
         tvNavAccuracy = viewMaps.findViewById(R.id.tvNavAccuracy);
         tvNavTripDist = viewMaps.findViewById(R.id.tvNavTripDist);
         tvNavTripDuration = viewMaps.findViewById(R.id.tvNavTripDuration);
 
-        if (tvNavCoordinates != null) {
-            tvNavCoordinates.setOnClickListener(v -> checkAndOpenLocationSettings());
-        }
         if (tvNavAccuracy != null) {
             tvNavAccuracy.setOnClickListener(v -> checkAndOpenLocationSettings());
         }
 
-        Button btnNavCarPlay = viewMaps.findViewById(R.id.btnNavCarPlayRoute);
-        if (btnNavCarPlay != null) {
-            btnNavCarPlay.setOnClickListener(v -> launchCarPlay());
-        }
-
+        viewMaps.findViewById(R.id.btnNavHome).setOnClickListener(v -> launchPoiSearch("Home"));
+        viewMaps.findViewById(R.id.btnNavWork).setOnClickListener(v -> launchPoiSearch("Work"));
         viewMaps.findViewById(R.id.btnNavFuel).setOnClickListener(v -> launchPoiSearch("gas station"));
         viewMaps.findViewById(R.id.btnNavParking).setOnClickListener(v -> launchPoiSearch("parking"));
         viewMaps.findViewById(R.id.btnNavCoffee).setOnClickListener(v -> launchPoiSearch("coffee"));
@@ -638,16 +730,17 @@ public class MainActivity extends AppCompatActivity {
 
         btnOpenOsmAnd = viewMaps.findViewById(R.id.btnOpenOsmAnd);
         if (btnOpenOsmAnd != null) {
-            String mapName = prefHelper.getMapName();
-            if (mapName != null && !mapName.isEmpty()) {
-                btnOpenOsmAnd.setText("LAUNCH " + mapName.toUpperCase());
-            }
             btnOpenOsmAnd.setOnClickListener(v -> launchOfflineMap());
+        }
+        TextView mapBadge = viewMaps.findViewById(R.id.tvMapStatusBadge);
+        if (mapBadge != null) {
+            String mapName = prefHelper.getMapName();
+            mapBadge.setText(mapName != null && !mapName.isEmpty() ? mapName : "No map app chosen");
         }
 
         btnChooseMapApp = viewMaps.findViewById(R.id.btnChooseMapApp);
         if (btnChooseMapApp != null) {
-            btnChooseMapApp.setOnClickListener(v -> showMapPicker());
+            btnChooseMapApp.setOnClickListener(v -> { if (!lockedWhileDriving()) showMapPicker(); });
         }
     }
 
@@ -655,13 +748,13 @@ public class MainActivity extends AppCompatActivity {
         try {
             LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
             if (lm != null && !lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                Toast.makeText(this, "GPS is off · Opening Location settings", Toast.LENGTH_SHORT).show();
+                notifier.show(Notifier.Kind.CAUTION, "GPS is off", "Opening location settings");
                 startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } else {
-                Toast.makeText(this, "GPS Telemetry Active · Real-time 20Hz", Toast.LENGTH_SHORT).show();
+                notifier.show(Notifier.Kind.OK, "GPS is on");
             }
         } catch (Exception e) {
-            Toast.makeText(this, "Cannot open Location settings", Toast.LENGTH_SHORT).show();
+            notifier.show(Notifier.Kind.ALERT, "Can't open location settings");
         }
     }
 
@@ -694,13 +787,12 @@ public class MainActivity extends AppCompatActivity {
 
         // 4. OsmAnd not found - show clear dialog guiding user to install from USB
         new AlertDialog.Builder(this)
-                .setTitle("OSMAND NOT INSTALLED")
-                .setMessage("OsmAnd 4.5.10 APK was not detected on this head unit.\n\n"
-                        + "Please sideload the APK and UAE offline map from your USB drive:\n"
-                        + "1. Copy net.osmand.plus APK & United-arab-emirates_asia.obf to USB\n"
-                        + "2. Insert USB into car head unit\n"
-                        + "3. Open File Manager and install OsmAnd APK")
-                .setPositiveButton("OPEN FILE MANAGER", (dialog, which) -> {
+                .setTitle("No map app installed")
+                .setMessage("Install OsmAnd for offline maps:\n"
+                        + "1. Copy the OsmAnd APK and your region's .obf map file to a USB drive.\n"
+                        + "2. Plug the USB drive into the head unit.\n"
+                        + "3. Open the file manager and install the APK.")
+                .setPositiveButton("Open file manager", (dialog, which) -> {
                     String[] fmPackages = {
                             "com.android.rk", "com.mediatek.filemanager", "com.estrongs.android.pop",
                             "com.android.documentsui", "com.google.android.documentsui", "com.sec.android.app.myfiles"
@@ -711,11 +803,11 @@ public class MainActivity extends AppCompatActivity {
                     try {
                         startActivity(new Intent(Intent.ACTION_VIEW).setType("*/*").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                     } catch (Exception e) {
-                        Toast.makeText(this, "Please open your car's File Manager app from APPS screen", Toast.LENGTH_LONG).show();
+                        notifier.show(Notifier.Kind.INFO, "Open your car's file manager from Apps");
                     }
                 })
-                .setNeutralButton("CHOOSE MAP APP", (dialog, which) -> showMapPicker())
-                .setNegativeButton("DISMISS", null)
+                .setNeutralButton("Choose map app", (dialog, which) -> showMapPicker())
+                .setNegativeButton("Close", null)
                 .show();
     }
 
@@ -759,11 +851,11 @@ public class MainActivity extends AppCompatActivity {
         if (launchAppPackage("com.waze")) return;
 
         new AlertDialog.Builder(this)
-                .setTitle("NAVIGATION APP NOT FOUND")
-                .setMessage("No navigation engine installed for searching \"" + query.toUpperCase() + "\".\n\nWould you like to install OsmAnd Offline Maps from USB or launch CarPlay Navigation?")
-                .setPositiveButton("LAUNCH CARPLAY", (d, w) -> launchCarPlay())
-                .setNeutralButton("OFFLINE MAP SETUP", (d, w) -> launchOfflineMap())
-                .setNegativeButton("CANCEL", null)
+                .setTitle("No map app found")
+                .setMessage("Install a map app such as OsmAnd to search for \"" + query + "\", or use maps in CarPlay.")
+                .setPositiveButton("Open CarPlay", (d, w) -> launchCarPlay())
+                .setNeutralButton("Map setup", (d, w) -> launchOfflineMap())
+                .setNegativeButton("Cancel", null)
                 .show();
     }
 
@@ -777,48 +869,45 @@ public class MainActivity extends AppCompatActivity {
         final Button btnSrcUsb = viewAudio.findViewById(R.id.btnSrcUsb);
         final Button btnRadioPlay = viewAudio.findViewById(R.id.btnRadioPlay);
 
-        int textPrimary = ContextCompat.getColor(this, R.color.cockpit_text_primary);
 
         btnSrcRadio.setOnClickListener(v -> {
-            tvActive.setText("FM RADIO TUNER (SI473X IC)");
-            btnSrcRadio.setTextColor(prefHelper.getAccentColor());
-            btnSrcSpotify.setTextColor(textPrimary);
-            btnSrcBluetooth.setTextColor(textPrimary);
-            btnSrcUsb.setTextColor(textPrimary);
+            tvActive.setText("Radio");
+            selectAudioSource(btnSrcRadio);
             if (tvPreset != null) {
-                tvPreset.setText(isRadioPlaying ? "ACTIVE TUNER" : "STANDBY · PRESS PLAY");
+                tvPreset.setText(isRadioPlaying ? "Active tuner" : "Standby · press play");
             }
-            Toast.makeText(this, "FM Radio Tuner selected · Press PLAY to listen", Toast.LENGTH_SHORT).show();
+            notifier.show(Notifier.Kind.INFO, "Radio selected", "Press play to listen");
         });
 
         if (btnRadioPlay != null) {
             btnRadioPlay.setOnClickListener(v -> {
                 if (!isRadioPlaying) {
                     isRadioPlaying = true;
-                    btnRadioPlay.setText("PAUSE RADIO");
+                    btnRadioPlay.setText("Pause radio");
+                    setRadioButtonIcon(true);
                     if (tvPreset != null) {
-                        tvPreset.setText("ACTIVE · " + tvFreq.getText() + " MHZ");
+                        tvPreset.setText("Active · " + tvFreq.getText() + " MHz");
                     }
 
                     // 1. Wake up vendor radio hardware tuner IC in background without switching away from launcher
                     sendRadioHardwareBroadcasts(tvFreq.getText().toString());
 
                     // 2. Update dashboard track display
-                    if (tvTrackTitle != null) tvTrackTitle.setText("FM " + tvFreq.getText() + " MHz");
-                    if (tvTrackArtist != null) tvTrackArtist.setText("Radio Tuner Broadcast");
-                    if (btnMediaPlayPause != null) btnMediaPlayPause.setText("PAUSE");
+                    setTrackText("FM " + tvFreq.getText() + " MHz", "Radio");
+                    if (btnMediaPlayPause != null) setPlayState(true);
 
-                    Toast.makeText(this, "Radio Tuner Playing · " + tvFreq.getText() + " MHz", Toast.LENGTH_SHORT).show();
+                    notifier.show(Notifier.Kind.INFO, "Radio playing", tvFreq.getText() + " MHz");
                 } else {
                     isRadioPlaying = false;
-                    btnRadioPlay.setText("PLAY RADIO");
+                    btnRadioPlay.setText("Play radio");
+                    setRadioButtonIcon(false);
                     if (tvPreset != null) {
-                        tvPreset.setText("STANDBY");
+                        tvPreset.setText("Standby");
                     }
                     sendRadioHardwarePauseBroadcasts();
                     MediaSyncService.pauseAllMedia(this);
-                    if (btnMediaPlayPause != null) btnMediaPlayPause.setText("PLAY");
-                    Toast.makeText(this, "Radio Tuner Paused", Toast.LENGTH_SHORT).show();
+                    if (btnMediaPlayPause != null) setPlayState(false);
+                    notifier.show(Notifier.Kind.INFO, "Radio paused");
                 }
             });
 
@@ -833,45 +922,47 @@ public class MainActivity extends AppCompatActivity {
         if (tvFreq != null) {
             tvFreq.setOnClickListener(v -> launchRadioApp());
         }
+        View openRadio = viewAudio.findViewById(R.id.btnOpenRadioApp);
+        if (openRadio != null) openRadio.setOnClickListener(v -> launchRadioApp());
+
+        // Transport mirrors the Home now-playing tile.
+        viewAudio.findViewById(R.id.btnAudioPrev).setOnClickListener(v ->
+                MediaSyncService.sendMediaKey(this, KeyEvent.KEYCODE_MEDIA_PREVIOUS));
+        viewAudio.findViewById(R.id.btnAudioNext).setOnClickListener(v ->
+                MediaSyncService.sendMediaKey(this, KeyEvent.KEYCODE_MEDIA_NEXT));
+        viewAudio.findViewById(R.id.btnAudioPlayPause).setOnClickListener(v -> {
+            if (btnMediaPlayPause != null) btnMediaPlayPause.performClick();
+        });
 
         viewAudio.findViewById(R.id.btnSrcSpotify).setOnClickListener(v -> {
-            tvActive.setText("SPOTIFY AUDIO STREAM");
-            btnSrcSpotify.setTextColor(prefHelper.getAccentColor());
-            btnSrcRadio.setTextColor(textPrimary);
-            btnSrcBluetooth.setTextColor(textPrimary);
-            btnSrcUsb.setTextColor(textPrimary);
+            tvActive.setText("Spotify");
+            selectAudioSource(btnSrcSpotify);
             if (!launchAppPackage("com.spotify.music")) {
                 try {
                     Intent musicIntent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_MUSIC);
                     musicIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(musicIntent);
-                    Toast.makeText(this, "Spotify not installed · Opened media player", Toast.LENGTH_SHORT).show();
+                    notifier.show(Notifier.Kind.CAUTION, "Spotify isn't installed", "Opened the media player");
                 } catch (Exception e) {
-                    Toast.makeText(this, "Spotify is not installed. Tap APPS in rail to open installed audio players.", Toast.LENGTH_LONG).show();
+                    notifier.show(Notifier.Kind.CAUTION, "Spotify isn't installed", "Open Apps to choose an audio player");
                 }
             }
         });
 
         viewAudio.findViewById(R.id.btnSrcBluetooth).setOnClickListener(v -> {
-            tvActive.setText("BLUETOOTH AUDIO STREAM");
-            btnSrcBluetooth.setTextColor(prefHelper.getAccentColor());
-            btnSrcRadio.setTextColor(textPrimary);
-            btnSrcSpotify.setTextColor(textPrimary);
-            btnSrcUsb.setTextColor(textPrimary);
+            tvActive.setText("Phone · Bluetooth");
+            selectAudioSource(btnSrcBluetooth);
             if (btWatcher != null && btWatcher.getConnectedDevice() == null) {
-                Toast.makeText(this, "No phone connected · Tap to pair or connect", Toast.LENGTH_SHORT).show();
+                notifier.show(Notifier.Kind.CAUTION, "No phone connected", "Pair a phone to stream audio");
                 showDeviceSelectorDialog(false);
             } else {
-                Toast.makeText(this, "Streaming via Bluetooth A2DP", Toast.LENGTH_SHORT).show();
+                notifier.show(Notifier.Kind.INFO, "Bluetooth audio");
             }
         });
 
         viewAudio.findViewById(R.id.btnSrcUsb).setOnClickListener(v -> {
-            tvActive.setText("USB MASS STORAGE");
-            btnSrcUsb.setTextColor(prefHelper.getAccentColor());
-            btnSrcRadio.setTextColor(textPrimary);
-            btnSrcSpotify.setTextColor(textPrimary);
-            btnSrcBluetooth.setTextColor(textPrimary);
+            tvActive.setText("USB");
+            selectAudioSource(btnSrcUsb);
             String[] usbPackages = {"com.ts.music", "com.microntek.music", "com.syu.music", "com.android.music", "com.android.musicfx"};
             for (String pkg : usbPackages) {
                 if (launchAppPackage(pkg)) return;
@@ -880,9 +971,9 @@ public class MainActivity extends AppCompatActivity {
                 Intent musicIntent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_MUSIC);
                 musicIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(musicIntent);
-                Toast.makeText(this, "USB player app not found · Opened default music app", Toast.LENGTH_SHORT).show();
+                notifier.show(Notifier.Kind.CAUTION, "USB player not found", "Opened the default music app");
             } catch (Exception e) {
-                Toast.makeText(this, "No USB music player found", Toast.LENGTH_SHORT).show();
+                notifier.show(Notifier.Kind.CAUTION, "No USB music player found");
             }
         });
 
@@ -892,10 +983,10 @@ public class MainActivity extends AppCompatActivity {
                 String freqStr = String.format(Locale.US, "%.1f", Math.max(87.5, f));
                 tvFreq.setText(freqStr);
                 if (isRadioPlaying && tvPreset != null) {
-                    tvPreset.setText("ACTIVE · " + freqStr + " MHZ");
+                    tvPreset.setText("Active · " + freqStr + " MHz");
                 }
                 if (isRadioPlaying && tvTrackTitle != null) {
-                    tvTrackTitle.setText("FM " + freqStr + " MHz");
+                    setTrackText("FM " + freqStr + " MHz", null);
                 }
                 try {
                     int freqKhz = (int) (Double.parseDouble(freqStr) * 1000);
@@ -913,10 +1004,10 @@ public class MainActivity extends AppCompatActivity {
                 String freqStr = String.format(Locale.US, "%.1f", Math.min(108.0, f));
                 tvFreq.setText(freqStr);
                 if (isRadioPlaying && tvPreset != null) {
-                    tvPreset.setText("ACTIVE · " + freqStr + " MHZ");
+                    tvPreset.setText("Active · " + freqStr + " MHz");
                 }
                 if (isRadioPlaying && tvTrackTitle != null) {
-                    tvTrackTitle.setText("FM " + freqStr + " MHz");
+                    setTrackText("FM " + freqStr + " MHz", null);
                 }
                 try {
                     int freqKhz = (int) (Double.parseDouble(freqStr) * 1000);
@@ -939,7 +1030,13 @@ public class MainActivity extends AppCompatActivity {
         appsAdapter.setOnAppClickListener(this::onAppItemClicked);
         gvApps.setOnItemClickListener((parent, view, position, id) -> onAppItemClicked(appsAdapter.getItem(position)));
 
+        appsAdapter.setFavouritePackages(java.util.Arrays.asList(
+                prefHelper.getMapPackage(), prefHelper.getCarPlayPackage(), prefHelper.getRadioPackage()));
+        gvApps.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+            if (b - t != ob - ot && drivingState.isDriving()) applyAppsDrivingMode(true);
+        });
         loadInstalledAppsAsync();
+        registerPackageReceiver();
 
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -952,13 +1049,57 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    /** Driving: hide search, show the banner and 6 favourites in a 3 x 2 grid. */
+    private void applyAppsDrivingMode(boolean driving) {
+        if (viewApps == null || appsAdapter == null) return;
+        GridView grid = viewApps.findViewById(R.id.gvApps);
+        View field = viewApps.findViewById(R.id.fieldSearchApps);
+        View banner = viewApps.findViewById(R.id.bannerDrivingApps);
+        EditText search = viewApps.findViewById(R.id.etSearchApps);
+        if (driving && search != null) {
+            search.clearFocus();
+            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            if (imm != null) imm.hideSoftInputFromWindow(search.getWindowToken(), 0);
+        }
+        field.setVisibility(driving ? View.GONE : View.VISIBLE);
+        banner.setVisibility(driving ? View.VISIBLE : View.GONE);
+        int gap = Math.round(getResources().getDisplayMetrics().density * (driving ? 24 : 16));
+        grid.setNumColumns(driving ? 3 : 5);
+        grid.setHorizontalSpacing(gap);
+        grid.setVerticalSpacing(gap);
+        int tile = grid.getHeight() > 0 ? (grid.getHeight() - gap) / 2 : 0;
+        appsAdapter.setDriving(driving, tile);
+    }
+
     private void onAppItemClicked(AppInfo app) {
         if (app == null) return;
         boolean launched = launchApp(app);
         if (!launched) {
-            Toast.makeText(this, "Cannot launch " + app.getLabel().toUpperCase() + ". App may be disabled or uninstalled.", Toast.LENGTH_LONG).show();
+            notifier.show(Notifier.Kind.ALERT, "Can't open " + app.getLabel(), "The app may be disabled or uninstalled");
             loadInstalledAppsAsync();
         }
+    }
+
+    private BroadcastReceiver packageReceiver;
+
+    /** Reloads the app grid when an app is installed, updated or removed. */
+    private void registerPackageReceiver() {
+        if (packageReceiver != null) return;
+        packageReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                loadInstalledAppsAsync();
+            }
+        };
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_PACKAGE_ADDED);
+        filter.addAction(Intent.ACTION_PACKAGE_REMOVED);
+        filter.addAction(Intent.ACTION_PACKAGE_CHANGED);
+        filter.addAction(Intent.ACTION_PACKAGE_REPLACED);
+        filter.addDataScheme("package");
+        try {
+            registerReceiver(packageReceiver, filter);
+        } catch (Exception ignored) {}
     }
 
     private void loadInstalledAppsAsync() {
@@ -972,89 +1113,178 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
+    private static final String[] SETTINGS_GROUPS = {"Phone", "Navigation", "Audio", "Display", "Advanced", "About"};
+
     private void setupSetupWidgets() {
-        viewSetup.findViewById(R.id.btnColorAmber).setOnClickListener(v -> applyAccentColor(PreferenceHelper.COLOR_AMBER));
-        viewSetup.findViewById(R.id.btnColorBlue).setOnClickListener(v -> applyAccentColor(PreferenceHelper.COLOR_BLUE));
-        viewSetup.findViewById(R.id.btnColorRed).setOnClickListener(v -> applyAccentColor(PreferenceHelper.COLOR_RED));
-        viewSetup.findViewById(R.id.btnColorGreen).setOnClickListener(v -> applyAccentColor(PreferenceHelper.COLOR_GREEN));
-        viewSetup.findViewById(R.id.btnColorWhite).setOnClickListener(v -> applyAccentColor(PreferenceHelper.COLOR_WHITE));
-
-        btnSelectDriverPhone = viewSetup.findViewById(R.id.btnSelectDriverPhone);
-        if (btnSelectDriverPhone != null) {
-            btnSelectDriverPhone.setOnClickListener(v -> showDeviceSelectorDialog(false));
+        for (String key : SETTINGS_GROUPS) {
+            View item = settingsView("setGrp" + key);
+            if (item != null) item.setOnClickListener(v -> showSettingsGroup(key));
         }
+        showSettingsGroup(getSharedPreferences("ad_display", MODE_PRIVATE).getString("settings_group", "Phone"));
 
-        btnSelectCarPlayApp = viewSetup.findViewById(R.id.btnSelectCarPlayApp);
+        // Phone and CarPlay
+        btnSelectDriverPhone = settingsView("tvSetDriverPhone");
+        String driver = getDeviceNameFromAddress(prefHelper.getSelectedDriverDevice());
+        if (driver != null) btnSelectDriverPhone.setText(driver);
+        onSettingsRow("rowSetDriverPhone", () -> showDeviceSelectorDialog(false), true);
+        btnSelectCarPlayApp = settingsView("tvSetCarPlayApp");
         btnSelectCarPlayApp.setText(prefHelper.getCarPlayName());
-        btnSelectCarPlayApp.setOnClickListener(v -> showCarPlayPicker());
+        onSettingsRow("rowSetCarPlayApp", this::showCarPlayPicker, true);
+        androidx.appcompat.widget.SwitchCompat swAuto = settingsView("switchSetAutoOpen");
+        swAuto.setChecked(isAutoOpenCarPlay());
+        onSettingsRow("rowSetAutoOpen", () -> {
+            boolean next = !isAutoOpenCarPlay();
+            getSharedPreferences("ad_display", MODE_PRIVATE).edit().putBoolean("auto_carplay", next).apply();
+            swAuto.setChecked(next);
+            if (viewCarPlay != null) {
+                androidx.appcompat.widget.SwitchCompat other = viewCarPlay.findViewById(R.id.switchAutoOpen);
+                if (other != null) other.setChecked(next);
+            }
+        }, false);
 
-        btnSelectRadioApp = viewSetup.findViewById(R.id.btnSelectRadioApp);
-        if (btnSelectRadioApp != null) {
-            btnSelectRadioApp.setText(prefHelper.getRadioName());
-            btnSelectRadioApp.setOnClickListener(v -> showRadioPicker());
+        // Navigation
+        btnSelectMapApp = settingsView("tvSetMapApp");
+        btnSelectMapApp.setText(prefHelper.getMapName());
+        onSettingsRow("rowSetMapApp", this::showMapPicker, true);
+        onSettingsRow("rowSetGps", () -> {
+            if (gpsManager != null) gpsManager.start();
+            notifier.show(Notifier.Kind.INFO, "GPS restarted");
+        }, false);
+
+        // Audio
+        btnSelectRadioApp = settingsView("tvSetRadioApp");
+        btnSelectRadioApp.setText(prefHelper.getRadioName());
+        onSettingsRow("rowSetRadioApp", this::showRadioPicker, true);
+        onSettingsRow("rowSetEqualiser", this::openAudioEqualizer, false);
+
+        // Display
+        androidx.appcompat.widget.SwitchCompat swNight = settingsView("switchSetNight");
+        swNight.setChecked(isNightTheme());
+        onSettingsRow("rowSetNight", this::toggleTheme, false);
+        View kmh = settingsView("segUnitKmh");
+        View mph = settingsView("segUnitMph");
+        kmh.setOnClickListener(v -> { if (prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH)) toggleSpeedUnit(); });
+        mph.setOnClickListener(v -> { if (!prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH)) toggleSpeedUnit(); });
+        onSettingsRow("rowSetUnits", this::toggleSpeedUnit, false);
+        updateUnitSegment();
+        androidx.appcompat.widget.SwitchCompat swClock = settingsView("switchSetClock");
+        swClock.setChecked(is24HourClock());
+        updateClockDetail();
+        onSettingsRow("rowSetClock", () -> {
+            getSharedPreferences("ad_display", MODE_PRIVATE).edit().putBoolean("clock_24", !is24HourClock()).apply();
+            swClock.setChecked(is24HourClock());
+            updateClockDetail();
+        }, false);
+
+        // Advanced
+        onSettingsRow("rowSetFactory", this::openFactorySettings, true);
+        onSettingsRow("rowSetAndroid", () -> {
+            try {
+                startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (Exception e) {
+                notifier.show(Notifier.Kind.ALERT, "Can't open Android settings");
+            }
+        }, true);
+        onSettingsRow("rowSetBluetooth", this::openBluetoothManager, true);
+        onSettingsRow("rowSetRestart", this::recreate, false);
+
+        // About
+        TextView version = settingsView("tvSetVersion");
+        try {
+            version.setText(getPackageManager().getPackageInfo(getPackageName(), 0).versionName);
+        } catch (Exception ignored) {}
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T extends View> T settingsView(String idName) {
+        return (T) viewSetup.findViewById(getResources().getIdentifier(idName, "id", getPackageName()));
+    }
+
+    private void onSettingsRow(String idName, Runnable action, boolean parkedOnly) {
+        View row = settingsView(idName);
+        if (row == null) return;
+        row.setOnClickListener(v -> { if (!parkedOnly || !lockedWhileDriving()) action.run(); });
+    }
+
+    private void showSettingsGroup(String key) {
+        if (drivingState.isDriving() && "Advanced".equals(key)) key = "Display";
+        settingsGroup = key;
+        getSharedPreferences("ad_display", MODE_PRIVATE).edit().putString("settings_group", key).apply();
+        for (String k : SETTINGS_GROUPS) {
+            View item = settingsView("setGrp" + k);
+            View page = settingsView("setPage" + k);
+            boolean on = k.equals(key);
+            if (item != null) {
+                item.setSelected(on);
+                ((TextView) item).setTypeface(androidx.core.content.res.ResourcesCompat.getFont(this,
+                        on ? R.font.atkinson_next_semibold : R.font.atkinson_next_medium));
+            }
+            if (page != null) page.setVisibility(on ? View.VISIBLE : View.GONE);
         }
+    }
 
-        btnSelectMapApp = viewSetup.findViewById(R.id.btnSelectMapApp);
-        if (btnSelectMapApp != null) {
-            btnSelectMapApp.setText(prefHelper.getMapName());
-            btnSelectMapApp.setOnClickListener(v -> showMapPicker());
-        }
+    /** Driving: Advanced is hidden; Phone, Display and Audio stay. */
+    private void applySettingsDrivingMode(boolean driving) {
+        if (viewSetup == null) return;
+        View advanced = settingsView("setGrpAdvanced");
+        if (advanced != null) advanced.setVisibility(driving ? View.GONE : View.VISIBLE);
+        if (driving && "Advanced".equals(settingsGroup)) showSettingsGroup("Display");
+    }
 
-        btnToggleUnit = viewSetup.findViewById(R.id.btnToggleUnit);
-        btnToggleUnit.setText(prefHelper.getSpeedUnit());
-        btnToggleUnit.setOnClickListener(v -> toggleSpeedUnit());
+    private void updateUnitSegment() {
+        if (viewSetup == null) return;
+        boolean mph = prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH);
+        TextView kmh = settingsView("segUnitKmh");
+        TextView mphView = settingsView("segUnitMph");
+        TextView detail = settingsView("tvSetUnits");
+        kmh.setSelected(!mph);
+        mphView.setSelected(mph);
+        detail.setText(mph ? "Miles and °F" : "Kilometres and °C");
+    }
 
-        Button btnGpsRefresh = viewSetup.findViewById(R.id.btnGpsRefreshRate);
-        if (btnGpsRefresh != null) {
-            btnGpsRefresh.setOnClickListener(v -> {
-                if (gpsManager != null) {
-                    gpsManager.start();
-                }
-                Toast.makeText(this, "GPS Stream refreshed at 20Hz", Toast.LENGTH_SHORT).show();
-            });
-        }
+    private boolean is24HourClock() {
+        return getSharedPreferences("ad_display", MODE_PRIVATE)
+                .getBoolean("clock_24", android.text.format.DateFormat.is24HourFormat(this));
+    }
 
-        viewSetup.findViewById(R.id.btnShortcutFactorySettings).setOnClickListener(v -> openFactorySettings());
-        viewSetup.findViewById(R.id.btnShortcutAndroidSettings).setOnClickListener(v ->
-                startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
-        viewSetup.findViewById(R.id.btnShortcutAudioEq).setOnClickListener(v -> openAudioEqualizer());
-        viewSetup.findViewById(R.id.btnShortcutBluetooth).setOnClickListener(v -> showDeviceSelectorDialog(false));
-        viewSetup.findViewById(R.id.btnRestartLauncher).setOnClickListener(v -> recreate());
+    private void updateClockDetail() {
+        TextView detail = settingsView("tvSetClock");
+        if (detail != null) detail.setText(is24HourClock() ? "Shows 17:30" : "Shows 5:30 PM");
     }
 
     private void toggleSpeedUnit() {
         String current = prefHelper.getSpeedUnit();
         String next = current.equals(PreferenceHelper.UNIT_KMH) ? PreferenceHelper.UNIT_MPH : PreferenceHelper.UNIT_KMH;
         prefHelper.setSpeedUnit(next);
-        if (btnToggleUnit != null) btnToggleUnit.setText(next);
-        if (tvSpeedUnit != null) tvSpeedUnit.setText(next);
+        updateUnitSegment();
+        if (tvSpeedUnit != null) tvSpeedUnit.setText(next.toLowerCase(Locale.US));
         if (gpsManager != null) {
             gpsManager.setUseMph(next.equals(PreferenceHelper.UNIT_MPH));
         }
         if (thermometerWatcher != null) {
             thermometerWatcher.setUseFahrenheit(next.equals(PreferenceHelper.UNIT_MPH));
         }
-        Toast.makeText(this, "Speedometer set to " + next, Toast.LENGTH_SHORT).show();
+        notifier.show(Notifier.Kind.INFO, "Speedometer set to " + next);
     }
 
     private void resetTrip() {
         if (gpsManager != null) {
             gpsManager.resetTrip();
             boolean isMph = prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH);
-            String distText = isMph ? "TRIP A: 0.0 MI" : "TRIP A: 0.0 KM";
+            String distText = isMph ? "Trip 0.0 mi" : "Trip 0.0 km";
             if (tvTripDistance != null) tvTripDistance.setText(distText);
-            if (tvTripTime != null) tvTripTime.setText("TIME: 0 MIN · RESET");
+            if (tvTripTime != null) tvTripTime.setText("0 min");
             if (tvNavTripDist != null) tvNavTripDist.setText(distText);
-            if (tvNavTripDuration != null) tvNavTripDuration.setText("DURATION: 0 MIN");
-            Toast.makeText(this, "Trip distance & time reset", Toast.LENGTH_SHORT).show();
+            if (tvNavTripDuration != null) tvNavTripDuration.setText("0 min");
+            notifier.show(Notifier.Kind.OK, "Trip reset");
         }
     }
 
     private void openFactorySettings() {
         new AlertDialog.Builder(this)
-                .setTitle("Car Factory Settings")
-                .setMessage("Factory PIN: 123456\nAlternative PIN: 7890\n\nCANbus: 03: Simple Soft (XP)\nProfile: 61: Hyundai Kia / 01: 13 All new Santafe")
-                .setPositiveButton("Open Settings", (dialog, which) -> {
+                .setTitle("Open factory settings?")
+                .setMessage("These are the head unit's own setup screens. Wrong values can stop the radio, camera or steering wheel buttons working.")
+                .setPositiveButton("Open", (dialog, which) -> {
                     String[] factoryIntents = {
                             "com.ts.factory",
                             "com.microntek.factorysettings",
@@ -1083,7 +1313,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             startActivity(new Intent(Settings.ACTION_SOUND_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } catch (Exception e) {
-            Toast.makeText(this, "Equalizer app not found", Toast.LENGTH_SHORT).show();
+            notifier.show(Notifier.Kind.CAUTION, "No equalizer app found");
         }
     }
 
@@ -1109,7 +1339,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } catch (Exception e) {
-            Toast.makeText(this, "Opening Bluetooth settings", Toast.LENGTH_SHORT).show();
+            notifier.show(Notifier.Kind.INFO, "Opening Bluetooth settings");
         }
     }
 
@@ -1157,9 +1387,9 @@ public class MainActivity extends AppCompatActivity {
             btnSelectCarPlayApp.setText(name);
         }
         if (tvCarPlayProtocol != null) {
-            tvCarPlayProtocol.setText(name.toUpperCase());
+            tvCarPlayProtocol.setText(name);
         }
-        Toast.makeText(this, "CarPlay set to: " + name, Toast.LENGTH_SHORT).show();
+        notifier.show(Notifier.Kind.OK, "CarPlay app set", name);
     }
 
     private void showRadioPicker() {
@@ -1211,7 +1441,7 @@ public class MainActivity extends AppCompatActivity {
         if (btnSelectRadioApp != null) {
             btnSelectRadioApp.setText(name);
         }
-        Toast.makeText(this, "Radio Tuner set to: " + name, Toast.LENGTH_SHORT).show();
+        notifier.show(Notifier.Kind.OK, "Radio app set", name);
     }
 
     private void launchRadioApp() {
@@ -1232,7 +1462,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         if (!launched) {
-            Toast.makeText(this, "Radio app not found. Select your car's tuner app in Setup.", Toast.LENGTH_LONG).show();
+            notifier.show(Notifier.Kind.CAUTION, "No radio app found", "Choose your car's tuner app in Settings");
             showRadioPicker();
         }
     }
@@ -1290,10 +1520,9 @@ public class MainActivity extends AppCompatActivity {
         if (btnSelectMapApp != null) {
             btnSelectMapApp.setText(name);
         }
-        if (btnOpenOsmAnd != null) {
-            btnOpenOsmAnd.setText("LAUNCH " + name.toUpperCase());
-        }
-        Toast.makeText(this, "Map Engine set to: " + name, Toast.LENGTH_SHORT).show();
+        TextView mapBadge = viewMaps != null ? viewMaps.findViewById(R.id.tvMapStatusBadge) : null;
+        if (mapBadge != null) mapBadge.setText(name);
+        notifier.show(Notifier.Kind.OK, "Map app set", name);
     }
 
     private String findInstalledRadioPackage() {
@@ -1398,76 +1627,26 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception ignored) {}
     }
 
-    private void applyAccentColor(int color) {
-        prefHelper.setAccentColor(color);
+    private boolean isNightTheme() {
+        return getSharedPreferences("ad_display", MODE_PRIVATE).getBoolean("night", true);
+    }
 
-        // Header & Bluetooth
-        if (tvStartupSubtitle != null) tvStartupSubtitle.setTextColor(color);
-        if (pbStartup != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            pbStartup.setIndeterminateTintList(ColorStateList.valueOf(color));
-        }
-        if (ivHeaderRecentsIcon != null) ivHeaderRecentsIcon.setColorFilter(color, PorterDuff.Mode.SRC_IN);
-        if (tvHeaderRecentsText != null) tvHeaderRecentsText.setTextColor(color);
-        if (tvHeaderBluetooth != null) tvHeaderBluetooth.setTextColor(color);
-        if (ivHeaderBtIcon != null) ivHeaderBtIcon.setColorFilter(color, PorterDuff.Mode.SRC_IN);
-        if (tvWeatherIcon != null) tvWeatherIcon.setTextColor(color);
+    private void toggleTheme() {
+        getSharedPreferences("ad_display", MODE_PRIVATE).edit()
+                .putBoolean("night", !isNightTheme()).putBoolean("reopen_settings", true).apply();
+        recreate();
+    }
 
-        // Dashboard View
-        if (viewDash != null) {
-            TextView speedUnit = viewDash.findViewById(R.id.tvSpeedUnit);
-            if (speedUnit != null) speedUnit.setTextColor(color);
+    /** True, with a notification, when the action is not allowed while the car is moving. */
+    private boolean lockedWhileDriving() {
+        if (!drivingState.isDriving()) return false;
+        notifier.show(Notifier.Kind.CAUTION, "Available when parked");
+        return true;
+    }
 
-            TextView carPlayProtocol = viewDash.findViewById(R.id.tvCarPlayProtocol);
-            if (carPlayProtocol != null) carPlayProtocol.setTextColor(color);
-
-            Button playPause = viewDash.findViewById(R.id.btnMediaPlayPause);
-            if (playPause != null) playPause.setTextColor(color);
-
-            TextView universalHeader = viewDash.findViewById(R.id.tvHeaderUniversalAudio);
-            if (universalHeader != null) universalHeader.setTextColor(color);
-        }
-
-        if (viewCarPlay != null) {
-            Button btnLaunchFull = viewCarPlay.findViewById(R.id.btnLaunchCarPlayFull);
-            if (btnLaunchFull != null) btnLaunchFull.setTextColor(color);
-        }
-
-        if (viewMaps != null) {
-            TextView navHeading = viewMaps.findViewById(R.id.tvNavHeadingBig);
-            if (navHeading != null) navHeading.setTextColor(color);
-            if (btnOpenOsmAnd != null) btnOpenOsmAnd.setTextColor(color);
-        }
-
-        if (viewAudio != null) {
-            Button btnRadio = viewAudio.findViewById(R.id.btnSrcRadio);
-            if (btnRadio != null) btnRadio.setTextColor(color);
-
-            Button btnRadioPlay = viewAudio.findViewById(R.id.btnRadioPlay);
-            if (btnRadioPlay != null) btnRadioPlay.setTextColor(color);
-
-            TextView presetBadge = viewAudio.findViewById(R.id.tvAudioPresetBadge);
-            if (presetBadge != null) presetBadge.setTextColor(color);
-
-            TextView freqUnit = viewAudio.findViewById(R.id.tvRadioFreqUnit);
-            if (freqUnit != null) freqUnit.setTextColor(color);
-        }
-
-        if (viewApps != null) {
-            TextView appsTitle = viewApps.findViewById(R.id.tvInstalledAppsTitle);
-            if (appsTitle != null) appsTitle.setTextColor(color);
-        }
-
-        if (viewSetup != null) {
-            if (btnSelectCarPlayApp != null) btnSelectCarPlayApp.setTextColor(color);
-            if (btnSelectRadioApp != null) btnSelectRadioApp.setTextColor(color);
-            if (btnSelectMapApp != null) btnSelectMapApp.setTextColor(color);
-            if (btnSelectDriverPhone != null) btnSelectDriverPhone.setTextColor(color);
-
-            Button btnFactory = viewSetup.findViewById(R.id.btnShortcutFactorySettings);
-            if (btnFactory != null) btnFactory.setTextColor(color);
-        }
-
-        updateRailAppearance(currentActiveRailBtn);
+    /** The single design-system accent (Day and Night variants come from resources). */
+    private int accent() {
+        return ContextCompat.getColor(this, R.color.ad_accent_text);
     }
 
     private void initNavigation() {
@@ -1484,54 +1663,84 @@ public class MainActivity extends AppCompatActivity {
         viewContainer.removeAllViews();
         viewContainer.addView(targetView);
         updateRailAppearance(activeRailBtn);
-        applyAccentColor(prefHelper.getAccentColor());
     }
 
     private void updateRailAppearance(View activeRailBtn) {
-        int textSec = ContextCompat.getColor(this, R.color.cockpit_text_secondary);
-        int accent = prefHelper.getAccentColor();
+        int normal = ContextCompat.getColor(this, R.color.ad_label_1);
+        int selected = ContextCompat.getColor(this, R.color.ad_on_accent);
+        View[] buttons = {railBtnDash, railBtnCarPlay, railBtnMaps, railBtnAudio, railBtnApps, railBtnSetup};
+        ImageView[] icons = {ivDashIcon, ivCarPlayIcon, ivMapsIcon, ivAudioIcon, ivAppsIcon, ivSetupIcon};
+        TextView[] labels = {tvDashLabel, tvCarPlayLabel, tvMapsLabel, tvAudioLabel, tvAppsLabel, tvSetupLabel};
+        int[] outline = {R.drawable.ic_sym_home, R.drawable.ic_sym_phone_iphone, R.drawable.ic_sym_map,
+                R.drawable.ic_sym_music_note, R.drawable.ic_sym_apps, R.drawable.ic_sym_settings};
+        int[] filled = {R.drawable.ic_sym_home_fill, R.drawable.ic_sym_phone_iphone, R.drawable.ic_sym_map_fill,
+                R.drawable.ic_sym_music_note_fill, R.drawable.ic_sym_apps_fill, R.drawable.ic_sym_settings_fill};
+        android.graphics.Typeface semibold = androidx.core.content.res.ResourcesCompat.getFont(this, R.font.atkinson_next_semibold);
+        android.graphics.Typeface medium = androidx.core.content.res.ResourcesCompat.getFont(this, R.font.atkinson_next_medium);
+        for (int i = 0; i < buttons.length; i++) {
+            boolean on = buttons[i] == activeRailBtn;
+            buttons[i].setSelected(on);
+            icons[i].setImageResource(on ? filled[i] : outline[i]);
+            icons[i].setColorFilter(on ? selected : normal, PorterDuff.Mode.SRC_IN);
+            labels[i].setTextColor(on ? selected : normal);
+            labels[i].setTypeface(on ? semibold : medium);
+        }
+    }
 
-        tvDashLabel.setTextColor(textSec);
-        tvCarPlayLabel.setTextColor(textSec);
-        tvMapsLabel.setTextColor(textSec);
-        tvAudioLabel.setTextColor(textSec);
-        tvAppsLabel.setTextColor(textSec);
-        tvSetupLabel.setTextColor(textSec);
+    private void setPlayState(boolean playing) {
+        if (btnMediaPlayPause == null) return;
+        btnMediaPlayPause.setImageResource(playing ? R.drawable.ic_sym_pause_fill : R.drawable.ic_sym_play_arrow_fill);
+        btnMediaPlayPause.setContentDescription(playing ? "Pause" : "Play");
+        android.widget.ImageButton audio = viewAudio != null ? viewAudio.findViewById(R.id.btnAudioPlayPause) : null;
+        if (audio != null) {
+            audio.setImageResource(playing ? R.drawable.ic_sym_pause_fill : R.drawable.ic_sym_play_arrow_fill);
+            audio.setContentDescription(playing ? "Pause" : "Play");
+        }
+    }
 
-        ivDashIcon.setColorFilter(textSec, PorterDuff.Mode.SRC_IN);
-        ivCarPlayIcon.setColorFilter(textSec, PorterDuff.Mode.SRC_IN);
-        ivMapsIcon.setColorFilter(textSec, PorterDuff.Mode.SRC_IN);
-        ivAudioIcon.setColorFilter(textSec, PorterDuff.Mode.SRC_IN);
-        ivAppsIcon.setColorFilter(textSec, PorterDuff.Mode.SRC_IN);
-        ivSetupIcon.setColorFilter(textSec, PorterDuff.Mode.SRC_IN);
+    private void selectAudioSource(View chosen) {
+        int[] ids = {R.id.btnSrcRadio, R.id.btnSrcBluetooth, R.id.btnSrcSpotify, R.id.btnSrcUsb};
+        for (int id : ids) {
+            View src = viewAudio.findViewById(id);
+            if (src != null) src.setSelected(src == chosen);
+        }
+    }
 
-        if (activeRailBtn == railBtnDash) {
-            tvDashLabel.setTextColor(accent);
-            ivDashIcon.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
-        } else if (activeRailBtn == railBtnCarPlay) {
-            tvCarPlayLabel.setTextColor(accent);
-            ivCarPlayIcon.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
-        } else if (activeRailBtn == railBtnMaps) {
-            tvMapsLabel.setTextColor(accent);
-            ivMapsIcon.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
-        } else if (activeRailBtn == railBtnAudio) {
-            tvAudioLabel.setTextColor(accent);
-            ivAudioIcon.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
-        } else if (activeRailBtn == railBtnApps) {
-            tvAppsLabel.setTextColor(accent);
-            ivAppsIcon.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
-        } else if (activeRailBtn == railBtnSetup) {
-            tvSetupLabel.setTextColor(accent);
-            ivSetupIcon.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
+    /** Updates the track on Home and Audio; null keeps the current text. */
+    private void setTrackText(String title, String artist) {
+        TextView audioTitle = viewAudio != null ? viewAudio.findViewById(R.id.tvAudioTrackTitle) : null;
+        TextView audioArtist = viewAudio != null ? viewAudio.findViewById(R.id.tvAudioTrackArtist) : null;
+        if (title != null) {
+            if (tvTrackTitle != null) tvTrackTitle.setText(title);
+            if (audioTitle != null) audioTitle.setText(title);
+        }
+        if (artist != null) {
+            if (tvTrackArtist != null) tvTrackArtist.setText(artist);
+            if (audioArtist != null) audioArtist.setText(artist);
+        }
+    }
+
+    private void setRadioButtonIcon(boolean playing) {
+        TextView btn = viewAudio != null ? viewAudio.findViewById(R.id.btnRadioPlay) : null;
+        if (btn != null) {
+            androidx.core.widget.TextViewCompat.setCompoundDrawablesRelativeWithIntrinsicBounds(btn,
+                    playing ? R.drawable.ic_btn_pause : R.drawable.ic_btn_play_arrow, 0, 0, 0);
+        }
+    }
+
+    private void setDot(View dot, int colorRes) {
+        if (dot instanceof ImageView) {
+            ((ImageView) dot).setColorFilter(ContextCompat.getColor(this, colorRes), PorterDuff.Mode.SRC_IN);
         }
     }
 
     private void initClock() {
-        final SimpleDateFormat sdf = new SimpleDateFormat("h:mm", Locale.getDefault());
+        final SimpleDateFormat sdf24 = new SimpleDateFormat("H:mm", Locale.getDefault());
+        final SimpleDateFormat sdf12 = new SimpleDateFormat("h:mm a", Locale.getDefault());
         clockHandler.post(new Runnable() {
             @Override
             public void run() {
-                tvClock.setText(sdf.format(new Date()));
+                tvClock.setText((is24HourClock() ? sdf24 : sdf12).format(new Date()));
                 clockHandler.postDelayed(this, 1000);
             }
         });
@@ -1544,8 +1753,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSpeedUpdated(int speed, String unit) {
                 runOnUiThread(() -> {
+                    boolean mph = prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH);
+                    drivingState.onSpeed(mph ? speed * 1.609344f : speed, android.os.SystemClock.elapsedRealtime());
                     tvSpeed.setText(String.valueOf(speed));
-                    tvSpeedUnit.setText(unit);
+                    tvSpeedUnit.setText(unit.toLowerCase(Locale.US));
                 });
             }
 
@@ -1562,17 +1773,17 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onCoordinatesUpdated(double latitude, double longitude, double altitudeMeters, float accuracyMeters) {
                 runOnUiThread(() -> {
-                    if (tvNavCoordinates != null) {
-                        tvNavCoordinates.setText(String.format(Locale.US, "%.4f° N, %.4f° E", latitude, longitude));
-                    }
-                    if (tvNavAltitude != null) {
-                        String currentSpeed = (tvSpeed != null) ? tvSpeed.getText().toString() : "0";
-                        String currentUnit = (tvSpeedUnit != null) ? tvSpeedUnit.getText().toString() : "KM/H";
-                        tvNavAltitude.setText(String.format(Locale.US, "Alt: %.0f m  ·  Speed: %s %s",
-                                altitudeMeters, currentSpeed, currentUnit));
+                    setDot(findViewById(R.id.ivGpsDot), R.color.ad_ok);
+                    TextView about = viewSetup != null ? viewSetup.findViewById(R.id.tvSetLocation) : null;
+                    if (about != null) {
+                        about.setText(String.format(Locale.US, "%.4f° %s, %.4f° %s · %.0f m · ±%.0f m",
+                                Math.abs(latitude), latitude >= 0 ? "N" : "S",
+                                Math.abs(longitude), longitude >= 0 ? "E" : "W", altitudeMeters, accuracyMeters));
                     }
                     if (tvNavAccuracy != null) {
-                        tvNavAccuracy.setText(String.format(Locale.US, "● 3D Fix · ±%.1fm", accuracyMeters));
+                        tvNavAccuracy.setText(accuracyMeters <= 10 ? "GPS good" : accuracyMeters <= 30 ? "GPS weak" : "GPS poor");
+                        if (viewMaps != null) setDot(viewMaps.findViewById(R.id.ivNavGpsDot),
+                                accuracyMeters <= 30 ? R.color.ad_ok : R.color.ad_caution);
                     }
                     if (thermometerWatcher != null && Math.abs(latitude) > 0.01 && Math.abs(longitude) > 0.01) {
                         thermometerWatcher.onLocationUpdated(latitude, longitude);
@@ -1586,23 +1797,37 @@ public class MainActivity extends AppCompatActivity {
                     boolean isMph = prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH);
                     String distText;
                     if (isMph) {
-                        distText = String.format(Locale.US, "TRIP A: %.1f MI", distanceKm * 0.621371);
+                        distText = String.format(Locale.US, "Trip %.1f mi", distanceKm * 0.621371);
                     } else {
-                        distText = String.format(Locale.US, "TRIP A: %.1f KM", distanceKm);
+                        distText = String.format(Locale.US, "Trip %.1f km", distanceKm);
                     }
                     tvTripDistance.setText(distText);
-                    tvTripTime.setText(String.format(Locale.US, "TIME: %d MIN · RESET", elapsedMinutes));
+                    tvTripTime.setText(String.format(Locale.US, "%d min", elapsedMinutes));
+                    TextView avg = viewDash != null ? viewDash.findViewById(R.id.tvAvgSpeed) : null;
+                    if (avg != null) {
+                        double hours = elapsedMinutes / 60.0;
+                        double km = isMph ? distanceKm * 0.621371 : distanceKm;
+                        avg.setText(hours > 0.05 ? String.format(Locale.US, "Avg %.0f", km / hours) : "Avg –");
+                    }
                     if (tvNavTripDist != null) {
                         tvNavTripDist.setText(distText);
                     }
                     if (tvNavTripDuration != null) {
-                        tvNavTripDuration.setText(String.format(Locale.US, "DURATION: %d MIN", elapsedMinutes));
+                        tvNavTripDuration.setText(String.format(Locale.US, "%d min", elapsedMinutes));
                     }
                 });
             }
 
             @Override
-            public void onGpsStatusChanged(boolean hasFix, int satelliteCount) {}
+            public void onGpsStatusChanged(boolean hasFix, int satelliteCount) {
+                runOnUiThread(() -> {
+                    setDot(findViewById(R.id.ivGpsDot), hasFix ? R.color.ad_ok : R.color.ad_label_3);
+                    if (!hasFix && tvNavAccuracy != null) {
+                        tvNavAccuracy.setText("GPS none");
+                        if (viewMaps != null) setDot(viewMaps.findViewById(R.id.ivNavGpsDot), R.color.ad_label_3);
+                    }
+                });
+            }
         });
         gpsManager.start();
     }
@@ -1610,7 +1835,11 @@ public class MainActivity extends AppCompatActivity {
     private void initBluetooth() {
         btWatcher = new BluetoothWatcher(this);
         btWatcher.setListener((isConnected, deviceName, details) -> runOnUiThread(() -> {
+            boolean wasConnected = isCarPlayConnected;
             isCarPlayConnected = isConnected;
+            if (isConnected && !wasConnected && isAutoOpenCarPlay() && isSavedPhoneConnected()) {
+                launchCarPlay();
+            }
             if (isConnected) {
                 updateConnectedPhoneUi(deviceName, details);
             } else {
@@ -1620,25 +1849,17 @@ public class MainActivity extends AppCompatActivity {
         btWatcher.start();
     }
 
+    @SuppressLint("MissingPermission")
+    private boolean isSavedPhoneConnected() {
+        String saved = prefHelper.getSelectedDriverDevice();
+        if (saved == null || saved.isEmpty() || btWatcher == null) return false;
+        BluetoothDevice dev = btWatcher.getConnectedDevice();
+        return dev != null && saved.equalsIgnoreCase(dev.getAddress());
+    }
+
     private void updateConnectedPhoneUi(String deviceName, String details) {
-        int accent = prefHelper.getAccentColor();
-        if (tvHeaderBluetooth != null) {
-            tvHeaderBluetooth.setText(deviceName != null ? deviceName.toUpperCase() : "CARPLAY ACTIVE");
-            tvHeaderBluetooth.setTextColor(accent);
-        }
-        if (ivHeaderBtIcon != null) {
-            ivHeaderBtIcon.setColorFilter(accent, PorterDuff.Mode.SRC_IN);
-        }
-        if (tvBtDeviceName != null) {
-            tvBtDeviceName.setText(deviceName != null ? deviceName.toUpperCase() : "DRIVER PHONE");
-        }
-        if (tvBtProfileDetail != null) {
-            tvBtProfileDetail.setText(details != null ? details.toUpperCase() : "WIRELESS CARPLAY & AUDIO");
-        }
-        if (tvBtStatusBadge != null) {
-            tvBtStatusBadge.setText("● ACTIVE");
-            tvBtStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.status_active));
-        }
+        String name = deviceName != null ? deviceName : "Phone";
+        showPhoneState(name, details != null ? details : "Connected", "Connected", R.color.ad_ok, true);
     }
 
     private void updateDisconnectedPhoneUi() {
@@ -1646,53 +1867,44 @@ public class MainActivity extends AppCompatActivity {
         String savedName = getDeviceNameFromAddress(savedAddr);
 
         if (isCarPlayConnected && savedName != null) {
-            updateConnectedPhoneUi(savedName, "WIRELESS PROJECTION ACTIVE");
+            updateConnectedPhoneUi(savedName, "Projection active");
             return;
         }
-
-        int textSec = ContextCompat.getColor(this, R.color.cockpit_text_secondary);
-        int textTert = ContextCompat.getColor(this, R.color.cockpit_text_tertiary);
-
         if (savedName != null) {
-            if (tvHeaderBluetooth != null) {
-                tvHeaderBluetooth.setText(savedName.toUpperCase());
-                tvHeaderBluetooth.setTextColor(textSec);
-            }
-            if (ivHeaderBtIcon != null) {
-                ivHeaderBtIcon.setColorFilter(textTert, PorterDuff.Mode.SRC_IN);
-            }
-            if (tvBtDeviceName != null) {
-                tvBtDeviceName.setText(savedName.toUpperCase());
-            }
-            if (tvBtProfileDetail != null) {
-                tvBtProfileDetail.setText("CARPLAY READY · TAP TO LAUNCH");
-            }
-            if (tvBtStatusBadge != null) {
-                tvBtStatusBadge.setText("○ READY");
-                tvBtStatusBadge.setTextColor(textSec);
-            }
+            showPhoneState(savedName, "Not connected", "Open CarPlay to start", R.color.ad_label_2, false);
         } else {
-            if (tvHeaderBluetooth != null) {
-                tvHeaderBluetooth.setText("TAP TO CONNECT");
-                tvHeaderBluetooth.setTextColor(textSec);
-            }
-            if (ivHeaderBtIcon != null) {
-                ivHeaderBtIcon.setColorFilter(textTert, PorterDuff.Mode.SRC_IN);
-            }
-            if (tvBtDeviceName != null) {
-                tvBtDeviceName.setText("NO DEVICE CONNECTED");
-            }
-            if (tvBtProfileDetail != null) {
-                tvBtProfileDetail.setText("CARPLAY LINK · READY");
-            }
-            if (tvBtStatusBadge != null) {
-                tvBtStatusBadge.setText("○ STANDBY");
-                tvBtStatusBadge.setTextColor(textSec);
-            }
+            showPhoneState("No phone", "", "Choose a phone to connect", R.color.ad_label_2, false);
         }
     }
 
-    @SuppressLint("MissingPermission")
+    /** Writes one phone state to the status bar chip, the Home tile and the Phone screen. */
+    private void showPhoneState(String name, String detail, String status, int statusColor, boolean connected) {
+        int accent = accent();
+        int inactive = ContextCompat.getColor(this, R.color.ad_label_3);
+        if (tvHeaderBluetooth != null) tvHeaderBluetooth.setText(connected ? name : "No phone");
+        setDot(ivHeaderBtIcon, connected ? R.color.ad_ok : R.color.ad_label_3);
+        if (viewDash != null) setDot(viewDash.findViewById(R.id.ivBtStatusDot), connected ? R.color.ad_ok : R.color.ad_label_3);
+        if (tvBtDeviceName != null) tvBtDeviceName.setText(name);
+        if (tvBtProfileDetail != null) tvBtProfileDetail.setText(detail);
+        if (tvBtStatusBadge != null) tvBtStatusBadge.setText(connected ? "Connected" : "Not connected");
+        if (viewCarPlay != null) {
+            TextView device = viewCarPlay.findViewById(R.id.tvConnectDevice);
+            TextView line = viewCarPlay.findViewById(R.id.tvConnectStatus);
+            TextView body = viewCarPlay.findViewById(R.id.tvConnectBody);
+            TextView auto = viewCarPlay.findViewById(R.id.tvAutoOpenDetail);
+            if (device != null) device.setText(connected ? name + " is connected" : "No phone connected");
+            if (line != null) line.setText(connected ? "Calls and audio" : "Not connected");
+            setDot(viewCarPlay.findViewById(R.id.ivConnectDot), connected ? R.color.ad_ok : R.color.ad_label_3);
+            if (body != null) {
+                body.setText(connected
+                        ? "CarPlay opens in " + prefHelper.getCarPlayName() + "."
+                        : "Connect your phone with Bluetooth, then open CarPlay.");
+            }
+            if (auto != null) auto.setText(connected ? "When " + name + " connects" : "When your phone connects");
+            refreshOtherPhones();
+        }
+    }
+
     private String getDeviceNameFromAddress(String address) {
         if (address == null || address.isEmpty()) return null;
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
@@ -1712,10 +1924,10 @@ public class MainActivity extends AppCompatActivity {
     private void initCarThermometer() {
         thermometerWatcher = new CarThermometerWatcher(this, (tempFormatted, tempCelsius, condition) -> runOnUiThread(() -> {
             if (tvWeatherText != null) {
-                tvWeatherText.setText(tempFormatted != null ? tempFormatted.toUpperCase() : "32°C · OUTSIDE");
+                tvWeatherText.setText(tempFormatted != null ? tempFormatted : "–");
             }
             if (tvWeatherIcon != null) {
-                tvWeatherIcon.setText(condition != null && !condition.isEmpty() ? condition.toUpperCase() : "TEMP");
+                tvWeatherIcon.setText(condition != null ? condition : "");
             }
         }));
         thermometerWatcher.setUseFahrenheit(prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH));
@@ -1732,21 +1944,20 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(40, 36, 40, 36);
-        layout.setBackgroundColor(0xFF0F172A);
+        layout.setPadding(32, 32, 32, 32);
+        layout.setBackgroundResource(R.drawable.ad_bg_notification);
 
         TextView title = new TextView(this);
-        title.setText("VEHICLE THERMOMETER CALIBRATION");
-        title.setTextColor(prefHelper.getAccentColor());
-        title.setTextSize(13);
-        title.setTypeface(null, Typeface.BOLD);
-        title.setLetterSpacing(0.08f);
+        title.setText("Calibrate temperature");
+        title.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
+        title.setTextSize(28);
+        title.setTypeface(androidx.core.content.res.ResourcesCompat.getFont(this, R.font.atkinson_next_semibold));
         layout.addView(title);
 
         TextView subtitle = new TextView(this);
-        subtitle.setText("Calibrate to match your Hyundai instrument cluster outside temperature or sync via online GPS weather.");
-        subtitle.setTextColor(0xFF94A3B8);
-        subtitle.setTextSize(11);
+        subtitle.setText("Match the outside temperature on your instrument cluster, or use GPS weather.");
+        subtitle.setTextColor(ContextCompat.getColor(this, R.color.ad_label_2));
+        subtitle.setTextSize(20);
         subtitle.setPadding(0, 8, 0, 24);
         layout.addView(subtitle);
 
@@ -1754,9 +1965,9 @@ public class MainActivity extends AppCompatActivity {
         final float[] tempHolder = new float[]{ thermometerWatcher.getCurrentTempCelsius() };
         final boolean isMph = prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH);
         updateTempDisplay(tvCurrentVal, tempHolder[0], isMph);
-        tvCurrentVal.setTextSize(42);
-        tvCurrentVal.setTextColor(0xFFF8FAFC);
-        tvCurrentVal.setTypeface(null, Typeface.BOLD);
+        tvCurrentVal.setTextSize(64);
+        tvCurrentVal.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
+        tvCurrentVal.setTypeface(androidx.core.content.res.ResourcesCompat.getFont(this, R.font.atkinson_next_semibold));
         tvCurrentVal.setGravity(Gravity.CENTER);
         tvCurrentVal.setPadding(0, 10, 0, 24);
         layout.addView(tvCurrentVal);
@@ -1767,9 +1978,9 @@ public class MainActivity extends AppCompatActivity {
 
         Button btnMinus = new Button(this);
         btnMinus.setText("− 1°");
-        btnMinus.setTextSize(16);
-        btnMinus.setTextColor(0xFFF8FAFC);
-        btnMinus.setBackgroundResource(R.drawable.bg_elevated_btn);
+        btnMinus.setTextSize(28);
+        btnMinus.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
+        btnMinus.setBackgroundResource(R.drawable.ad_bg_btn_secondary);
         btnMinus.setLayoutParams(new LinearLayout.LayoutParams(0, 110, 1f));
         btnMinus.setOnClickListener(v -> {
             tempHolder[0] -= 1.0f;
@@ -1781,9 +1992,9 @@ public class MainActivity extends AppCompatActivity {
 
         Button btnPlus = new Button(this);
         btnPlus.setText("+ 1°");
-        btnPlus.setTextSize(16);
-        btnPlus.setTextColor(0xFFF8FAFC);
-        btnPlus.setBackgroundResource(R.drawable.bg_elevated_btn);
+        btnPlus.setTextSize(28);
+        btnPlus.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
+        btnPlus.setBackgroundResource(R.drawable.ad_bg_btn_secondary);
         btnPlus.setLayoutParams(new LinearLayout.LayoutParams(0, 110, 1f));
         btnPlus.setOnClickListener(v -> {
             tempHolder[0] += 1.0f;
@@ -1796,19 +2007,21 @@ public class MainActivity extends AppCompatActivity {
         layout.addView(btnRow);
 
         Button btnSyncGps = new Button(this);
-        btnSyncGps.setText("SYNC LIVE GPS WEATHER");
-        btnSyncGps.setTextSize(11);
-        btnSyncGps.setTextColor(0xFF94A3B8);
-        btnSyncGps.setBackgroundResource(R.drawable.bg_elevated_btn);
+        btnSyncGps.setText("Use GPS weather");
+        btnSyncGps.setAllCaps(false);
+        btnSyncGps.setTextSize(22);
+        btnSyncGps.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
+        btnSyncGps.setBackgroundResource(R.drawable.ad_bg_btn_secondary);
         LinearLayout.LayoutParams lpGps = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 110);
         lpGps.setMargins(0, 18, 0, 0);
         btnSyncGps.setLayoutParams(lpGps);
 
         Button btnSave = new Button(this);
-        btnSave.setText("MATCH & LOCK TEMPERATURE");
-        btnSave.setTextSize(11);
-        btnSave.setTextColor(prefHelper.getAccentColor());
-        btnSave.setBackgroundResource(R.drawable.bg_elevated_btn);
+        btnSave.setText("Save temperature");
+        btnSave.setAllCaps(false);
+        btnSave.setTextSize(22);
+        btnSave.setTextColor(ContextCompat.getColor(this, R.color.ad_on_accent));
+        btnSave.setBackgroundResource(R.drawable.ad_bg_btn_primary);
         LinearLayout.LayoutParams lpSave = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 110);
         lpSave.setMargins(0, 12, 0, 0);
         btnSave.setLayoutParams(lpSave);
@@ -1828,7 +2041,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 thermometerWatcher.triggerImmediateLocationWeatherSync();
             }
-            Toast.makeText(this, "Auto GPS weather enabled · Updating for vehicle location...", Toast.LENGTH_SHORT).show();
+            notifier.show(Notifier.Kind.INFO, "Weather uses GPS location", "Updating for the vehicle's position");
             dialog.dismiss();
         });
 
@@ -1837,7 +2050,7 @@ public class MainActivity extends AppCompatActivity {
             float target = tempHolder[0];
             float offset = target - raw;
             thermometerWatcher.setTempOffset(offset);
-            Toast.makeText(this, String.format(Locale.US, "Calibrated: offset set to %+.1f°C (Matches car dashboard)", offset), Toast.LENGTH_SHORT).show();
+            notifier.show(Notifier.Kind.OK, "Temperature calibrated", String.format(Locale.US, "Offset %+.1f°C", offset));
             dialog.dismiss();
         });
 
@@ -1867,13 +2080,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showDeviceSelectorDialog(boolean isAutoDismiss) {
+        if (lockedWhileDriving()) return;
         if (isFinishing()) return;
         if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
             deviceSelectorDialog.dismiss();
-        }
-        if (deviceSelectorTimer != null) {
-            deviceSelectorTimer.cancel();
-            deviceSelectorTimer = null;
         }
         cleanupDialogBtReceivers();
 
@@ -1884,37 +2094,27 @@ public class MainActivity extends AppCompatActivity {
 
         if (deviceSelectorDialog.getWindow() != null) {
             deviceSelectorDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+            deviceSelectorDialog.getWindow().setDimAmount(0.5f);
         }
 
-        TextView tvCountdown = dialogView.findViewById(R.id.tvCountdownTimer);
         LinearLayout deviceContainer = dialogView.findViewById(R.id.deviceListContainer);
         View layoutDeviceLoading = dialogView.findViewById(R.id.layoutDeviceLoading);
         ProgressBar pbDeviceLoading = dialogView.findViewById(R.id.pbDeviceLoading);
         TextView tvDeviceLoadingText = dialogView.findViewById(R.id.tvDeviceLoadingText);
         Button btnPair = dialogView.findViewById(R.id.btnPairNewDevice);
-        Button btnSkip = dialogView.findViewById(R.id.btnSkipSelector);
+        View btnSkip = dialogView.findViewById(R.id.btnSkipSelector);
 
-        int accentColor = prefHelper.getAccentColor();
-        if (btnSkip != null) btnSkip.setTextColor(accentColor);
-        if (tvCountdown != null) tvCountdown.setTextColor(accentColor);
-        if (tvDeviceLoadingText != null) tvDeviceLoadingText.setTextColor(accentColor);
+        int accentColor = accent();
         if (pbDeviceLoading != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             pbDeviceLoading.setIndeterminateTintList(ColorStateList.valueOf(accentColor));
         }
 
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-        if (adapter != null && !adapter.isEnabled()) {
-            try {
-                adapter.enable();
-            } catch (Exception ignored) {}
-        }
-
-        populateDeviceListWithLoader(dialogView, tvCountdown, deviceContainer, layoutDeviceLoading, adapter, accentColor, 0);
+        populateDeviceListWithLoader(dialogView, deviceContainer, layoutDeviceLoading, adapter, accentColor, 0);
 
         if (btnPair != null) {
             btnPair.setOnClickListener(v -> {
                 cleanupDialogBtReceivers();
-                if (deviceSelectorTimer != null) deviceSelectorTimer.cancel();
                 if (deviceSelectorDialog != null) deviceSelectorDialog.dismiss();
                 openBluetoothManager();
             });
@@ -1923,51 +2123,12 @@ public class MainActivity extends AppCompatActivity {
         if (btnSkip != null) {
             btnSkip.setOnClickListener(v -> {
                 cleanupDialogBtReceivers();
-                if (deviceSelectorTimer != null) deviceSelectorTimer.cancel();
                 if (deviceSelectorDialog != null) deviceSelectorDialog.dismiss();
             });
         }
 
-        if (isAutoDismiss) {
-            deviceSelectorTimer = new CountDownTimer(8000, 1000) {
-                @Override
-                public void onTick(long millisUntilFinished) {
-                    long seconds = (millisUntilFinished / 1000) + 1;
-                    if (tvCountdown != null) {
-                        tvCountdown.setText("Auto in " + seconds + "s");
-                    }
-                }
-
-                @Override
-                public void onFinish() {
-                    cleanupDialogBtReceivers();
-                    if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
-                        deviceSelectorDialog.dismiss();
-                    }
-                    String saved = prefHelper.getSelectedDriverDevice();
-                    if (saved != null && !saved.isEmpty() && btWatcher != null) {
-                        BluetoothAdapter a = BluetoothAdapter.getDefaultAdapter();
-                        if (a != null && a.isEnabled()) {
-                            try {
-                                BluetoothDevice dev = a.getRemoteDevice(saved);
-                                if (dev != null) {
-                                    btWatcher.signalConnect(dev);
-                                }
-                            } catch (Exception ignored) {}
-                        }
-                    }
-                }
-            }.start();
-        } else {
-            if (tvCountdown != null) tvCountdown.setVisibility(View.GONE);
-        }
-
         deviceSelectorDialog.setOnDismissListener(dialog -> {
             cleanupDialogBtReceivers();
-            if (deviceSelectorTimer != null) {
-                deviceSelectorTimer.cancel();
-                deviceSelectorTimer = null;
-            }
             if (isBtConnecting && btWatcher != null) {
                 btWatcher.cancelPendingConnection();
                 isBtConnecting = false;
@@ -1977,13 +2138,13 @@ public class MainActivity extends AppCompatActivity {
         deviceSelectorDialog.show();
     }
 
-    private void populateDeviceListWithLoader(View dialogView, TextView tvCountdown, LinearLayout deviceContainer, View layoutDeviceLoading, BluetoothAdapter adapter, int accentColor, int attempt) {
+    private void populateDeviceListWithLoader(View dialogView, LinearLayout deviceContainer, View layoutDeviceLoading, BluetoothAdapter adapter, int accentColor, int attempt) {
         @SuppressLint("MissingPermission")
         java.util.Set<BluetoothDevice> pairedDevices = (adapter != null && adapter.isEnabled()) ? adapter.getBondedDevices() : null;
 
         if (pairedDevices != null && !pairedDevices.isEmpty()) {
             if (layoutDeviceLoading != null) layoutDeviceLoading.setVisibility(View.GONE);
-            renderDeviceCards(pairedDevices, deviceContainer, tvCountdown, accentColor);
+            renderDeviceCards(pairedDevices, deviceContainer, accentColor);
             return;
         }
 
@@ -2006,7 +2167,7 @@ public class MainActivity extends AppCompatActivity {
                             if (devices != null && !devices.isEmpty()) {
                                 cleanupDialogBtReceivers();
                                 if (layoutDeviceLoading != null) layoutDeviceLoading.setVisibility(View.GONE);
-                                renderDeviceCards(devices, deviceContainer, tvCountdown, accentColor);
+                                renderDeviceCards(devices, deviceContainer, accentColor);
                             }
                         }
                     }
@@ -2020,7 +2181,7 @@ public class MainActivity extends AppCompatActivity {
             dialogPollRunnable = () -> {
                 if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
                     BluetoothAdapter currAdapter = BluetoothAdapter.getDefaultAdapter();
-                    populateDeviceListWithLoader(dialogView, tvCountdown, deviceContainer, layoutDeviceLoading, currAdapter, accentColor, attempt + 1);
+                    populateDeviceListWithLoader(dialogView, deviceContainer, layoutDeviceLoading, currAdapter, accentColor, attempt + 1);
                 }
             };
             dialogPollHandler.postDelayed(dialogPollRunnable, 600);
@@ -2031,9 +2192,12 @@ public class MainActivity extends AppCompatActivity {
             if (deviceContainer != null) {
                 deviceContainer.removeAllViews();
                 TextView tvEmpty = new TextView(this);
-                tvEmpty.setText("No paired phones detected in range.\nTap \"Pair New Phone\" to link your phone via Bluetooth.");
-                tvEmpty.setTextColor(ContextCompat.getColor(this, R.color.cockpit_text_secondary));
-                tvEmpty.setTextSize(13);
+                BluetoothAdapter btNow = BluetoothAdapter.getDefaultAdapter();
+                tvEmpty.setText(btNow != null && !btNow.isEnabled()
+                        ? "Bluetooth is off. Turn it on in Phone settings, then try again."
+                        : "No paired phones. Pair a phone to use it here.");
+                tvEmpty.setTextColor(ContextCompat.getColor(this, R.color.ad_label_2));
+                tvEmpty.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, getResources().getDimension(R.dimen.ad_text_label));
                 tvEmpty.setPadding(16, 24, 16, 24);
                 tvEmpty.setGravity(android.view.Gravity.CENTER);
                 deviceContainer.addView(tvEmpty);
@@ -2042,7 +2206,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @SuppressLint("MissingPermission")
-    private void renderDeviceCards(java.util.Set<BluetoothDevice> pairedDevices, LinearLayout deviceContainer, TextView tvCountdown, int accentColor) {
+    private void renderDeviceCards(java.util.Set<BluetoothDevice> pairedDevices, LinearLayout deviceContainer, int accentColor) {
         if (deviceContainer == null) return;
         deviceContainer.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(this);
@@ -2053,47 +2217,41 @@ public class MainActivity extends AppCompatActivity {
             TextView tvName = card.findViewById(R.id.tvDialogDeviceName);
             TextView tvStatus = card.findViewById(R.id.tvDialogDeviceStatus);
             TextView btnConnect = card.findViewById(R.id.btnConnectPill);
+            View ivConnected = card.findViewById(R.id.ivDialogConnected);
+            ImageView ivIcon = card.findViewById(R.id.ivDialogDeviceIcon);
+            int label2 = ContextCompat.getColor(MainActivity.this, R.color.ad_label_2);
 
             @SuppressLint("MissingPermission")
             String name = (device.getName() != null && !device.getName().isEmpty()) ? device.getName() : "Phone (" + device.getAddress() + ")";
-            tvName.setText(name.toUpperCase());
+            tvName.setText(name);
 
             boolean isActuallyConnected = (btWatcher != null && btWatcher.isDeviceCurrentlyConnected(device));
             boolean isSavedDriver = (savedAddr != null && savedAddr.equalsIgnoreCase(device.getAddress()));
-            if (isActuallyConnected || (isCarPlayConnected && isSavedDriver)) {
-                tvStatus.setText("CONNECTED · READY FOR CARPLAY");
-                tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
-                tvName.setTextColor(accentColor);
-                btnConnect.setText("LAUNCH");
-                btnConnect.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
-            } else if (isSavedDriver) {
-                tvStatus.setText("DEFAULT DRIVER · READY TO CONNECT");
-                tvStatus.setTextColor(accentColor);
-                btnConnect.setText("CONNECT");
-                btnConnect.setTextColor(accentColor);
+            String lower = name.toLowerCase(Locale.US);
+            if (ivIcon != null && (lower.contains("iphone") || lower.contains("ipad"))) {
+                ivIcon.setImageResource(R.drawable.ic_sym_phone_iphone);
+            }
+            tvStatus.setTextColor(label2);
+            if (isActuallyConnected) {
+                tvStatus.setText("Connected");
+                btnConnect.setVisibility(View.GONE);
+                if (ivConnected != null) ivConnected.setVisibility(View.VISIBLE);
             } else {
-                tvStatus.setText("PAIRED · READY TO CONNECT");
-                tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.cockpit_text_secondary));
-                btnConnect.setText("CONNECT");
-                btnConnect.setTextColor(accentColor);
+                tvStatus.setText(isSavedDriver ? "Your phone" : "Paired");
+                btnConnect.setText("Connect");
             }
 
             View.OnClickListener selectListener = v -> {
                 if (isBtConnecting) return;
 
                 cleanupDialogBtReceivers();
-                if (deviceSelectorTimer != null) {
-                    deviceSelectorTimer.cancel();
-                    deviceSelectorTimer = null;
-                    if (tvCountdown != null) tvCountdown.setVisibility(View.GONE);
-                }
 
                 // If this device is ALREADY verified as connected (via A2DP, Adapter, Audio routing, or vendor BT)
                 if (btWatcher != null && btWatcher.isDeviceCurrentlyConnected(device)) {
                     prefHelper.setSelectedDriverDevice(device.getAddress());
                     isCarPlayConnected = true;
-                    updateConnectedPhoneUi(name, "CONNECTED · CARPLAY READY");
-                    Toast.makeText(MainActivity.this, name + " is connected. Starting CarPlay...", Toast.LENGTH_SHORT).show();
+                    updateConnectedPhoneUi(name, "Connected");
+                    notifier.show(Notifier.Kind.OK, name + " connected", "Starting CarPlay");
                     if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
                         deviceSelectorDialog.dismiss();
                     }
@@ -2105,11 +2263,8 @@ public class MainActivity extends AppCompatActivity {
                 isBtConnecting = true;
                 prefHelper.setSelectedDriverDevice(device.getAddress());
 
-                tvStatus.setText("CONNECTING TO " + name.toUpperCase() + "...");
-                tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.accent_amber));
-                tvName.setTextColor(accentColor);
-                btnConnect.setText("CONNECTING...");
-                btnConnect.setTextColor(accentColor);
+                tvStatus.setText("Connecting…");
+                btnConnect.setText("Connecting…");
 
                 // Disable all cards while connection is in progress so driver doesn't spam
                 for (int i = 0; i < deviceContainer.getChildCount(); i++) {
@@ -2119,8 +2274,8 @@ public class MainActivity extends AppCompatActivity {
                     if (b != null) b.setEnabled(false);
                 }
 
-                updateConnectedPhoneUi(name, "CONNECTING BLUETOOTH...");
-                Toast.makeText(MainActivity.this, "Initiating Bluetooth connection to " + name + "...", Toast.LENGTH_SHORT).show();
+                updateConnectedPhoneUi(name, "Connecting");
+                notifier.show(Notifier.Kind.INFO, "Connecting to " + name);
 
                 if (btWatcher != null) {
                     btWatcher.connectToDevice(device, new BluetoothWatcher.DeviceConnectionCallback() {
@@ -2128,7 +2283,7 @@ public class MainActivity extends AppCompatActivity {
                         public void onConnecting(BluetoothDevice dev) {
                             runOnUiThread(() -> {
                                 if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
-                                    tvStatus.setText("ESTABLISHING LINK TO " + name.toUpperCase() + "...");
+                                    tvStatus.setText("Connecting…");
                                 }
                             });
                         }
@@ -2141,14 +2296,13 @@ public class MainActivity extends AppCompatActivity {
                                 prefHelper.setSelectedDriverDevice(device.getAddress());
 
                                 if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
-                                    tvStatus.setText("CONNECTED · STARTING CARPLAY");
-                                    tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
-                                    btnConnect.setText("CONNECTED");
-                                    btnConnect.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
+                                    tvStatus.setText("Connected, opening CarPlay");
+                                    btnConnect.setVisibility(View.GONE);
+                                    if (ivConnected != null) ivConnected.setVisibility(View.VISIBLE);
                                 }
 
-                                updateConnectedPhoneUi(name, "CONNECTED · CARPLAY READY");
-                                Toast.makeText(MainActivity.this, "Connected to " + name + "! Starting CarPlay...", Toast.LENGTH_SHORT).show();
+                                updateConnectedPhoneUi(name, "Connected");
+                                notifier.show(Notifier.Kind.OK, "Connected to " + name, "Starting CarPlay");
 
                                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
                                     if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
@@ -2165,15 +2319,11 @@ public class MainActivity extends AppCompatActivity {
                                 isBtConnecting = false;
 
                                 if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
-                                    tvStatus.setText("CONNECTED IN CAR? TAP TO LAUNCH ANYWAY");
-                                    tvStatus.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.accent_amber));
-                                    btnConnect.setText("LAUNCH ANYWAY");
-                                    btnConnect.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.status_active));
+                                    tvStatus.setText("Couldn't confirm. Already connected?");
+                                    btnConnect.setText("Open CarPlay");
 
                                     View.OnClickListener launchAnywayListener = fl -> {
                                         prefHelper.setSelectedDriverDevice(device.getAddress());
-                                        isCarPlayConnected = true;
-                                        updateConnectedPhoneUi(name, "CONNECTED · CARPLAY READY");
                                         if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
                                             deviceSelectorDialog.dismiss();
                                         }
@@ -2192,15 +2342,13 @@ public class MainActivity extends AppCompatActivity {
                                     }
                                 }
 
-                                Toast.makeText(MainActivity.this,
-                                        "If " + name + " is connected in car, tap 'LAUNCH ANYWAY' or open Car Bluetooth",
-                                        Toast.LENGTH_LONG).show();
+                                notifier.show(Notifier.Kind.CAUTION, "Couldn't confirm " + name, "If it's connected, tap Open CarPlay, or check Phone settings");
                             });
                         }
                     });
                 } else {
                     isBtConnecting = false;
-                    Toast.makeText(MainActivity.this, "Bluetooth service unavailable", Toast.LENGTH_SHORT).show();
+                    notifier.show(Notifier.Kind.ALERT, "Bluetooth is unavailable");
                 }
             };
 
@@ -2248,23 +2396,18 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-                if (tvTrackTitle != null && title != null && !title.trim().isEmpty()) {
-                    tvTrackTitle.setText(title);
-                }
-                if (tvTrackArtist != null && artist != null && !artist.trim().isEmpty()) {
-                    tvTrackArtist.setText(artist);
-                }
+                setTrackText(title != null && !title.trim().isEmpty() ? title : null,
+                        artist != null && !artist.trim().isEmpty() ? artist : null);
                 if (btnMediaPlayPause != null && hasPlayState) {
-                    btnMediaPlayPause.setText(isPlaying ? "PAUSE" : "PLAY");
+                    setPlayState(isPlaying);
                 }
 
                 String action = intent.getAction();
                 boolean isCarPlaySource = action != null && (action.startsWith("com.zlink") || action.startsWith("zjinnova") || action.contains("diplay"));
-                if (isCarPlaySource || (isPlaying && title != null && !title.trim().isEmpty() && !title.startsWith("FM "))) {
+                if (isCarPlaySource && isPlaying) {
                     isCarPlayConnected = true;
-                    String saved = prefHelper.getSelectedDriverDevice();
-                    String savedName = getDeviceNameFromAddress(saved);
-                    updateConnectedPhoneUi(savedName != null ? savedName : "CARPLAY", "WIRELESS PROJECTION ACTIVE");
+                    String savedName = getDeviceNameFromAddress(prefHelper.getSelectedDriverDevice());
+                    updateConnectedPhoneUi(savedName != null ? savedName : "Phone", "CarPlay active");
                 }
             }
         };
@@ -2300,41 +2443,47 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private final MediaStateHolder.Listener mediaStateListener = s -> {
-        if (tvTrackTitle != null && s.title != null) tvTrackTitle.setText(s.title);
-        if (tvTrackArtist != null && s.artist != null) tvTrackArtist.setText(s.artist);
-        if (btnMediaPlayPause != null && s.hasTrack()) {
-            btnMediaPlayPause.setText(s.playing ? "PAUSE" : "PLAY");
+        setTrackText(s.title, s.artist);
+        if (s.hasTrack()) setPlayState(s.playing);
+        if (viewDash != null) {
+            ImageView art = viewDash.findViewById(R.id.ivAlbumArt);
+            View placeholder = viewDash.findViewById(R.id.ivAlbumArtPlaceholder);
+            if (art != null) art.setImageBitmap(s.art);
+            if (placeholder != null) placeholder.setVisibility(s.art != null ? View.GONE : View.VISIBLE);
+            TextView source = viewDash.findViewById(R.id.tvTrackSource);
+            if (source != null && s.sourcePackage != null) source.setText(appLabel(s.sourcePackage));
         }
-        if (s.playing && s.hasTrack() && !s.title.startsWith("FM ")) {
+        // Only a CarPlay bridge playing means projection is running; any other player does not.
+        if (s.playing && isCarPlayBridge(s.sourcePackage)) {
             isCarPlayConnected = true;
-            String saved = prefHelper.getSelectedDriverDevice();
-            String savedName = getDeviceNameFromAddress(saved);
-            updateConnectedPhoneUi(savedName != null ? savedName : "CARPLAY", "WIRELESS PROJECTION ACTIVE");
+            String savedName = getDeviceNameFromAddress(prefHelper.getSelectedDriverDevice());
+            updateConnectedPhoneUi(savedName != null ? savedName : "Phone", "CarPlay active");
         }
     };
 
+    private boolean isCarPlayBridge(String pkg) {
+        if (pkg == null) return false;
+        return pkg.equals(prefHelper.getCarPlayPackage()) || pkg.contains("zlink") || pkg.contains("zjinnova")
+                || pkg.contains("diplay") || pkg.contains("carplay") || pkg.contains("autokit") || pkg.contains("carlinke");
+    }
+
     private void launchCarPlay() {
-        isCarPlayConnected = true;
-        String savedAddr = prefHelper.getSelectedDriverDevice();
-        String savedName = getDeviceNameFromAddress(savedAddr);
-        updateConnectedPhoneUi(savedName != null ? savedName : "CARPLAY", "LAUNCHING PROJECTION...");
+        // 1. The app the user chose in Settings.
+        if (launchAppPackage(prefHelper.getCarPlayPackage())) return;
 
-        String pkg = prefHelper.getCarPlayPackage();
-
-        // 1. Try launching Zlink via its explicit intent first
+        // 2. Zlink's explicit entry point.
         try {
             Intent zlinkIntent = new Intent("zjinnova.android.intent.action.ZLINK_MAIN");
             zlinkIntent.putExtra("page", "LINK");
             zlinkIntent.putExtra("feature", "carplay");
             zlinkIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(zlinkIntent);
-            return;
+            if (zlinkIntent.resolveActivity(getPackageManager()) != null) {
+                startActivity(zlinkIntent);
+                return;
+            }
         } catch (Exception ignored) {}
 
-        // 2. Try launching package selected by user
-        if (launchAppPackage(pkg)) return;
-
-        // 3. Fallback to common CarPlay packages
+        // 3. Common CarPlay bridge apps; remember the one that worked.
         String[] commonCarPlayPackages = {
                 "com.zjinnova.zlink",
                 "com.zlink.carplay",
@@ -2345,27 +2494,27 @@ public class MainActivity extends AppCompatActivity {
                 "com.autokit",
                 "com.carlinke"
         };
-        boolean launched = false;
         for (String fallback : commonCarPlayPackages) {
             if (launchAppPackage(fallback)) {
                 prefHelper.setCarPlayPackage(fallback);
-                prefHelper.setCarPlayName("TLink 5.3");
-                launched = true;
-                break;
+                prefHelper.setCarPlayName(appLabel(fallback));
+                return;
             }
         }
-        if (!launched) {
-            new AlertDialog.Builder(this)
-                    .setTitle("CARPLAY APP NOT FOUND")
-                    .setMessage("Could not find " + prefHelper.getCarPlayName() + " or any standard CarPlay projection app (Zlink, SpeedPlay, AutoKit).\n\nSelect a projection bridge from your installed apps or open Android Settings.")
-                    .setPositiveButton("SELECT APP", (dialog, which) -> showCarPlayPicker())
-                    .setNeutralButton("OPEN SETTINGS", (dialog, which) -> {
-                        try {
-                            startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                        } catch (Exception ignored) {}
-                    })
-                    .setNegativeButton("CANCEL", null)
-                    .show();
+        new AlertDialog.Builder(this)
+                .setTitle("No CarPlay app found")
+                .setMessage("Couldn't open " + prefHelper.getCarPlayName() + " or another CarPlay app. Choose the app that runs CarPlay on this head unit.")
+                .setPositiveButton("Choose app", (dialog, which) -> showCarPlayPicker())
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private String appLabel(String pkg) {
+        try {
+            PackageManager pm = getPackageManager();
+            return pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString();
+        } catch (Exception e) {
+            return pkg;
         }
     }
 
@@ -2480,7 +2629,6 @@ public class MainActivity extends AppCompatActivity {
         if (gpsManager != null) gpsManager.stop();
         if (btWatcher != null) btWatcher.stop();
         if (thermometerWatcher != null) thermometerWatcher.stop();
-        if (deviceSelectorTimer != null) deviceSelectorTimer.cancel();
         cleanupDialogBtReceivers();
         if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
             deviceSelectorDialog.dismiss();
@@ -2489,6 +2637,11 @@ public class MainActivity extends AppCompatActivity {
         if (mediaReceiver != null) {
             try {
                 unregisterReceiver(mediaReceiver);
+            } catch (Exception ignored) {}
+        }
+        if (packageReceiver != null) {
+            try {
+                unregisterReceiver(packageReceiver);
             } catch (Exception ignored) {}
         }
     }
