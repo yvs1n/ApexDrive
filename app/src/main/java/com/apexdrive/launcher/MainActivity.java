@@ -1044,6 +1044,7 @@ public class MainActivity extends AppCompatActivity {
             if (b - t != ob - ot && drivingState.isDriving()) applyAppsDrivingMode(true);
         });
         loadInstalledAppsAsync();
+        registerPackageReceiver();
 
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -1085,6 +1086,28 @@ public class MainActivity extends AppCompatActivity {
             notifier.show(Notifier.Kind.ALERT, "Can't open " + app.getLabel(), "The app may be disabled or uninstalled");
             loadInstalledAppsAsync();
         }
+    }
+
+    private BroadcastReceiver packageReceiver;
+
+    /** Reloads the app grid when an app is installed, updated or removed. */
+    private void registerPackageReceiver() {
+        if (packageReceiver != null) return;
+        packageReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                loadInstalledAppsAsync();
+            }
+        };
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_PACKAGE_ADDED);
+        filter.addAction(Intent.ACTION_PACKAGE_REMOVED);
+        filter.addAction(Intent.ACTION_PACKAGE_CHANGED);
+        filter.addAction(Intent.ACTION_PACKAGE_REPLACED);
+        filter.addDataScheme("package");
+        try {
+            registerReceiver(packageReceiver, filter);
+        } catch (Exception ignored) {}
     }
 
     private void loadInstalledAppsAsync() {
@@ -2593,6 +2616,11 @@ public class MainActivity extends AppCompatActivity {
         if (mediaReceiver != null) {
             try {
                 unregisterReceiver(mediaReceiver);
+            } catch (Exception ignored) {}
+        }
+        if (packageReceiver != null) {
+            try {
+                unregisterReceiver(packageReceiver);
             } catch (Exception ignored) {}
         }
     }
