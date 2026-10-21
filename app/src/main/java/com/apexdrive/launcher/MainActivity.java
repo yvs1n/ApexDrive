@@ -139,6 +139,7 @@ public class MainActivity extends AppCompatActivity {
         drivingState.setListener(driving -> runOnUiThread(() -> {
             View chip = findViewById(R.id.chipDriving);
             if (chip != null) chip.setVisibility(driving ? View.VISIBLE : View.GONE);
+            updatePairRow();
             if (driving && currentActiveRailBtn == railBtnSetup) {
                 showView(viewDash, railBtnDash);
                 notifier.show(Notifier.Kind.INFO, "Settings are available when parked");
@@ -636,9 +637,81 @@ public class MainActivity extends AppCompatActivity {
         if (btnLaunch != null) {
             btnLaunch.setOnClickListener(v -> launchCarPlay());
         }
-        View btnChoose = viewCarPlay.findViewById(R.id.btnChoosePhone);
-        if (btnChoose != null) {
-            btnChoose.setOnClickListener(v -> { if (!lockedWhileDriving()) showDeviceSelectorDialog(false); });
+        View rowAuto = viewCarPlay.findViewById(R.id.rowAutoOpen);
+        androidx.appcompat.widget.SwitchCompat swAuto = viewCarPlay.findViewById(R.id.switchAutoOpen);
+        if (swAuto != null) swAuto.setChecked(isAutoOpenCarPlay());
+        if (rowAuto != null) {
+            rowAuto.setOnClickListener(v -> {
+                boolean next = !isAutoOpenCarPlay();
+                getSharedPreferences("ad_display", MODE_PRIVATE).edit().putBoolean("auto_carplay", next).apply();
+                if (swAuto != null) swAuto.setChecked(next);
+            });
+        }
+        View rowSettings = viewCarPlay.findViewById(R.id.rowPhoneSettings);
+        if (rowSettings != null) rowSettings.setOnClickListener(v -> openBluetoothManager());
+        View rowPair = viewCarPlay.findViewById(R.id.rowPairPhone);
+        if (rowPair != null) rowPair.setOnClickListener(v -> { if (!lockedWhileDriving()) openBluetoothManager(); });
+        View steps = viewCarPlay.findViewById(R.id.btnShowSteps);
+        if (steps != null) steps.setOnClickListener(v -> showCarPlaySteps());
+        refreshOtherPhones();
+        updatePairRow();
+    }
+
+    private boolean isAutoOpenCarPlay() {
+        return getSharedPreferences("ad_display", MODE_PRIVATE).getBoolean("auto_carplay", false);
+    }
+
+    private void showCarPlaySteps() {
+        new AlertDialog.Builder(this)
+                .setTitle("CarPlay not starting?")
+                .setMessage("1. Unlock your phone.\n"
+                        + "2. Check that Bluetooth is on and the phone is connected.\n"
+                        + "3. If CarPlay uses a cable, plug it in again.\n"
+                        + "4. Choose your CarPlay app in Settings, then try Open CarPlay.")
+                .setPositiveButton("Done", null)
+                .show();
+    }
+
+    /** Lists paired phones other than the current one in the Phone screen. */
+    @SuppressLint("MissingPermission")
+    private void refreshOtherPhones() {
+        if (viewCarPlay == null) return;
+        LinearLayout list = viewCarPlay.findViewById(R.id.llOtherPhones);
+        if (list == null) return;
+        list.removeAllViews();
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        if (adapter == null || !adapter.isEnabled()) return;
+        String current = prefHelper.getSelectedDriverDevice();
+        int shown = 0;
+        try {
+            for (BluetoothDevice dev : adapter.getBondedDevices()) {
+                if (shown >= 3) break;
+                if (current != null && current.equalsIgnoreCase(dev.getAddress())) continue;
+                String name = dev.getName();
+                if (name == null || name.isEmpty()) continue;
+                View row = getLayoutInflater().inflate(R.layout.item_phone_row, list, false);
+                ((TextView) row.findViewById(R.id.tvPhoneRowName)).setText(name);
+                ((TextView) row.findViewById(R.id.tvPhoneRowDetail)).setText("Paired");
+                row.setOnClickListener(v -> showDeviceSelectorDialog(false));
+                list.addView(row);
+                shown++;
+            }
+        } catch (Exception ignored) {}
+    }
+
+    /** Pairing is locked while driving, as the design system shows. */
+    private void updatePairRow() {
+        if (viewCarPlay == null) return;
+        boolean locked = drivingState.isDriving();
+        ImageView icon = viewCarPlay.findViewById(R.id.ivPairIcon);
+        TextView title = viewCarPlay.findViewById(R.id.tvPairTitle);
+        TextView detail = viewCarPlay.findViewById(R.id.tvPairDetail);
+        if (icon != null) icon.setImageResource(locked ? R.drawable.ic_sym_lock : R.drawable.ic_sym_add);
+        int dim = ContextCompat.getColor(this, R.color.ad_label_4);
+        if (title != null) title.setTextColor(locked ? dim : ContextCompat.getColor(this, R.color.ad_label_1));
+        if (detail != null) {
+            detail.setText(locked ? "Available when parked" : "About 1 minute");
+            detail.setTextColor(locked ? dim : ContextCompat.getColor(this, R.color.ad_label_2));
         }
     }
 
@@ -1638,10 +1711,18 @@ public class MainActivity extends AppCompatActivity {
         if (viewCarPlay != null) {
             TextView device = viewCarPlay.findViewById(R.id.tvConnectDevice);
             TextView line = viewCarPlay.findViewById(R.id.tvConnectStatus);
-            if (device != null) device.setText(name);
-            if (line != null) {
-                line.setText(detail.isEmpty() ? status : detail + " · " + status);
+            TextView body = viewCarPlay.findViewById(R.id.tvConnectBody);
+            TextView auto = viewCarPlay.findViewById(R.id.tvAutoOpenDetail);
+            if (device != null) device.setText(connected ? name + " is connected" : "No phone connected");
+            if (line != null) line.setText(connected ? "Calls and audio" : "Not connected");
+            setDot(viewCarPlay.findViewById(R.id.ivConnectDot), connected ? R.color.ad_ok : R.color.ad_label_3);
+            if (body != null) {
+                body.setText(connected
+                        ? "CarPlay opens in " + prefHelper.getCarPlayName() + "."
+                        : "Connect your phone with Bluetooth, then open CarPlay.");
             }
+            if (auto != null) auto.setText(connected ? "When " + name + " connects" : "When your phone connects");
+            refreshOtherPhones();
         }
     }
 

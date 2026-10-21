@@ -1,74 +1,255 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Phone: connection status and the two actions that matter. -->
+<!-- Phone, as drawn in design/design-system.html (tpl-phone): 544 + 24 + 328 by 520. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="@dimen/ad_shell_inset">
+    android:orientation="horizontal">
 
+    <!-- Current phone -->
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="544"
         android:orientation="vertical"
-        android:padding="@dimen/ad_tile_padding"
-        android:background="@drawable/bg_panel">
+        android:padding="24dp"
+        android:elevation="2dp"
+        android:background="@drawable/ad_bg_tile">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <FrameLayout
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:background="@drawable/ad_bg_avatar">
+
+                <ImageView
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_sym_phone_iphone"
+                    app:tint="@color/ad_label_1"
+                    android:importantForAccessibility="no" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvConnectDevice"
+                    style="@style/TextAppearance.ApexDrive.Title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    android:text="No phone connected" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:id="@+id/ivConnectDot"
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:src="@drawable/ad_dot"
+                        app:tint="@color/ad_label_3"
+                        android:importantForAccessibility="no" />
+
+                    <TextView
+                        android:id="@+id/tvConnectStatus"
+                        style="@style/Widget.ApexDrive.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:textSize="@dimen/ad_text_label"
+                        android:text="Not connected" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
 
         <TextView
-            style="@style/TextAppearance.ApexDrive.Caption"
+            android:id="@+id/tvConnectBody"
+            style="@style/TextAppearance.ApexDrive.Body"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Phone" />
+            android:layout_marginTop="16dp"
+            android:maxWidth="400dp"
+            android:textColor="@color/ad_label_2"
+            android:text="Connect your phone with Bluetooth, then open CarPlay." />
+
+        <com.apexdrive.launcher.ui.CenteredIconButton
+            android:id="@+id/btnLaunchCarPlayFull"
+            style="@style/Widget.ApexDrive.Button.Primary"
+            android:layout_width="match_parent"
+            android:layout_marginTop="16dp"
+            app:drawableStartCompat="@drawable/ic_btn_cast"
+            android:text="Open CarPlay" />
+
+        <LinearLayout
+            android:id="@+id/rowAutoOpen"
+            style="@style/Widget.ApexDrive.Row"
+            android:layout_marginTop="16dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                style="@style/Widget.ApexDrive.RowIcon"
+                android:src="@drawable/ic_sym_bolt" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/Widget.ApexDrive.RowTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Open automatically" />
+
+                <TextView
+                    android:id="@+id/tvAutoOpenDetail"
+                    style="@style/Widget.ApexDrive.RowDetail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="When your phone connects" />
+            </LinearLayout>
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchAutoOpen"
+                style="@style/Widget.ApexDrive.Switch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:clickable="false"
+                android:focusable="false" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowPhoneSettings"
+            style="@style/Widget.ApexDrive.Row"
+            android:layout_marginTop="16dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                style="@style/Widget.ApexDrive.RowIcon"
+                android:src="@drawable/ic_sym_bluetooth" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/Widget.ApexDrive.RowTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Phone settings" />
+
+                <TextView
+                    style="@style/Widget.ApexDrive.RowDetail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Bluetooth app on the head unit" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_sym_chevron_right"
+                app:tint="@color/ad_label_2"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Other phones -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="328"
+        android:layout_marginStart="@dimen/ad_tile_gap"
+        android:orientation="vertical"
+        android:padding="@dimen/ad_tile_padding"
+        android:elevation="2dp"
+        android:background="@drawable/ad_bg_tile">
 
         <TextView
-            android:id="@+id/tvConnectDevice"
-            style="@style/TextAppearance.ApexDrive.Display"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="No phone connected" />
+            style="@style/Widget.ApexDrive.TileHeader"
+            android:text="Other phones" />
 
-        <TextView
-            android:id="@+id/tvConnectStatus"
-            style="@style/TextAppearance.ApexDrive.Body"
+        <LinearLayout
+            android:id="@+id/llOtherPhones"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Choose a phone to connect" />
+            android:orientation="vertical" />
+
+        <LinearLayout
+            android:id="@+id/rowPairPhone"
+            style="@style/Widget.ApexDrive.Row"
+            android:layout_marginTop="12dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/ivPairIcon"
+                style="@style/Widget.ApexDrive.RowIcon"
+                android:src="@drawable/ic_sym_add" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvPairTitle"
+                    style="@style/Widget.ApexDrive.RowTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Pair a phone" />
+
+                <TextView
+                    android:id="@+id/tvPairDetail"
+                    style="@style/Widget.ApexDrive.RowDetail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="About 1 minute" />
+            </LinearLayout>
+        </LinearLayout>
 
         <View
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/ad_target"
-            android:orientation="horizontal">
+        <TextView
+            style="@style/TextAppearance.ApexDrive.Label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CarPlay not starting?" />
 
-            <Button
-                android:id="@+id/btnLaunchCarPlayFull"
-                style="@style/TextAppearance.ApexDrive.Label"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:background="@drawable/ad_bg_btn_primary"
-                android:textColor="@color/ad_on_accent"
-                android:textAllCaps="false"
-                android:text="Open CarPlay" />
-
-            <Button
-                android:id="@+id/btnChoosePhone"
-                style="@style/TextAppearance.ApexDrive.Label"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:layout_marginStart="@dimen/ad_target_gap"
-                android:background="@drawable/ad_bg_btn_secondary"
-                android:textAllCaps="false"
-                android:text="Choose phone" />
-        </LinearLayout>
+        <Button
+            android:id="@+id/btnShowSteps"
+            style="@style/Widget.ApexDrive.Button.Quiet"
+            android:layout_width="wrap_content"
+            android:layout_marginTop="4dp"
+            android:paddingStart="0dp"
+            android:gravity="start|center_vertical"
+            android:text="Show steps" />
     </LinearLayout>
 </LinearLayout>
