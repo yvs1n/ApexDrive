@@ -264,7 +264,7 @@ Threat model: the unit is a shared, always-on Android device with a data connect
 
 **P-38 · High · `CarThermometerWatcher.java:221-222`, `:265-266`, `:147-149`, `:171-181`, `PreferenceHelper.java:124-130`, `MainActivity.java:1822`**
 - **What happens:** Latitude and longitude with 4 decimals (about 11 m) go to `api.open-meteo.com` and `api.bigdatacloud.net` at start-up and then every 10 minutes or 3 km. Auto-weather defaults to `true`. The only code that writes the preference is `setAutoWeatherEnabled(true)` (`MainActivity.java:1822`); nothing can turn it off. There is no consent screen and no disclosure in the README.
-- **Why it matters:** A continuous precise-location feed to two third parties, with no off switch. It is also an opensource project that other people will install in their cars.
+- **Why it matters:** A continuous precise-location feed to two third parties, with no off switch. It is also an open-source project that other people will install in their cars.
 - **Fix:** First-run opt-in with plain wording (what is sent, to whom). A Setup toggle that calls `setAutoWeatherEnabled(false)` and stops all network use. Round to 2 decimals (about 1 km), which is enough for weather. List the endpoints in the README. Keep the city name optional.
 
 **P-39 · Med · `BluetoothWatcher.java:586-616`** `[verify in car]`
@@ -300,3 +300,54 @@ Threat model: the unit is a shared, always-on Android device with a data connect
 - **What happens:** `checkPermissions()` requests location (fine and coarse) and the two Bluetooth permissions in `onCreate`, with no rationale. The Bluetooth ones are install-time "normal" permissions, so they are never prompted. A denial is not handled; the result callback only restarts GPS.
 - **Why it matters:** The first thing a new user sees is a permission dialog over an empty cockpit. After a denial the Maps screen reads "Searching Satellite Coordinates..." forever (`view_maps.xml:85`), with nothing explaining why. `README.md:59` tells the user to pick "Allow all the time", an option that does not exist for `targetSdk` 28.
 - **Fix:** Ask in context on the first Maps or speed tap, explain why, and show an explicit "Location permission denied" state with a button. Fix the README. `[verify in car]` some units hide or auto-deny the permission dialog; the app should then say how to grant it with `adb shell pm grant`.
+
+---
+
+## D. Performance and battery
+
+Target: Allwinner T3L (quad Cortex-A7 class), 2 GB RAM, Mali-400 GPU, 1024x600. **Nothing here was measured**; the findings are costs visible in the code. Before and after each fix, capture on the unit over `adb` (Wi-Fi): `dumpsys meminfo com.apexdrive.launcher`, `dumpsys gfxinfo com.apexdrive.launcher framestats`, `top -m 5 -n 1` while on the dash, and a 10-minute `simpleperf` or systrace trace with the app in the background. Battery is a secondary concern in a car; CPU heat, jank in the foreground navigation app, and Binder/broadcast traffic are the real costs.
+
+**P-45 · High · `GpsTelemetryManager.java:63-78`, `MainActivity.java:2451-2456`, `:2458-2475`**
+- **What happens:** GPS is requested at `minTime=50 ms, minDistance=0` and the network provider at 500 ms. Every fix runs five listener callbacks, each wrapped in `runOnUiThread` (already on the main thread because no looper is given), with four `String.format` calls and a dozen `setText` calls (`MainActivity.java:1544-1601`). `onResume` calls `gpsManager.start()` again (`:2454`), and nothing stops GPS until `onDestroy` (`:2462`). The launcher is the HOME app, so it sits behind the navigation app almost all the time.
+- **Why it matters:** Continuous main-thread work and location wakeups for views nobody can see, on a SoC that is also decoding the navigation app and the CarPlay stream.
+- **Fix:** Request `GPS_PROVIDER` at 1000 ms and stop updates in `onPause` (or `onStop`); only push to the UI when the displayed value changes. If the Maps screen needs more, request faster rates only while it is visible.
+
+**P-46 · Med · `BluetoothWatcher.java:618-627`, `:634-738`, `:389-399`, `:451-459`, `MainActivity.java:1611-1618`**
+- **What happens:** A main-thread poll every 3 s runs `checkCurrentState()`: two profile `getConnectedDevices()` Binder calls, `getBondedDevices()`, reflection `isConnected` per bonded device, three `getProfileConnectionState` calls, eight `SystemProperties` reflection lookups and up to five `Settings.System` reads. Every branch ends in `notifyConnected()` regardless of change, and the listener refreshes the header, card and badge (`setText`, `setColorFilter`) each time.
+- **Why it matters:** Steady main-thread Binder traffic and redundant redraws, forever.
+- **Fix:** Event-driven first (the broadcasts and proxy callbacks already exist). Keep a fallback poll at 15 to 30 s on a `HandlerThread`, de-duplicate state (`if (same) return`), and cache the reflected `Method` objects (P-53).
+
+**P-47 · Low · `MainActivity.java:1528-1537`, `:2461`**
+- **What happens:** The clock runnable fires every second and calls `setText` with minutes-only text, so 59 of 60 updates are no-ops. It is removed only in `onDestroy`.
+- **Why it matters:** 86,400 pointless wakeups a day, plus formatting work.
+- **Fix:** Register a dynamic `ACTION_TIME_TICK` receiver (once a minute, also covers P-17), or schedule the next tick at the minute boundary.
+
+**P-48 · Med · `CarThermometerWatcher.java:350-372`, `:393-402`**
+- **What happens:** Every 15 s, `checkSystemProperties()` starts a new thread and, for up to five property names, runs `Runtime.exec("getprop <name>")`. A unit that has none of those properties (most of them) spawns five processes every 15 s, about 20 per minute, for the whole session.
+- **Why it matters:** Process spawns are expensive on this CPU, and the work is pointless where the properties do not exist.
+- **Fix:** Read properties through the reflection already written in `BluetoothWatcher.java:451-459`, only for names in the active profile, at most once a minute. Better: when a CAN broadcast has been seen, stop polling.
+
+**P-49 · Med · `MainActivity.java:1116`, `:1165`, `:1240`, `:1332-1346`, `:2403-2420`**
+- **What happens:** `showCarPlayPicker`, `showRadioPicker` and `showMapPicker` call `loadInstalledApps()` on the UI thread, which queries all launcher activities and calls `loadLabel` and `loadIcon` for each, although pickers show only text. `findInstalledRadioPackage()` (`:1332-1346`, reached from `launchRadioApp`) loads labels for every app on the UI thread too.
+- **Why it matters:** With a couple of hundred apps this can block the main thread long enough to feel hung or trigger an ANR (not measured).
+- **Fix:** Keep one cached, labels-only list built off the UI thread and refreshed by the package receiver (P-25). Load icons lazily for the Apps grid only.
+
+**P-50 · Low · `MainActivity.java:1481-1487`, `:1400-1470`**
+- **What happens:** `showView()` calls `applyAccentColor()` on every navigation tap. That writes the preference (`prefHelper.setAccentColor`, `:1401`), does 12 `findViewById` calls and about 40 `setTextColor` / `setColorFilter` calls, then runs `updateRailAppearance()` a second time (`:1469`, `:1485`).
+- **Why it matters:** Avoidable work in the one interaction that must feel instant.
+- **Fix:** Apply the accent when the colour changes and when a view is first attached; cache the view references.
+
+**P-51 · Med · `MainActivity.java:234-247`, `:146-149`, `AppsGridAdapter.java:22-24`, `AppInfo.java:9`**
+- **What happens:** All six screens are inflated synchronously in `onCreate` and stay in memory. The startup loader is hidden immediately (`:147-149`), so it never shows. The apps grid keeps a `Drawable` per installed app for the lifetime of the process.
+- **Why it matters:** Slower cold start (the launcher restarts on every Home press if the process was killed) and a bigger heap on a 2 GB unit.
+- **Fix:** Inflate each screen on first visit (or use `ViewStub`), load icons through a small `LruCache`, and delete the dead loader views or make them real.
+
+**P-52 · Med · `MediaSyncService.java:153-276`, `MainActivity.java:1350-1398`, `BluetoothWatcher.java:586-616`**
+- **What happens:** Single taps fan out into dozens of operations: pause is about 19 broadcasts, key dispatches and one `exec`; play is about 33; connecting a phone is 22 broadcasts; starting the radio is 15 broadcasts. Every implicit broadcast wakes every matching receiver on the device, including the vendor MCU services, and `sendMediaKey` starts a new thread and a new process per call.
+- **Why it matters:** UI jank on tap, and unpredictable side effects in other apps (see P-09, P-10, P-76).
+- **Fix:** One action per command, targeted at the active profile's receiver (P-76).
+
+**P-53 · Low · `BluetoothWatcher.java:317`, `:451-459`, `:464`, `:486`; `CarThermometerWatcher.java:184`, `:219`, `:351`; `MainActivity.java:964`**
+- **What happens:** `getMethod(...)` is repeated on every call, and each background job is a bare `new Thread` with no pool, naming or cancellation. HTTP connections are never `disconnect()`ed and responses are read with no size cap.
+- **Why it matters:** Minor CPU churn, leaked threads after `stop()`, and a late result can post to a stopped watcher (`:256`, `:284`).
+- **Fix:** Cache `Method`s in static fields, use one single-thread `ExecutorService` per component and shut it down in `stop()`, and call `disconnect()` in `finally`.
