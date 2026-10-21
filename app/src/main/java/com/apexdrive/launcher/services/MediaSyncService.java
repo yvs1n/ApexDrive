@@ -15,6 +15,7 @@ import android.os.SystemClock;
 import android.service.notification.NotificationListenerService;
 import android.view.KeyEvent;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MediaSyncService extends NotificationListenerService {
@@ -24,51 +25,137 @@ public class MediaSyncService extends NotificationListenerService {
     public static final String EXTRA_TRACK_ARTIST = "extra_track_artist";
     public static final String EXTRA_IS_PLAYING = "extra_is_playing";
 
-    private static MediaController sActiveController = null;
+    // Cleared in onListenerDisconnected / onDestroy so controls never target a dead session.
+    private static volatile MediaController sActiveController = null;
     private static boolean sIsPlaying = false;
     private MediaSessionManager mediaSessionManager;
+    private ComponentName listenerComponent;
+    private MediaSessionManager.OnActiveSessionsChangedListener sessionsListener;
+    private final List<ControllerCallback> callbacks = new ArrayList<>();
     private BroadcastReceiver musicBroadcastReceiver;
+
+    /** One callback per controller, so an event can be matched to the session it came from. */
+    private final class ControllerCallback extends MediaController.Callback {
+        final MediaController controller;
+
+        ControllerCallback(MediaController controller) {
+            this.controller = controller;
+        }
+
+        @Override
+        public void onMetadataChanged(MediaMetadata metadata) {
+            if (controller == sActiveController) {
+                broadcastMetadata(metadata, controller.getPlaybackState());
+            }
+        }
+
+        @Override
+        public void onPlaybackStateChanged(PlaybackState state) {
+            if (state != null && state.getState() == PlaybackState.STATE_PLAYING
+                    && controller != sActiveController) {
+                // A different session started playing: follow it.
+                sActiveController = controller;
+            }
+            if (controller == sActiveController) {
+                broadcastMetadata(controller.getMetadata(), state);
+            }
+        }
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            mediaSessionManager = (MediaSessionManager) getSystemService(Context.MEDIA_SESSION_SERVICE);
-            initMediaSessionListener();
-        }
+        mediaSessionManager = (MediaSessionManager) getSystemService(Context.MEDIA_SESSION_SERVICE);
+        listenerComponent = new ComponentName(this, MediaSyncService.class);
         initBroadcastMetadataListener();
     }
 
-    private void initMediaSessionListener() {
-        if (mediaSessionManager == null) return;
-        try {
-            ComponentName componentName = new ComponentName(this, MediaSyncService.class);
-            mediaSessionManager.addOnActiveSessionsChangedListener(
-                    controllers -> updateActiveController(controllers), componentName);
+    @Override
+    public void onListenerConnected() {
+        super.onListenerConnected();
+        registerSessionListener();
+    }
 
-            List<MediaController> initialControllers = mediaSessionManager.getActiveSessions(componentName);
-            updateActiveController(initialControllers);
-        } catch (SecurityException ignored) {
-            // Notification listener permission not granted yet
+    @Override
+    public void onListenerDisconnected() {
+        super.onListenerDisconnected();
+        unregisterSessionListener();
+        // Ask the system to bind again (API 24+). Does nothing if access was revoked.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                requestRebind(listenerComponent);
+            } catch (Exception ignored) {}
         }
     }
 
-    private void updateActiveController(List<MediaController> controllers) {
-        if (controllers != null && !controllers.isEmpty()) {
-            sActiveController = controllers.get(0);
-            sActiveController.registerCallback(new MediaController.Callback() {
-                @Override
-                public void onMetadataChanged(MediaMetadata metadata) {
-                    broadcastMetadata(metadata, (sActiveController != null) ? sActiveController.getPlaybackState() : null);
-                }
-
-                @Override
-                public void onPlaybackStateChanged(PlaybackState state) {
-                    broadcastMetadata((sActiveController != null) ? sActiveController.getMetadata() : null, state);
-                }
-            });
-            broadcastMetadata(sActiveController.getMetadata(), sActiveController.getPlaybackState());
+    private void registerSessionListener() {
+        if (mediaSessionManager == null) return;
+        unregisterSessionListener();
+        try {
+            sessionsListener = this::updateControllers;
+            mediaSessionManager.addOnActiveSessionsChangedListener(sessionsListener, listenerComponent);
+            updateControllers(mediaSessionManager.getActiveSessions(listenerComponent));
+        } catch (SecurityException e) {
+            // Notification access not granted (yet).
+            sessionsListener = null;
         }
+    }
+
+    private void unregisterSessionListener() {
+        if (mediaSessionManager != null && sessionsListener != null) {
+            try {
+                mediaSessionManager.removeOnActiveSessionsChangedListener(sessionsListener);
+            } catch (Exception ignored) {}
+        }
+        sessionsListener = null;
+        clearCallbacks();
+        sActiveController = null;
+    }
+
+    private void clearCallbacks() {
+        for (ControllerCallback cb : callbacks) {
+            try {
+                cb.controller.unregisterCallback(cb);
+            } catch (Exception ignored) {}
+        }
+        callbacks.clear();
+    }
+
+    private void updateControllers(List<MediaController> controllers) {
+        MediaController previous = sActiveController;
+        clearCallbacks();
+
+        if (controllers == null || controllers.isEmpty()) {
+            sActiveController = null;
+            return;
+        }
+
+        // Prefer the session that is playing, then the one we already followed, then the first.
+        MediaController chosen = null;
+        for (MediaController c : controllers) {
+            PlaybackState s = c.getPlaybackState();
+            if (s != null && s.getState() == PlaybackState.STATE_PLAYING) {
+                chosen = c;
+                break;
+            }
+        }
+        if (chosen == null && previous != null) {
+            for (MediaController c : controllers) {
+                if (c.getSessionToken().equals(previous.getSessionToken())) {
+                    chosen = c;
+                    break;
+                }
+            }
+        }
+        if (chosen == null) chosen = controllers.get(0);
+        sActiveController = chosen;
+
+        for (MediaController c : controllers) {
+            ControllerCallback cb = new ControllerCallback(c);
+            c.registerCallback(cb);
+            callbacks.add(cb);
+        }
+        broadcastMetadata(chosen.getMetadata(), chosen.getPlaybackState());
     }
 
     private void initBroadcastMetadataListener() {
@@ -220,6 +307,7 @@ public class MediaSyncService extends NotificationListenerService {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        unregisterSessionListener();
         if (musicBroadcastReceiver != null) {
             try {
                 unregisterReceiver(musicBroadcastReceiver);
