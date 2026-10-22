@@ -685,6 +685,37 @@
                             android:text="Reloads the launcher" />
                     </LinearLayout>
                 </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/rowSetReport"
+                    style="@style/Widget.ApexDrive.Row"
+                    android:layout_marginTop="12dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        style="@style/Widget.ApexDrive.RowIcon"
+                        android:src="@drawable/ic_sym_info" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/Widget.ApexDrive.RowTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Head unit report" />
+
+                        <TextView
+                            style="@style/Widget.ApexDrive.RowDetail"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Details to send when something doesn't work" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
