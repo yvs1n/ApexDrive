@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.Cursor;
+import android.net.Uri;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -25,7 +27,9 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayDeque;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * Outside temperature from, in priority order: a manual value, the vehicle (CAN broadcast,
@@ -76,6 +80,25 @@ public class CarThermometerWatcher implements SensorEventListener {
 
     private static final long POLL_INTERVAL_MS = 60 * 1000L;
     private long lastBroadcastAt = 0;
+
+    /**
+     * Key names that say "outside temperature": out_temp, outside_temperature, ext.temp,
+     * ambient_air_temp, temp_out and the like. Head units name these differently, so the
+     * Settings tables and broadcast extras are searched by name instead of a fixed list.
+     */
+    private static final Pattern OUTSIDE_TEMP_KEY = Pattern.compile(
+            "(?i).*(out|outside|outdoor|ext|exterior|external|ambient|env)[_.-]?(air[_.-]?)?(temp|tmp).*"
+                    + "|.*(temp|tmp)[_.-]?(out|outside|outdoor|ext|exterior|external|ambient)([_.-].*)?");
+    /** Names that look like an outside temperature but are something else. */
+    private static final Pattern NOT_OUTSIDE_KEY = Pattern.compile(
+            "(?i).*(cpu|soc|chip|board|batt|bat_|coolant|water|oil|engine|inside|inner|indoor|cabin|interior"
+                    + "|set|target|seat|unit|max|min|alarm|warn|enable|switch|show|display_mode).*");
+    private static final long SETTINGS_SCAN_MS = 5 * 60 * 1000L;
+    private long lastSettingsScanAt = 0;
+    /** Table and key that last gave a reading, read directly on later polls. */
+    private Uri foundTable;
+    private String foundKey;
+    private final ArrayDeque<String> history = new ArrayDeque<>();
 
     private String weatherCity = "";
     // Weather scheduling. Times are SystemClock.elapsedRealtime(); 0 means "never".
@@ -413,8 +436,9 @@ public class CarThermometerWatcher implements SensorEventListener {
         try {
             Bundle extras = intent.getExtras();
             if (extras == null) return;
-            String[] keys = {"out_temp", "ext_temp", "ambient_temp"};
-            for (String key : keys) {
+            note("broadcast " + intent.getAction() + " " + extras.keySet());
+            for (String key : extras.keySet()) {
+                if (!isOutsideTempKey(key)) continue;
                 Object o = extras.get(key);
                 if (o instanceof Number) {
                     acceptVehicleValue(((Number) o).floatValue());
@@ -428,7 +452,18 @@ public class CarThermometerWatcher implements SensorEventListener {
         } catch (Exception ignored) {}
     }
 
+    static boolean isOutsideTempKey(String key) {
+        return key != null && OUTSIDE_TEMP_KEY.matcher(key).matches() && !NOT_OUTSIDE_KEY.matcher(key).matches();
+    }
+
     private void pollCanSettings() {
+        if (foundKey != null && readSettingsKey(foundTable, foundKey)) return;
+        long now = SystemClock.elapsedRealtime();
+        if (lastSettingsScanAt == 0 || now - lastSettingsScanAt >= SETTINGS_SCAN_MS) {
+            lastSettingsScanAt = now;
+            if (scanSettingsTable(Settings.System.CONTENT_URI)) return;
+            if (scanSettingsTable(Settings.Global.CONTENT_URI)) return;
+        }
         try {
             // [verify in car] vendor Settings.System keys; unknown on most units.
             String[] settingKeys = {
@@ -447,6 +482,73 @@ public class CarThermometerWatcher implements SensorEventListener {
                 }
             }
         } catch (Exception ignored) {}
+    }
+
+    /** Searches a whole Settings table for an outside-temperature key with a plausible value. */
+    private boolean scanSettingsTable(Uri table) {
+        Cursor c = null;
+        try {
+            c = context.getContentResolver().query(table, new String[]{"name", "value"}, null, null, null);
+            if (c == null) return false;
+            while (c.moveToNext()) {
+                String name = c.getString(0);
+                if (!isOutsideTempKey(name)) continue;
+                String value = c.getString(1);
+                note("settings " + table.getLastPathSegment() + "/" + name + "=" + value);
+                if (isPlausibleValue(value)) {
+                    foundTable = table;
+                    foundKey = name;
+                    parseAndSetTemp(value);
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            note("settings " + table.getLastPathSegment() + " not readable: " + e.getClass().getSimpleName());
+        } finally {
+            if (c != null) c.close();
+        }
+        return false;
+    }
+
+    private boolean readSettingsKey(Uri table, String key) {
+        try {
+            String value = Settings.System.CONTENT_URI.equals(table)
+                    ? Settings.System.getString(context.getContentResolver(), key)
+                    : Settings.Global.getString(context.getContentResolver(), key);
+            if (isPlausibleValue(value)) {
+                parseAndSetTemp(value);
+                return true;
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    private static boolean isPlausibleValue(String value) {
+        if (value == null) return false;
+        try {
+            String cleaned = value.replaceAll("[^0-9.-]", "");
+            return !cleaned.isEmpty() && UnitMath.isPlausibleOutsideCelsius(Float.parseFloat(cleaned));
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    private void note(String line) {
+        if (history.size() >= 20) history.removeFirst();
+        history.addLast(line);
+    }
+
+    /** What the vehicle sources showed, for the head unit report. Main thread. */
+    public String getDiagnostics() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Showing: ").append(Float.isNaN(displayedC) ? "no reading" : displayedC + " C")
+                .append(" from ").append(displayedCondition).append('\n');
+        sb.append("Vehicle key: ").append(foundKey == null ? "none found"
+                : foundTable.getLastPathSegment() + "/" + foundKey).append('\n');
+        sb.append("Last vehicle broadcast: ").append(lastBroadcastAt == 0 ? "never"
+                : (SystemClock.elapsedRealtime() - lastBroadcastAt) / 1000 + " s ago").append('\n');
+        for (String l : history) sb.append(l).append('\n');
+        return sb.toString();
     }
 
     private static java.lang.reflect.Method sysPropGet;
