@@ -1882,7 +1882,9 @@ public class MainActivity extends AppCompatActivity {
             TextView line = viewCarPlay.findViewById(R.id.tvConnectStatus);
             TextView body = viewCarPlay.findViewById(R.id.tvConnectBody);
             TextView auto = viewCarPlay.findViewById(R.id.tvAutoOpenDetail);
-            if (device != null) device.setText(connected ? name + " is connected" : "No phone connected");
+            // A saved but disconnected phone is named, as on the Home tile.
+            if (device != null) device.setText(connected ? name + " is connected"
+                    : "No phone".equals(name) ? "No phone connected" : name);
             if (line != null) line.setText(connected ? "Calls and audio" : "Not connected");
             setDot(viewCarPlay.findViewById(R.id.ivConnectDot), connected ? R.color.ad_ok : R.color.ad_label_3);
             if (body != null) {
@@ -1903,10 +1905,22 @@ public class MainActivity extends AppCompatActivity {
                 for (BluetoothDevice dev : adapter.getBondedDevices()) {
                     if (address.equalsIgnoreCase(dev.getAddress())) {
                         String name = dev.getName();
-                        if (name != null && !name.isEmpty()) return name;
+                        if (name != null && !name.isEmpty()) {
+                            // Phones chosen before names were saved get theirs now.
+                            if (address.equalsIgnoreCase(prefHelper.getSelectedDriverDevice())
+                                    && !name.equals(prefHelper.getSelectedDriverName())) {
+                                prefHelper.setSelectedDriverDevice(address, name);
+                            }
+                            return name;
+                        }
                     }
                 }
             } catch (Exception ignored) {}
+        }
+        // Fall back to the name saved when the driver phone was chosen.
+        if (address.equalsIgnoreCase(prefHelper.getSelectedDriverDevice())) {
+            String saved = prefHelper.getSelectedDriverName();
+            if (!saved.isEmpty()) return saved;
         }
         return null;
     }
@@ -2255,7 +2269,7 @@ public class MainActivity extends AppCompatActivity {
 
                 // If this device is ALREADY verified as connected (via A2DP, Adapter, Audio routing, or vendor BT)
                 if (btWatcher != null && btWatcher.isDeviceCurrentlyConnected(device)) {
-                    prefHelper.setSelectedDriverDevice(device.getAddress());
+                    prefHelper.setSelectedDriverDevice(device.getAddress(), device.getName());
                     isCarPlayConnected = true;
                     updateConnectedPhoneUi(name, "Connected");
                     notifier.show(Notifier.Kind.OK, name + " connected", "Starting CarPlay");
@@ -2268,7 +2282,7 @@ public class MainActivity extends AppCompatActivity {
 
                 // Device is not yet confirmed connected: initiate real connection and gate CarPlay launch on success
                 isBtConnecting = true;
-                prefHelper.setSelectedDriverDevice(device.getAddress());
+                prefHelper.setSelectedDriverDevice(device.getAddress(), device.getName());
 
                 tvStatus.setText("Connecting…");
                 btnConnect.setText("Connecting…");
@@ -2300,7 +2314,7 @@ public class MainActivity extends AppCompatActivity {
                             runOnUiThread(() -> {
                                 isBtConnecting = false;
                                 isCarPlayConnected = true;
-                                prefHelper.setSelectedDriverDevice(device.getAddress());
+                                prefHelper.setSelectedDriverDevice(device.getAddress(), device.getName());
 
                                 if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
                                     tvStatus.setText("Connected, opening CarPlay");
@@ -2330,7 +2344,7 @@ public class MainActivity extends AppCompatActivity {
                                     btnConnect.setText("Open CarPlay");
 
                                     View.OnClickListener launchAnywayListener = fl -> {
-                                        prefHelper.setSelectedDriverDevice(device.getAddress());
+                                        prefHelper.setSelectedDriverDevice(device.getAddress(), device.getName());
                                         if (deviceSelectorDialog != null && deviceSelectorDialog.isShowing()) {
                                             deviceSelectorDialog.dismiss();
                                         }
