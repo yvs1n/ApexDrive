@@ -1940,54 +1940,59 @@ public class MainActivity extends AppCompatActivity {
         TextView title = new TextView(this);
         title.setText("Calibrate temperature");
         title.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
-        title.setTextSize(28);
+        title.setTextSize(22);
         title.setTypeface(androidx.core.content.res.ResourcesCompat.getFont(this, R.font.atkinson_next_semibold));
         layout.addView(title);
 
+        // With no reading there is nothing to calibrate: the driver sets the temperature instead.
+        final boolean hasReading = thermometerWatcher.hasReading();
         TextView subtitle = new TextView(this);
-        subtitle.setText("Match the outside temperature on your instrument cluster, or use GPS weather.");
+        subtitle.setText(hasReading
+                ? "Match the outside temperature on your instrument cluster, or use GPS weather."
+                : "No temperature reading. Set it from your instrument cluster with − and +, or use GPS weather.");
         subtitle.setTextColor(ContextCompat.getColor(this, R.color.ad_label_2));
-        subtitle.setTextSize(20);
-        subtitle.setPadding(0, 8, 0, 24);
+        subtitle.setTextSize(16);
+        subtitle.setPadding(0, 8, 0, 16);
         layout.addView(subtitle);
 
         final TextView tvCurrentVal = new TextView(this);
         final float[] tempHolder = new float[]{ thermometerWatcher.getCurrentTempCelsius() };
         final boolean isMph = prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH);
         updateTempDisplay(tvCurrentVal, tempHolder[0], isMph);
-        tvCurrentVal.setTextSize(64);
+        tvCurrentVal.setTextSize(48);
         tvCurrentVal.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
         tvCurrentVal.setTypeface(androidx.core.content.res.ResourcesCompat.getFont(this, R.font.atkinson_next_semibold));
         tvCurrentVal.setGravity(Gravity.CENTER);
-        tvCurrentVal.setPadding(0, 10, 0, 24);
+        tvCurrentVal.setPadding(0, 0, 0, 16);
         layout.addView(tvCurrentVal);
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
         btnRow.setGravity(Gravity.CENTER);
 
+        // The first press with no reading starts from a mild 20 °C rather than from nothing.
         Button btnMinus = new Button(this);
         btnMinus.setText("− 1°");
-        btnMinus.setTextSize(28);
+        btnMinus.setTextSize(24);
         btnMinus.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
         btnMinus.setBackgroundResource(R.drawable.ad_bg_btn_secondary);
-        btnMinus.setLayoutParams(new LinearLayout.LayoutParams(0, 110, 1f));
+        btnMinus.setLayoutParams(new LinearLayout.LayoutParams(0, 72, 1f));
         btnMinus.setOnClickListener(v -> {
-            tempHolder[0] -= 1.0f;
+            tempHolder[0] = Float.isNaN(tempHolder[0]) ? 20f : tempHolder[0] - 1.0f;
             updateTempDisplay(tvCurrentVal, tempHolder[0], isMph);
         });
 
         View spacer = new View(this);
-        spacer.setLayoutParams(new LinearLayout.LayoutParams(24, 110));
+        spacer.setLayoutParams(new LinearLayout.LayoutParams(16, 72));
 
         Button btnPlus = new Button(this);
         btnPlus.setText("+ 1°");
-        btnPlus.setTextSize(28);
+        btnPlus.setTextSize(24);
         btnPlus.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
         btnPlus.setBackgroundResource(R.drawable.ad_bg_btn_secondary);
-        btnPlus.setLayoutParams(new LinearLayout.LayoutParams(0, 110, 1f));
+        btnPlus.setLayoutParams(new LinearLayout.LayoutParams(0, 72, 1f));
         btnPlus.setOnClickListener(v -> {
-            tempHolder[0] += 1.0f;
+            tempHolder[0] = Float.isNaN(tempHolder[0]) ? 20f : tempHolder[0] + 1.0f;
             updateTempDisplay(tvCurrentVal, tempHolder[0], isMph);
         });
 
@@ -1999,27 +2004,30 @@ public class MainActivity extends AppCompatActivity {
         Button btnSyncGps = new Button(this);
         btnSyncGps.setText("Use GPS weather");
         btnSyncGps.setAllCaps(false);
-        btnSyncGps.setTextSize(22);
+        btnSyncGps.setTextSize(18);
         btnSyncGps.setTextColor(ContextCompat.getColor(this, R.color.ad_label_1));
         btnSyncGps.setBackgroundResource(R.drawable.ad_bg_btn_secondary);
-        LinearLayout.LayoutParams lpGps = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 110);
-        lpGps.setMargins(0, 18, 0, 0);
+        LinearLayout.LayoutParams lpGps = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 64);
+        lpGps.setMargins(0, 16, 0, 0);
         btnSyncGps.setLayoutParams(lpGps);
 
         Button btnSave = new Button(this);
         btnSave.setText("Save temperature");
         btnSave.setAllCaps(false);
-        btnSave.setTextSize(22);
+        btnSave.setTextSize(18);
         btnSave.setTextColor(ContextCompat.getColor(this, R.color.ad_on_accent));
         btnSave.setBackgroundResource(R.drawable.ad_bg_btn_primary);
-        LinearLayout.LayoutParams lpSave = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 110);
+        LinearLayout.LayoutParams lpSave = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 64);
         lpSave.setMargins(0, 12, 0, 0);
         btnSave.setLayoutParams(lpSave);
 
         layout.addView(btnSyncGps);
         layout.addView(btnSave);
 
-        builder.setView(layout);
+        // Scrolls rather than cutting off Save if the dialog is taller than the 600 px screen.
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+        scroll.addView(layout);
+        builder.setView(scroll);
         AlertDialog dialog = builder.create();
 
         btnSyncGps.setOnClickListener(v -> {
@@ -2036,11 +2044,19 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnSave.setOnClickListener(v -> {
-            float raw = thermometerWatcher.getRawTempCelsius();
             float target = tempHolder[0];
-            float offset = target - raw;
-            thermometerWatcher.setTempOffset(offset);
-            notifier.show(Notifier.Kind.OK, "Temperature calibrated", String.format(Locale.US, "Offset %+.1f°C", offset));
+            if (Float.isNaN(target)) {
+                notifier.show(Notifier.Kind.INFO, "Set a temperature first", "Use − or + to match your instrument cluster");
+                return;
+            }
+            if (thermometerWatcher.calibrateDisplayedTo(target)) {
+                float offset = target - thermometerWatcher.getRawTempCelsius();
+                notifier.show(Notifier.Kind.OK, "Temperature calibrated", String.format(Locale.US, "Offset %+.1f°C", offset));
+            } else {
+                // No reading to offset: keep the driver's value as a manual temperature.
+                thermometerWatcher.setManualTemp(target, "Manual");
+                notifier.show(Notifier.Kind.OK, "Temperature set", "Tap the temperature to change it or switch to GPS weather");
+            }
             dialog.dismiss();
         });
 
@@ -2048,7 +2064,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateTempDisplay(TextView tv, float tempC, boolean isMph) {
-        if (isMph) {
+        if (Float.isNaN(tempC)) {
+            tv.setText(isMph ? "–°F" : "–°C");
+        } else if (isMph) {
             float tempF = (tempC * 9f / 5f) + 32f;
             tv.setText(String.format(Locale.US, "%.0f°F", tempF));
         } else {
