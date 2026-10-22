@@ -55,6 +55,7 @@ import com.apexdrive.launcher.services.GpsTelemetryManager;
 import com.apexdrive.launcher.services.MediaStateHolder;
 import com.apexdrive.launcher.services.MediaSyncService;
 import com.apexdrive.launcher.utils.Notifier;
+import com.apexdrive.launcher.utils.HeadUnitReport;
 import com.apexdrive.launcher.utils.PreferenceHelper;
 
 import java.lang.reflect.Method;
@@ -1109,6 +1110,7 @@ public class MainActivity extends AppCompatActivity {
         });
         onSettingsRow("rowSetBluetooth", this::openBluetoothManager);
         onSettingsRow("rowSetRestart", this::recreate);
+        onSettingsRow("rowSetReport", this::showHeadUnitReport);
 
         // About
         TextView version = settingsView("tvSetVersion");
@@ -1192,6 +1194,51 @@ public class MainActivity extends AppCompatActivity {
             if (tvNavTripDuration != null) tvNavTripDuration.setText("0 min");
             notifier.show(Notifier.Kind.OK, "Trip reset");
         }
+    }
+
+    /**
+     * Collects the head unit report on a worker thread, saves it and shows it. Head units keep
+     * the phone connection and outside temperature in vendor places; this shows where.
+     */
+    private void showHeadUnitReport() {
+        notifier.show(Notifier.Kind.INFO, "Making the report", "This takes a few seconds");
+        final String bt = btWatcher != null ? btWatcher.getDiagnostics() : "Bluetooth watcher not running\n";
+        final String temp = thermometerWatcher != null ? thermometerWatcher.getDiagnostics() : "Thermometer not running\n";
+        final Context app = getApplicationContext();
+        new Thread(() -> {
+            final String report = HeadUnitReport.build(app, bt, temp);
+            final java.io.File file = HeadUnitReport.save(app, report);
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                TextView body = new TextView(this);
+                body.setText(report);
+                body.setTextSize(12);
+                body.setTypeface(android.graphics.Typeface.MONOSPACE);
+                body.setTextIsSelectable(true);
+                int pad = Math.round(16 * getResources().getDisplayMetrics().density);
+                body.setPadding(pad, pad, pad, pad);
+                android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+                scroll.addView(body);
+                AlertDialog.Builder b = new AlertDialog.Builder(this)
+                        .setTitle(file != null ? "Saved to " + file.getAbsolutePath() : "Head unit report")
+                        .setView(scroll)
+                        .setNegativeButton("Close", null);
+                Intent share = new Intent(Intent.ACTION_SEND)
+                        .setType("text/plain")
+                        .putExtra(Intent.EXTRA_SUBJECT, "ApexDrive head unit report")
+                        .putExtra(Intent.EXTRA_TEXT, report.length() > 90000 ? report.substring(0, 90000) : report);
+                if (share.resolveActivity(getPackageManager()) != null) {
+                    b.setPositiveButton("Share", (d, w) -> {
+                        try {
+                            startActivity(Intent.createChooser(share, "Send report"));
+                        } catch (Exception e) {
+                            notifier.show(Notifier.Kind.ALERT, "Can't share the report", "Copy it from " + (file != null ? file.getAbsolutePath() : "the screen"));
+                        }
+                    });
+                }
+                b.show();
+            });
+        }, "HeadUnitReport").start();
     }
 
     private void openFactorySettings() {
