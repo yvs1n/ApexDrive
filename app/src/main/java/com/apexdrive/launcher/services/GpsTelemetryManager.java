@@ -322,7 +322,8 @@ public class GpsTelemetryManager implements LocationListener {
     private void publishAll() {
         if (listener == null || lastLocation == null) return;
         listener.onSpeedUpdated(UnitMath.speedForDisplay(lastSpeedMps, isMph), isMph ? "MPH" : "KM/H");
-        listener.onHeadingUpdated(bearingToDirection(lastBearing) + " " + Math.round(lastBearing) + "°", lastBearing);
+        int degrees = roundedBearing(lastBearing);
+        listener.onHeadingUpdated(bearingToDirection(degrees) + " " + degrees + "°", degrees);
         Location l = lastLocation;
         listener.onCoordinatesUpdated(l.getLatitude(), l.getLongitude(),
                 l.hasAltitude() ? l.getAltitude() : Double.NaN,
@@ -339,11 +340,19 @@ public class GpsTelemetryManager implements LocationListener {
         listener.onTripUpdated(trip.getDistanceMeters() / 1000.0, trip.getMovingMinutes());
     }
 
-    private String bearingToDirection(float bearing) {
-        if (bearing < 0) bearing += 360f;
-        String[] directions = {"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "N"};
-        int index = Math.round((bearing % 360f) / 22.5f);
-        return directions[index % 16];
+    /**
+     * Whole degrees in 0..359. Some GPS chips report bearings of 360 or more, or below 0,
+     * and rounding 359.6 gives 360, which would read as "N 360°".
+     */
+    static int roundedBearing(float bearing) {
+        if (Float.isNaN(bearing) || Float.isInfinite(bearing)) return 0;
+        int d = Math.round(bearing) % 360;
+        return d < 0 ? d + 360 : d;
+    }
+
+    static String bearingToDirection(int degrees) {
+        String[] directions = {"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"};
+        return directions[Math.round(degrees / 22.5f) % 16];
     }
 
     @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
