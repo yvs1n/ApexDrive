@@ -1250,6 +1250,9 @@ public class MainActivity extends AppCompatActivity {
         for (String pkg : btPackages) {
             if (launchAppPackage(pkg)) return;
         }
+        // Unknown firmware: look for the head unit's own Bluetooth phone app by its name.
+        String found = findHeadUnitBluetoothApp();
+        if (found != null && launchAppPackage(found)) return;
         // Android's Bluetooth settings page crashes ("Settings keeps stopping") on a unit
         // without a Bluetooth adapter, so check first.
         if (BluetoothAdapter.getDefaultAdapter() == null) {
@@ -1261,6 +1264,28 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             notifier.show(Notifier.Kind.ALERT, "Can't open Bluetooth settings", "Open them from the head unit's own menu");
         }
+    }
+
+    /**
+     * Finds a launcher app that looks like the head unit's Bluetooth phone app, such as one
+     * labelled "Bluetooth" or "BT". Android's own Settings is skipped: its Bluetooth page
+     * can't pair phones through the head unit's Bluetooth module.
+     */
+    private String findHeadUnitBluetoothApp() {
+        try {
+            Intent main = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+            for (ResolveInfo ri : getPackageManager().queryIntentActivities(main, 0)) {
+                String pkg = ri.activityInfo.packageName;
+                if (pkg.equals(getPackageName()) || pkg.equals("com.android.settings")) continue;
+                String label = String.valueOf(ri.loadLabel(getPackageManager())).trim().toLowerCase(Locale.US);
+                String p = pkg.toLowerCase(Locale.US);
+                if (label.contains("bluetooth") || label.equals("bt") || label.startsWith("bt ")
+                        || label.contains("蓝牙") || p.contains("bluetooth") || p.endsWith(".bt")) {
+                    return pkg;
+                }
+            }
+        } catch (Exception ignored) {}
+        return null;
     }
 
     private void showCarPlayPicker() {
