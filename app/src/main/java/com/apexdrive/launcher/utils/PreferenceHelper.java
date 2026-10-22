@@ -72,6 +72,24 @@ public class PreferenceHelper {
         prefs.edit().putString(KEY_SELECTED_DRIVER_DEVICE, deviceAddress).apply();
     }
 
+    /**
+     * Saves the driver phone with its name. The name is kept because head units often
+     * report no bonded devices to Android's Bluetooth stack, so it can't always be looked up.
+     */
+    public void setSelectedDriverDevice(String deviceAddress, String deviceName) {
+        prefs.edit()
+                .putString(KEY_SELECTED_DRIVER_DEVICE, deviceAddress)
+                .putString(KEY_SELECTED_DRIVER_NAME, deviceName != null ? deviceName : "")
+                .apply();
+    }
+
+    /** Name saved with the driver phone, or "" when none was saved. */
+    public String getSelectedDriverName() {
+        return prefs.getString(KEY_SELECTED_DRIVER_NAME, "");
+    }
+
+    private static final String KEY_SELECTED_DRIVER_NAME = "selected_driver_name";
+
     private static final String KEY_SAVED_TEMP_C = "saved_temp_c";
     private static final String KEY_SAVED_CONDITION = "saved_condition";
     private static final String KEY_MANUAL_TEMP_CALIBRATION = "manual_temp_calibration";
