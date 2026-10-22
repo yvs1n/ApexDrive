@@ -505,7 +505,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         if (tvCarPlayProtocol != null) {
-            tvCarPlayProtocol.setText(prefHelper.getCarPlayName());
+            tvCarPlayProtocol.setText(carPlayAppName());
         }
 
         if (tvSpeed != null) {
@@ -1050,7 +1050,7 @@ public class MainActivity extends AppCompatActivity {
         if (driver != null) btnSelectDriverPhone.setText(driver);
         onSettingsRow("rowSetDriverPhone", () -> showDeviceSelectorDialog(false));
         btnSelectCarPlayApp = settingsView("tvSetCarPlayApp");
-        btnSelectCarPlayApp.setText(prefHelper.getCarPlayName());
+        btnSelectCarPlayApp.setText(carPlayAppName());
         onSettingsRow("rowSetCarPlayApp", this::showCarPlayPicker);
         androidx.appcompat.widget.SwitchCompat swAuto = settingsView("switchSetAutoOpen");
         swAuto.setChecked(isAutoOpenCarPlay());
@@ -1889,7 +1889,7 @@ public class MainActivity extends AppCompatActivity {
             setDot(viewCarPlay.findViewById(R.id.ivConnectDot), connected ? R.color.ad_ok : R.color.ad_label_3);
             if (body != null) {
                 body.setText(connected
-                        ? "CarPlay opens in " + prefHelper.getCarPlayName() + "."
+                        ? "CarPlay opens in " + carPlayAppName() + "."
                         : "Connect your phone with Bluetooth, then open CarPlay.");
             }
             if (auto != null) auto.setText(connected ? "When " + name + " connects" : "When your phone connects");
@@ -2490,7 +2490,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void launchCarPlay() {
         // 1. The app the user chose in Settings.
-        if (launchAppPackage(prefHelper.getCarPlayPackage())) return;
+        if (launchAppPackage(prefHelper.getCarPlayPackage())) {
+            checkCarPlayOpened(carPlayAppName());
+            return;
+        }
 
         // 2. Zlink's explicit entry point.
         try {
@@ -2500,6 +2503,7 @@ public class MainActivity extends AppCompatActivity {
             zlinkIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             if (zlinkIntent.resolveActivity(getPackageManager()) != null) {
                 startActivity(zlinkIntent);
+                checkCarPlayOpened("Zlink");
                 return;
             }
         } catch (Exception ignored) {}
@@ -2519,6 +2523,7 @@ public class MainActivity extends AppCompatActivity {
             if (launchAppPackage(fallback)) {
                 prefHelper.setCarPlayPackage(fallback);
                 prefHelper.setCarPlayName(appLabel(fallback));
+                checkCarPlayOpened(appLabel(fallback));
                 return;
             }
         }
@@ -2528,6 +2533,36 @@ public class MainActivity extends AppCompatActivity {
                 .setPositiveButton("Choose app", (dialog, which) -> showCarPlayPicker())
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private boolean activityResumed;
+    private String pendingCarPlayApp = "";
+    private final Runnable carPlayOpenCheck = () -> {
+        if (!activityResumed || isFinishing()) return;
+        notifier.show(Notifier.Kind.ALERT, pendingCarPlayApp + " didn't open CarPlay",
+                "Connect your iPhone in the head unit's Bluetooth app first", "Bluetooth", this::openBluetoothManager);
+    };
+
+    /**
+     * Some CarPlay apps (Zlink, TLINK) close straight away when no phone is connected, so
+     * the launcher comes back and nothing seems to happen. If it is still in front a moment
+     * after the launch, say so instead of failing silently.
+     */
+    private void checkCarPlayOpened(String appName) {
+        pendingCarPlayApp = appName;
+        clockHandler.removeCallbacks(carPlayOpenCheck);
+        clockHandler.postDelayed(carPlayOpenCheck, 2500);
+    }
+
+    /** The CarPlay app's name as installed, or the saved name when it is not installed. */
+    private String carPlayAppName() {
+        String pkg = prefHelper.getCarPlayPackage();
+        try {
+            PackageManager pm = getPackageManager();
+            return pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString();
+        } catch (Exception e) {
+            return prefHelper.getCarPlayName();
+        }
     }
 
     private String appLabel(String pkg) {
@@ -2638,9 +2673,16 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        activityResumed = true;
         makeFullScreen();
         if (gpsManager != null) gpsManager.start();
         if (btWatcher != null) btWatcher.forceRefresh();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        activityResumed = false;
     }
 
     @Override
