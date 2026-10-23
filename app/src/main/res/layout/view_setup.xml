@@ -745,101 +745,12 @@
                     android:layout_marginStart="8dp"
                     android:text="About" />
 
+                <!-- Filled from AboutInfo when About is first opened. -->
                 <LinearLayout
-                    android:id="@+id/rowSetVersion"
-                    style="@style/Widget.ApexDrive.Row"
-                    android:layout_marginTop="12dp"
-                    android:clickable="false"
-                    android:focusable="false">
-
-                    <ImageView
-                        style="@style/Widget.ApexDrive.RowIcon"
-                        android:src="@drawable/ic_sym_info" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            style="@style/Widget.ApexDrive.RowTitle"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Version" />
-
-                        <TextView
-                            android:id="@+id/tvSetVersion"
-                            style="@style/Widget.ApexDrive.RowDetail"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/rowSetLocation"
-                    style="@style/Widget.ApexDrive.Row"
-                    android:layout_marginTop="12dp"
-                    android:clickable="false"
-                    android:focusable="false">
-
-                    <ImageView
-                        style="@style/Widget.ApexDrive.RowIcon"
-                        android:src="@drawable/ic_sym_location_on" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            style="@style/Widget.ApexDrive.RowTitle"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Location" />
-
-                        <TextView
-                            android:id="@+id/tvSetLocation"
-                            style="@style/Widget.ApexDrive.RowDetail"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Waiting for GPS" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/rowSetLicence"
-                    style="@style/Widget.ApexDrive.Row"
-                    android:layout_marginTop="12dp"
-                    android:clickable="false"
-                    android:focusable="false">
-
-                    <ImageView
-                        style="@style/Widget.ApexDrive.RowIcon"
-                        android:src="@drawable/ic_sym_license" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            style="@style/Widget.ApexDrive.RowTitle"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Licence" />
-
-                        <TextView
-                            android:id="@+id/tvSetLicence"
-                            style="@style/Widget.ApexDrive.RowDetail"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="MIT. Fonts: SIL Open Font License" />
-                    </LinearLayout>
-                </LinearLayout>
+                    android:id="@+id/aboutList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
             </LinearLayout>
         </FrameLayout>
     </ScrollView>

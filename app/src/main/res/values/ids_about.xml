@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Detail of the Location row on Settings > About, which the GPS listener keeps updating. -->
+    <item name="tvSetLocation" type="id" />
+</resources>
