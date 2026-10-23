@@ -1096,6 +1096,8 @@ public class MainActivity extends AppCompatActivity {
 
         // Display
         androidx.appcompat.widget.SwitchCompat swNight = settingsView("switchSetNight");
+        // toggleTheme() recreates the activity; restoring saved state would put the old value back.
+        swNight.setSaveEnabled(false);
         swNight.setChecked(isNightTheme());
         onSettingsRow("rowSetNight", this::toggleTheme);
         View kmh = settingsView("segUnitKmh");
