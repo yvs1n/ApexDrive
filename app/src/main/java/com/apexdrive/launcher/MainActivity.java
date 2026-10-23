@@ -913,7 +913,7 @@ public class MainActivity extends AppCompatActivity {
         viewAudio.findViewById(R.id.btnSrcUsb).setOnClickListener(v -> {
             tvActive.setText("USB");
             selectAudioSource(btnSrcUsb);
-            String[] usbPackages = {"com.ts.music", "com.microntek.music", "com.syu.music", "com.android.music", "com.android.musicfx"};
+            String[] usbPackages = {"com.tw.music", "com.ts.music", "com.microntek.music", "com.syu.music", "com.android.music", "com.android.musicfx"};
             for (String pkg : usbPackages) {
                 if (launchAppPackage(pkg)) return;
             }
@@ -1263,6 +1263,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void openAudioEqualizer() {
         String[] eqPackages = {
+                "com.tw.eq",
                 "com.ts.eq",
                 "com.microntek.eq",
                 "com.syu.eq",
@@ -1283,6 +1284,7 @@ public class MainActivity extends AppCompatActivity {
             btWatcher.forceRefresh();
         }
         String[] btPackages = {
+                "com.tw.bt",
                 "com.allwinner.bluetooth",
                 "com.allwinner.radio",
                 "com.goc.bluetooth",
@@ -1390,6 +1392,7 @@ public class MainActivity extends AppCompatActivity {
         final List<String> packages = new ArrayList<>();
 
         String[] known = {
+                "Radio (com.tw.radio)",
                 "Allwinner Radio (com.allwinner.radio)",
                 "SYU Radio (com.syu.radio)",
                 "TopWay Radio (com.ts.radio)",
@@ -1398,6 +1401,7 @@ public class MainActivity extends AppCompatActivity {
                 "Car FM Tuner (com.car.radio)"
         };
         String[] knownPkgs = {
+                "com.tw.radio",
                 "com.allwinner.radio",
                 "com.syu.radio",
                 "com.ts.radio",
@@ -1520,6 +1524,7 @@ public class MainActivity extends AppCompatActivity {
     private String findInstalledRadioPackage() {
         PackageManager pm = getPackageManager();
         String[] knownRadioPackages = {
+                "com.tw.radio",
                 "com.allwinner.radio",
                 "com.softwinner.radio",
                 "com.syu.radio",
