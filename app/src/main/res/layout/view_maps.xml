@@ -1,301 +1,218 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Maps (Audit 2, section 5.3), built from design-system tiles and buttons: 544 + 24 + 328 by 520. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="horizontal"
-    android:padding="10dp">
+    android:orientation="horizontal">
 
-    <!-- Left Stage: Live Dynamic GPS Tactical Navigation Stage -->
+    <!-- Where to? -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_weight="1.25"
+        android:layout_weight="544"
         android:orientation="vertical"
-        android:background="@drawable/bg_panel"
-        android:padding="14dp">
+        android:padding="@dimen/ad_tile_padding"
+        android:elevation="2dp"
+        android:background="@drawable/ad_bg_tile">
 
-        <!-- Stage Header -->
+        <TextView
+            style="@style/Widget.ApexDrive.TileHeader"
+            app:drawableStartCompat="@drawable/ic_hdr_navigation"
+            android:text="Where to?" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <com.apexdrive.launcher.ui.CenteredIconButton
+                android:id="@+id/btnNavHome"
+                style="@style/Widget.ApexDrive.Button"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                app:drawableStartCompat="@drawable/ic_btn_home"
+                android:text="Home" />
+
+            <com.apexdrive.launcher.ui.CenteredIconButton
+                android:id="@+id/btnNavWork"
+                style="@style/Widget.ApexDrive.Button"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                app:drawableStartCompat="@drawable/ic_btn_work"
+                android:text="Work" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <com.apexdrive.launcher.ui.CenteredIconButton
+                android:id="@+id/btnNavFuel"
+                style="@style/Widget.ApexDrive.Button"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                app:drawableStartCompat="@drawable/ic_btn_local_gas_station"
+                android:text="Fuel" />
+
+            <com.apexdrive.launcher.ui.CenteredIconButton
+                android:id="@+id/btnNavParking"
+                style="@style/Widget.ApexDrive.Button"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                app:drawableStartCompat="@drawable/ic_btn_local_parking"
+                android:text="Parking" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <com.apexdrive.launcher.ui.CenteredIconButton
+                android:id="@+id/btnNavCoffee"
+                style="@style/Widget.ApexDrive.Button"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                app:drawableStartCompat="@drawable/ic_btn_local_cafe"
+                android:text="Coffee" />
+
+            <com.apexdrive.launcher.ui.CenteredIconButton
+                android:id="@+id/btnNavHospital"
+                style="@style/Widget.ApexDrive.Button"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                app:drawableStartCompat="@drawable/ic_btn_local_hospital"
+                android:text="Hospital" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/Widget.ApexDrive.TileHeader"
+            android:layout_marginTop="24dp"
+            android:text="Recent" />
+
+        <TextView
+            style="@style/TextAppearance.ApexDrive.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/ad_label_3"
+            android:text="Places you visit appear here." />
+    </LinearLayout>
+
+    <!-- Here -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="328"
+        android:layout_marginStart="@dimen/ad_tile_gap"
+        android:orientation="vertical"
+        android:padding="@dimen/ad_tile_padding"
+        android:elevation="2dp"
+        android:background="@drawable/ad_bg_tile">
+
+        <TextView
+            style="@style/Widget.ApexDrive.TileHeader"
+            app:drawableStartCompat="@drawable/ic_hdr_map"
+            android:text="Here" />
+
+        <TextView
+            android:id="@+id/tvNavHeadingBig"
+            style="@style/TextAppearance.ApexDrive.Title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="–" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/ivNavGpsDot"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ad_dot"
+                app:tint="@color/ad_label_3"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:id="@+id/tvNavAccuracy"
+                style="@style/Widget.ApexDrive.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textSize="@dimen/ad_text_label"
+                android:text="GPS none" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvNavTripDist"
+                style="@style/Widget.ApexDrive.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Trip 0.0 km" />
+
+            <TextView
+                android:id="@+id/tvNavTripDuration"
+                style="@style/Widget.ApexDrive.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="0 min" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <com.apexdrive.launcher.ui.CenteredIconButton
+            android:id="@+id/btnOpenOsmAnd"
+            style="@style/Widget.ApexDrive.Button.Primary"
+            android:layout_width="match_parent"
+            app:drawableStartCompat="@drawable/ic_btn_map"
+            android:text="Open map" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
             <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="LIVE GPS TELEMETRY &amp; NAVIGATION"
-                android:textColor="@color/cockpit_text_secondary"
-                android:textSize="10sp"
-                android:fontFamily="sans-serif-medium"
-                android:letterSpacing="0.08" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
-
-            <TextView
-                android:id="@+id/tvNavAccuracy"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card_inner"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:paddingTop="2dp"
-                android:paddingBottom="2dp"
-                android:text="● 3D Fix · ±3m"
-                android:textColor="@color/status_active"
-                android:textSize="10sp"
-                android:fontFamily="sans-serif-bold" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="8dp"
-            android:background="@color/cockpit_surface_border_subtle" />
-
-        <!-- Live Dynamic Compass & Heading Card -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:layout_marginTop="8dp"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="@drawable/bg_card_inner"
-            android:padding="14dp">
-
-            <TextView
-                android:id="@+id/tvNavHeadingBig"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="NORTH 0°"
-                android:textColor="@color/accent_amber"
-                android:textSize="32sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.04" />
-
-            <TextView
-                android:id="@+id/tvNavCoordinates"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="Searching Satellite Coordinates..."
-                android:textColor="@color/cockpit_text_primary"
-                android:textSize="12sp"
-                android:fontFamily="sans-serif-medium" />
-
-            <TextView
-                android:id="@+id/tvNavAltitude"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
-                android:text="Altitude: -- m  ·  Speed: 0 KM/H"
-                android:textColor="@color/cockpit_text_secondary"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif" />
-
-            <!-- Direct Launch into CarPlay Navigation (Big Finger Friendly 60dp) -->
-            <Button
-                android:id="@+id/btnNavCarPlayRoute"
-                android:layout_width="wrap_content"
-                android:layout_height="60dp"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/bg_elevated_btn"
-                android:text="OPEN CARPLAY NAVIGATION"
-                android:textColor="@color/cockpit_text_primary"
-                android:textSize="14sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.05"
-                android:paddingStart="32dp"
-                android:paddingEnd="32dp" />
-
-        </LinearLayout>
-
-        <!-- Live Trip Bar -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="36dp"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="@drawable/bg_card_inner"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp">
-
-            <TextView
-                android:id="@+id/tvNavTripDist"
+                android:id="@+id/tvMapStatusBadge"
+                style="@style/TextAppearance.ApexDrive.Caption"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="TRIP: 0.0 KM"
-                android:textColor="@color/cockpit_text_secondary"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-bold"
-                android:letterSpacing="0.05" />
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textColor="@color/ad_label_2"
+                android:text="OsmAnd" />
 
-            <TextView
-                android:id="@+id/tvNavTripDuration"
+            <Button
+                android:id="@+id/btnChooseMapApp"
+                style="@style/Widget.ApexDrive.Button.Quiet"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="DURATION: 0 MIN"
-                android:textColor="@color/cockpit_text_secondary"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-bold"
-                android:letterSpacing="0.05" />
+                android:text="Change app" />
         </LinearLayout>
-
     </LinearLayout>
-
-    <!-- Space -->
-    <View
-        android:layout_width="10dp"
-        android:layout_height="match_parent" />
-
-    <!-- Right Stage: Dynamic Quick Destination & Map Launcher Hub -->
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:background="@drawable/bg_panel"
-        android:padding="14dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="QUICK DESTINATIONS &amp; APPS"
-            android:textColor="@color/cockpit_text_secondary"
-            android:textSize="10sp"
-            android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.08" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="8dp"
-            android:background="@color/cockpit_surface_border_subtle" />
-
-        <!-- 1-Tap POI Quick Triggers (Uses system GPS geo: intent - Big Finger Friendly 58dp) -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btnNavFuel"
-                android:layout_width="0dp"
-                android:layout_height="58dp"
-                android:layout_weight="1"
-                android:background="@drawable/bg_elevated_btn"
-                android:text="FUEL STATION"
-                android:textColor="@color/cockpit_text_primary"
-                android:textSize="13sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.08" />
-
-            <Button
-                android:id="@+id/btnNavParking"
-                android:layout_width="0dp"
-                android:layout_height="58dp"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:background="@drawable/bg_elevated_btn"
-                android:text="PARKING"
-                android:textColor="@color/cockpit_text_primary"
-                android:textSize="13sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.08" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btnNavCoffee"
-                android:layout_width="0dp"
-                android:layout_height="58dp"
-                android:layout_weight="1"
-                android:background="@drawable/bg_elevated_btn"
-                android:text="REST AREA"
-                android:textColor="@color/cockpit_text_primary"
-                android:textSize="13sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.08" />
-
-            <Button
-                android:id="@+id/btnNavHospital"
-                android:layout_width="0dp"
-                android:layout_height="58dp"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:background="@drawable/bg_elevated_btn"
-                android:text="HOSPITAL"
-                android:textColor="@color/cockpit_text_primary"
-                android:textSize="13sp"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.08" />
-        </LinearLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:text="PRIMARY NAVIGATION ENGINE"
-            android:textColor="@color/cockpit_text_secondary"
-            android:textSize="10sp"
-            android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.08" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="6dp"
-            android:background="@color/cockpit_surface_border_subtle" />
-
-        <!-- Primary Hero Button: OsmAnd Offline Navigation -->
-        <Button
-            android:id="@+id/btnOpenOsmAnd"
-            android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:layout_marginTop="10dp"
-            android:background="@drawable/bg_elevated_btn"
-            android:text="LAUNCH OSMAND OFFLINE"
-            android:textColor="@color/accent_amber"
-            android:textSize="14sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.08" />
-
-        <TextView
-            android:id="@+id/tvMapStatusBadge"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:gravity="center"
-            android:text="● RADARS · ROAD BUMPS · OFFLINE LANES ACTIVE"
-            android:textColor="@color/status_active"
-            android:textSize="10sp"
-            android:fontFamily="sans-serif-bold"
-            android:letterSpacing="0.05" />
-
-        <Button
-            android:id="@+id/btnChooseMapApp"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/bg_elevated_btn"
-            android:text="CHANGE DEFAULT MAP ENGINE"
-            android:textColor="@color/cockpit_text_secondary"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.06" />
-
-    </LinearLayout>
-
 </LinearLayout>

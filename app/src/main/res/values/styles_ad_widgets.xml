@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Component styles from design/design-system.html (Components section). -->
+<resources>
+    <!-- Tile header: 22 px semibold, label-2, 26 px icon, 8 px gap. -->
+    <style name="Widget.ApexDrive.TileHeader" parent="TextAppearance.ApexDrive.Label">
+        <item name="android:textColor">@color/ad_label_2</item>
+        <item name="android:drawablePadding">8dp</item>
+        <item name="drawableTint">@color/ad_label_2</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <!-- Buttons: 64 px capsule, 22 px semibold, 30 px icon with a 10 px gap, 28 px side padding. -->
+    <style name="Widget.ApexDrive.Button" parent="Widget.AppCompat.Button.Borderless">
+        <item name="android:minHeight">@dimen/ad_target</item>
+        <item name="android:minWidth">@dimen/ad_target</item>
+        <item name="android:layout_height">@dimen/ad_target</item>
+        <item name="android:paddingStart">28dp</item>
+        <item name="android:paddingEnd">28dp</item>
+        <item name="android:paddingTop">0dp</item>
+        <item name="android:paddingBottom">0dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:drawablePadding">10dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">@dimen/ad_text_label</item>
+        <item name="android:fontFamily">@font/atkinson_next_semibold</item>
+        <item name="fontFamily">@font/atkinson_next_semibold</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:textColor">@color/ad_label_1</item>
+        <item name="drawableTint">@color/ad_label_1</item>
+        <item name="android:background">@drawable/ad_bg_btn_secondary</item>
+    </style>
+
+    <style name="Widget.ApexDrive.Button.Primary">
+        <item name="android:textColor">@color/ad_on_accent</item>
+        <item name="drawableTint">@color/ad_on_accent</item>
+        <item name="android:background">@drawable/ad_bg_btn_primary</item>
+    </style>
+
+    <style name="Widget.ApexDrive.Button.Quiet">
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:textColor">@color/ad_accent_text</item>
+        <item name="drawableTint">@color/ad_accent_text</item>
+        <item name="android:background">@drawable/ad_bg_btn_quiet</item>
+    </style>
+
+    <!-- Icon-only button: 64 x 64 capsule, 30 px icon. -->
+    <style name="Widget.ApexDrive.IconButton" parent="">
+        <item name="android:layout_width">@dimen/ad_target</item>
+        <item name="android:layout_height">@dimen/ad_target</item>
+        <item name="android:padding">17dp</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:background">@drawable/ad_bg_btn_secondary</item>
+        <item name="tint">@color/ad_label_1</item>
+    </style>
+
+    <!-- Chip: 20 px medium label-2 with an optional 12 px dot. -->
+    <style name="Widget.ApexDrive.Chip" parent="TextAppearance.ApexDrive.Caption">
+        <item name="android:textColor">@color/ad_label_2</item>
+        <item name="android:fontFamily">@font/atkinson_next_medium</item>
+        <item name="fontFamily">@font/atkinson_next_medium</item>
+        <item name="android:drawablePadding">8dp</item>
+        <item name="android:gravity">center_vertical</item>
+    </style>
+
+    <!-- List row: 72 px, 16 px padding, inner radius. -->
+    <style name="Widget.ApexDrive.Row" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">@dimen/ad_row_height</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:background">@drawable/ad_bg_row</item>
+    </style>
+
+    <style name="Widget.ApexDrive.RowIcon" parent="">
+        <item name="android:layout_width">32dp</item>
+        <item name="android:layout_height">32dp</item>
+        <item name="android:layout_marginEnd">16dp</item>
+        <item name="tint">@color/ad_label_2</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
+    <style name="Widget.ApexDrive.RowTitle" parent="TextAppearance.ApexDrive.Label">
+        <item name="android:singleLine">true</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <style name="Widget.ApexDrive.RowDetail" parent="TextAppearance.ApexDrive.Caption">
+        <item name="android:singleLine">true</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:layout_marginTop">2dp</item>
+    </style>
+
+    <!-- Switch: 60 x 36 track, 28 px thumb. -->
+    <style name="Widget.ApexDrive.Switch" parent="Widget.AppCompat.CompoundButton.Switch">
+        <item name="android:thumb">@drawable/ad_switch_thumb</item>
+        <item name="track">@drawable/ad_switch_track</item>
+        <item name="android:background">@null</item>
+        <item name="showText">false</item>
+    </style>
+
+    <!-- Settings group list item: 64 px, 26 px icon, label 22. -->
+    <style name="Widget.ApexDrive.ListItem" parent="TextAppearance.ApexDrive.Label">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">@dimen/ad_target</item>
+        <item name="android:layout_marginBottom">4dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:drawablePadding">16dp</item>
+        <item name="drawableTint">@color/ad_label_2</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:background">@drawable/ad_bg_list_item</item>
+    </style>
+
+    <!-- Segment in a segmented control: 48 px capsule, label 22 semibold. -->
+    <style name="Widget.ApexDrive.Segment" parent="TextAppearance.ApexDrive.Label">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:minWidth">88dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:paddingEnd">20dp</item>
+        <item name="android:fontFamily">@font/atkinson_next_semibold</item>
+        <item name="fontFamily">@font/atkinson_next_semibold</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:background">@drawable/ad_bg_segment_item</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:textColor">@color/ad_label_1</item>
+    </style>
+</resources>

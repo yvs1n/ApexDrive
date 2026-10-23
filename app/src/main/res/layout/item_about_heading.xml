@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Section heading on Settings > About; same as the headings on the Look page. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/TextAppearance.ApexDrive.Label"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="8dp"
+    android:layout_marginTop="24dp"
+    android:textColor="@color/ad_label_2" />

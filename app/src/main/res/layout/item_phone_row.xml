@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A paired phone in the Other phones list. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Widget.ApexDrive.Row"
+    android:layout_marginTop="12dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <ImageView
+        style="@style/Widget.ApexDrive.RowIcon"
+        android:src="@drawable/ic_sym_smartphone" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvPhoneRowName"
+            style="@style/Widget.ApexDrive.RowTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/tvPhoneRowDetail"
+            style="@style/Widget.ApexDrive.RowDetail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,82 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Recent apps, as a design-system glass sheet (same pattern as "Choose a phone"). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
+    android:layout_width="560dp"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@drawable/bg_panel"
-    android:padding="20dp"
-    android:minWidth="520dp">
+    android:padding="16dp"
+    android:background="@drawable/ad_bg_glass_sheet">
 
-    <!-- Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical">
-
-        <ImageView
-            android:id="@+id/ivSwitcherIcon"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:src="@drawable/ic_nav_recents"
-            android:contentDescription="Task Switcher" />
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="4dp">
 
         <TextView
+            style="@style/TextAppearance.ApexDrive.Title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
             android:layout_weight="1"
-            android:text="ACTIVE BACKGROUND APPS"
-            android:textColor="@color/cockpit_text_primary"
-            android:textSize="17sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.04" />
+            android:text="Recent apps" />
 
         <TextView
             android:id="@+id/tvRecentsBadge"
+            style="@style/Widget.ApexDrive.Chip"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="3 RUNNING"
-            android:textColor="@color/accent_amber"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-bold"
-            android:letterSpacing="0.04" />
+            android:layout_marginEnd="12dp"
+            android:text="" />
+
+        <ImageButton
+            android:id="@+id/btnDismissSwitcher"
+            style="@style/Widget.ApexDrive.IconButton"
+            android:background="@drawable/ad_bg_btn_close"
+            android:src="@drawable/ic_sym_close"
+            android:contentDescription="Close" />
     </LinearLayout>
 
     <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="Switch directly to an active task or close background apps to free RAM on the head unit."
-        android:textColor="@color/cockpit_text_secondary"
-        android:textSize="12sp"
-        android:fontFamily="sans-serif" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="12dp"
-        android:layout_marginBottom="12dp"
-        android:background="@color/cockpit_surface_border_subtle" />
-
-    <!-- Empty State -->
-    <TextView
         android:id="@+id/tvNoRecentTasks"
+        style="@style/TextAppearance.ApexDrive.Body"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:padding="24dp"
-        android:text="No active background apps detected.\nAll system resources are optimized."
-        android:textColor="@color/cockpit_text_secondary"
-        android:textSize="13sp"
-        android:fontFamily="sans-serif"
+        android:layout_marginTop="12dp"
+        android:padding="16dp"
+        android:textColor="@color/ad_label_2"
+        android:text="No recent apps."
         android:visibility="gone" />
 
-    <!-- Scrollable Tasks List (Big Touch Targets) -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:maxHeight="320dp">
+        android:layout_marginTop="12dp"
+        android:maxHeight="300dp"
+        android:scrollbars="none"
+        android:overScrollMode="never">
 
         <LinearLayout
             android:id="@+id/llTasksList"
@@ -85,57 +65,23 @@
             android:orientation="vertical" />
     </ScrollView>
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="12dp"
-        android:layout_marginBottom="12dp"
-        android:background="@color/cockpit_surface_border_subtle" />
-
-    <!-- Action Buttons (Large Touch Targets >= 52dp) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal">
 
         <Button
             android:id="@+id/btnCloseAllTasks"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1.2"
-            android:background="@drawable/bg_elevated_btn"
-            android:text="CLOSE ALL APPS"
-            android:textColor="@color/accent_sport_red"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.04" />
+            style="@style/Widget.ApexDrive.Button"
+            android:layout_width="wrap_content"
+            android:text="Close all" />
 
         <Button
             android:id="@+id/btnSystemRecents"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_elevated_btn"
-            android:text="SYSTEM UI"
-            android:textColor="@color/cockpit_text_primary"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.04" />
-
-        <Button
-            android:id="@+id/btnDismissSwitcher"
+            style="@style/Widget.ApexDrive.Button.Quiet"
             android:layout_width="wrap_content"
-            android:layout_height="52dp"
-            android:layout_marginStart="8dp"
-            android:background="@drawable/bg_elevated_btn"
-            android:text="RETURN"
-            android:textColor="@color/cockpit_text_secondary"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-black"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp" />
+            android:layout_marginStart="12dp"
+            android:text="System recents" />
     </LinearLayout>
-
 </LinearLayout>

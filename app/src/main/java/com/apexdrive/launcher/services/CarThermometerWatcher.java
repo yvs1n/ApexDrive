@@ -4,17 +4,22 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.Cursor;
+import android.net.Uri;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationManager;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.Settings;
 
 import com.apexdrive.launcher.utils.PreferenceHelper;
+import com.apexdrive.launcher.utils.UnitMath;
 
 import org.json.JSONObject;
 
@@ -22,13 +27,34 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayDeque;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
+/**
+ * Outside temperature from, in priority order: a manual value, the vehicle (CAN broadcast,
+ * vendor Settings key or system property), the built-in ambient sensor, and online weather.
+ *
+ * The raw reading of each source is kept separately and the calibration offset is applied
+ * exactly once, when the value is published. With no reading at all the listener receives
+ * "--" and a NaN temperature; nothing is invented.
+ *
+ * All state is read and written on the main thread. Worker threads (weather) hand their
+ * result over with a single post to the main handler.
+ */
 public class CarThermometerWatcher implements SensorEventListener {
 
     public interface TemperatureListener {
+        /** tempCelsius is {@link Float#NaN} when there is no reading. */
         void onTemperatureUpdated(String tempFormatted, float tempCelsius, String condition);
     }
+
+    private enum Source { MANUAL, VEHICLE, SENSOR, WEATHER }
+
+    /** A vehicle reading older than this is no longer shown. */
+    private static final long VEHICLE_MAX_AGE_MS = 15 * 60 * 1000L;
+    /** A weather reading older than this is no longer shown. */
+    private static final long WEATHER_MAX_AGE_MS = 45 * 60 * 1000L;
 
     private final Context context;
     private final TemperatureListener listener;
@@ -37,12 +63,53 @@ public class CarThermometerWatcher implements SensorEventListener {
     private Sensor tempSensor;
     private BroadcastReceiver canbusReceiver;
     private final Handler pollHandler = new Handler(Looper.getMainLooper());
-    private boolean isMph = false;
-    private float currentTempC = 32.0f;
-    private float rawTempC = 32.0f;
-    private String currentCondition = "OUTSIDE";
-    private String currentCity = "";
-    private long lastOnlineFetchTime = 0;
+    private boolean useFahrenheit = false;
+    private boolean stopped = false;
+
+    // Per-source raw readings (indexed by Source.ordinal()).
+    private final float[] rawC = {Float.NaN, Float.NaN, Float.NaN, Float.NaN};
+    private final long[] readAt = new long[4];
+    private final String[] label = {"Manual", "Car sensor", "Built-in sensor", "Outside"};
+    private float offsetC;
+
+    // What is currently shown. Volatile so the getters are safe from any thread.
+    private volatile float displayedC = Float.NaN;
+    private volatile float displayedRawC = Float.NaN;
+    private volatile String displayedCondition = "No data";
+    private volatile String displayedCity = "";
+
+    private static final long POLL_INTERVAL_MS = 60 * 1000L;
+    private long lastBroadcastAt = 0;
+
+    /**
+     * Key names that say "outside temperature": out_temp, outside_temperature, ext.temp,
+     * ambient_air_temp, temp_out and the like. Head units name these differently, so the
+     * Settings tables and broadcast extras are searched by name instead of a fixed list.
+     */
+    private static final Pattern OUTSIDE_TEMP_KEY = Pattern.compile(
+            "(?i).*(out|outside|outdoor|ext|exterior|external|ambient|env)[_.-]?(air[_.-]?)?(temp|tmp).*"
+                    + "|.*(temp|tmp)[_.-]?(out|outside|outdoor|ext|exterior|external|ambient)([_.-].*)?");
+    /** Names that look like an outside temperature but are something else. */
+    private static final Pattern NOT_OUTSIDE_KEY = Pattern.compile(
+            "(?i).*(cpu|soc|chip|board|batt|bat_|coolant|water|oil|engine|inside|inner|indoor|cabin|interior"
+                    + "|set|target|seat|unit|max|min|alarm|warn|enable|switch|show|display_mode).*");
+    private static final long SETTINGS_SCAN_MS = 5 * 60 * 1000L;
+    private long lastSettingsScanAt = 0;
+    /** Table and key that last gave a reading, read directly on later polls. */
+    private Uri foundTable;
+    private String foundKey;
+    private final ArrayDeque<String> history = new ArrayDeque<>();
+
+    private String weatherCity = "";
+    // Weather scheduling. Times are SystemClock.elapsedRealtime(); 0 means "never".
+    private static final long WEATHER_REFRESH_MS = 10 * 60 * 1000L;
+    private static final long WEATHER_RETRY_BASE_MS = 30 * 1000L;
+    private double lastWeatherLat = 0.0;
+    private double lastWeatherLon = 0.0;
+    private long lastWeatherSuccessAt = 0;
+    private long lastWeatherAttemptAt = 0;
+    private int weatherFailures = 0;
+    private boolean weatherFetching = false;
     private double lastFetchLat = 0.0;
     private double lastFetchLon = 0.0;
 
@@ -50,51 +117,83 @@ public class CarThermometerWatcher implements SensorEventListener {
         this.context = context;
         this.listener = listener;
         this.prefHelper = new PreferenceHelper(context);
-        this.currentTempC = prefHelper.getSavedTempCelsius();
-        this.rawTempC = this.currentTempC;
-        this.currentCondition = prefHelper.getSavedCondition();
+        this.offsetC = prefHelper.getTempOffset();
+        this.useFahrenheit = prefHelper.isTempFahrenheit();
+        // Only a value the driver typed in is restored. Sensor, vehicle and weather
+        // readings are never replayed from a previous run as if they were live.
+        float saved = prefHelper.getSavedTempCelsius();
+        if (prefHelper.isManualTempCalibration() && !Float.isNaN(saved)) {
+            rawC[Source.MANUAL.ordinal()] = saved;
+            label[Source.MANUAL.ordinal()] = prefHelper.getSavedCondition();
+        }
     }
 
+    /** Temperature unit, independent of the speed unit. Persisted. */
     public void setUseFahrenheit(boolean useFahrenheit) {
-        this.isMph = useFahrenheit;
-        notifyTemp(currentTempC);
+        this.useFahrenheit = useFahrenheit;
+        prefHelper.setTempFahrenheit(useFahrenheit);
+        publish();
     }
 
+    public boolean isFahrenheit() {
+        return useFahrenheit;
+    }
+
+    public boolean hasReading() {
+        return !Float.isNaN(displayedC);
+    }
+
+    /** Displayed temperature including the calibration offset, or {@link Float#NaN} when there is none. */
     public float getCurrentTempCelsius() {
-        return currentTempC;
+        return displayedC;
     }
 
+    /** Raw reading of the source being displayed, before the offset, or NaN when there is none. */
     public float getRawTempCelsius() {
-        return rawTempC;
+        return displayedRawC;
     }
 
     public String getCurrentCondition() {
-        return currentCondition;
+        return displayedCondition;
     }
 
     public String getCurrentCity() {
-        return currentCity;
+        return displayedCity;
     }
 
     public void setManualTemp(float tempC, String condition) {
-        this.currentTempC = tempC;
-        if (condition != null) this.currentCondition = condition;
+        rawC[Source.MANUAL.ordinal()] = tempC;
+        readAt[Source.MANUAL.ordinal()] = SystemClock.elapsedRealtime();
+        if (condition != null) label[Source.MANUAL.ordinal()] = condition;
         prefHelper.setSavedTempCelsius(tempC);
-        prefHelper.setSavedCondition(this.currentCondition);
+        prefHelper.setSavedCondition(label[Source.MANUAL.ordinal()]);
         prefHelper.setManualTempCalibration(true);
-        notifyTemp(currentTempC);
+        publish();
     }
 
     public void setTempOffset(float offset) {
+        if (Float.isNaN(offset)) return;
+        offsetC = offset;
         prefHelper.setTempOffset(offset);
-        this.currentTempC = this.rawTempC + offset;
-        prefHelper.setSavedTempCelsius(this.currentTempC);
-        notifyTemp(this.currentTempC);
+        publish();
+    }
+
+    /**
+     * Sets the offset so that the displayed source shows {@code targetCelsius}.
+     * @return false when there is no reading to calibrate against
+     */
+    public boolean calibrateDisplayedTo(float targetCelsius) {
+        if (Float.isNaN(displayedRawC) || Float.isNaN(targetCelsius)) return false;
+        setTempOffset(targetCelsius - displayedRawC);
+        return true;
     }
 
     public void clearManualCalibration() {
         prefHelper.setManualTempCalibration(false);
         prefHelper.setTempOffset(0.0f);
+        offsetC = 0.0f;
+        rawC[Source.MANUAL.ordinal()] = Float.NaN;
+        publish();
     }
 
     public boolean isManualCalibration() {
@@ -102,7 +201,8 @@ public class CarThermometerWatcher implements SensorEventListener {
     }
 
     public void start() {
-        notifyTemp(currentTempC);
+        stopped = false;
+        publish();
 
         try {
             sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
@@ -122,6 +222,8 @@ public class CarThermometerWatcher implements SensorEventListener {
             }
         };
 
+        // Vendor actions: names collected from common Chinese head-unit firmwares.
+        // [verify in car] which of these the unit really sends, and with which extras.
         IntentFilter filter = new IntentFilter();
         filter.addAction("android.intent.action.AIR_CONDITION_CHANGED");
         filter.addAction("com.android.ecar.cannews");
@@ -144,82 +246,96 @@ public class CarThermometerWatcher implements SensorEventListener {
         startPeriodicPoll();
 
         // Immediate automatic location-based weather sync on ignition / boot
-        if (prefHelper.isAutoWeatherEnabled()) {
+        if (isOnlineWeatherEnabled()) {
             triggerImmediateLocationWeatherSync();
         }
     }
 
     public void triggerImmediateLocationWeatherSync() {
+        if (!isOnlineWeatherEnabled()) return;
+        // Only an existing location is used: the last known fix, else the saved coarse
+        // location. There is no IP-based lookup (P-37).
+        Location last = null;
         try {
             LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-            Location last = null;
             if (lm != null) {
                 last = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 if (last == null) last = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                 if (last == null) last = lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
             }
-            if (last != null && (last.getLatitude() != 0.0 || last.getLongitude() != 0.0)) {
-                fetchOnlineWeather(last.getLatitude(), last.getLongitude());
-            } else {
-                fetchIpGeolocationAndWeather();
-            }
-        } catch (Exception e) {
-            fetchIpGeolocationAndWeather();
+        } catch (Exception ignored) {
+            // No permission yet: fall back to the saved location below.
         }
+        if (last != null && (last.getLatitude() != 0.0 || last.getLongitude() != 0.0)) {
+            fetchOnlineWeather(last.getLatitude(), last.getLongitude());
+        } else if (prefHelper.hasSavedWeatherLocation()) {
+            fetchOnlineWeather(prefHelper.getSavedWeatherLat(), prefHelper.getSavedWeatherLon());
+        }
+    }
+
+    /** Weather makes network calls only when the user has allowed it and auto weather is on. */
+    private boolean isOnlineWeatherEnabled() {
+        return prefHelper.isOnlineWeatherAllowed() && prefHelper.isAutoWeatherEnabled();
+    }
+
+    private static double round2(double v) {
+        return Math.round(v * 100.0) / 100.0;
     }
 
     public void onLocationUpdated(double latitude, double longitude) {
         if (latitude == 0.0 && longitude == 0.0) return;
-        if (!prefHelper.isAutoWeatherEnabled() && prefHelper.isManualTempCalibration()) return;
+        if (!isOnlineWeatherEnabled()) return;
+        double rLat = round2(latitude), rLon = round2(longitude);
+        if (!prefHelper.hasSavedWeatherLocation()
+                || (float) rLat != (float) prefHelper.getSavedWeatherLat()
+                || (float) rLon != (float) prefHelper.getSavedWeatherLon()) {
+            prefHelper.setSavedWeatherLocation(rLat, rLon); // written only when the 1 km cell changes
+        }
 
-        long now = System.currentTimeMillis();
-        boolean timeElapsed = (now - lastOnlineFetchTime > 10 * 60 * 1000); // 10 minutes debounce
-        boolean distMoved = (Math.abs(latitude - lastFetchLat) > 0.03 || Math.abs(longitude - lastFetchLon) > 0.03); // ~3km
-        if (lastOnlineFetchTime == 0 || timeElapsed || distMoved) {
+        lastFetchLat = latitude;
+        lastFetchLon = longitude;
+        boolean moved = lastWeatherSuccessAt != 0
+                && (Math.abs(latitude - lastWeatherLat) > 0.03 || Math.abs(longitude - lastWeatherLon) > 0.03); // ~3 km
+        if (moved) {
             fetchOnlineWeather(latitude, longitude);
+        } else {
+            refreshWeatherIfDue();
         }
     }
 
-    public void fetchIpGeolocationAndWeather() {
-        new Thread(() -> {
-            try {
-                URL url = new URL("http://ip-api.com/json");
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setConnectTimeout(4000);
-                conn.setReadTimeout(4000);
-                if (conn.getResponseCode() == 200) {
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                    StringBuilder sb = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) sb.append(line);
-                    reader.close();
-                    JSONObject json = new JSONObject(sb.toString());
-                    if ("success".equalsIgnoreCase(json.optString("status"))) {
-                        double lat = json.optDouble("lat", 0.0);
-                        double lon = json.optDouble("lon", 0.0);
-                        String city = json.optString("city", "");
-                        if (!city.isEmpty()) {
-                            currentCity = city.toUpperCase(Locale.US);
-                        }
-                        if (lat != 0.0 && lon != 0.0) {
-                            fetchOnlineWeather(lat, lon);
-                        }
-                    }
-                }
-            } catch (Exception ignored) {}
-        }).start();
+    /**
+     * Fetches when the last successful reading is old, or after a failure once the
+     * backoff (30 s doubling to 10 min) has passed. A failed attempt no longer blocks
+     * retries for 10 minutes.
+     */
+    private void refreshWeatherIfDue() {
+        if (!isOnlineWeatherEnabled() || weatherFetching) return;
+        if (lastFetchLat == 0.0 && lastFetchLon == 0.0) return;
+        long now = SystemClock.elapsedRealtime();
+        if (weatherFailures > 0) {
+            long backoff = Math.min(WEATHER_REFRESH_MS, WEATHER_RETRY_BASE_MS << Math.min(weatherFailures - 1, 5));
+            if (now - lastWeatherAttemptAt < backoff) return;
+        } else if (lastWeatherSuccessAt != 0 && now - lastWeatherSuccessAt < WEATHER_REFRESH_MS) {
+            return;
+        }
+        fetchOnlineWeather(lastFetchLat, lastFetchLon);
     }
 
     public void fetchOnlineWeather(double latitude, double longitude) {
+        if (!isOnlineWeatherEnabled() || weatherFetching) return;
         if (latitude == 0.0 && longitude == 0.0) return;
-        lastOnlineFetchTime = System.currentTimeMillis();
+        lastWeatherAttemptAt = SystemClock.elapsedRealtime();
+        weatherFetching = true;
         lastFetchLat = latitude;
         lastFetchLon = longitude;
 
+        final String knownCity = weatherCity;
+        final boolean needCity = weatherCity.isEmpty()
+                || Math.abs(latitude - lastWeatherLat) > 0.03 || Math.abs(longitude - lastWeatherLon) > 0.03;
         new Thread(() -> {
             try {
                 String urlStr = String.format(Locale.US,
-                        "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&current_weather=true",
+                        "https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f&current_weather=true",
                         latitude, longitude);
                 URL url = new URL(urlStr);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -238,32 +354,47 @@ public class CarThermometerWatcher implements SensorEventListener {
                     JSONObject json = new JSONObject(sb.toString());
                     if (json.has("current_weather")) {
                         JSONObject cw = json.getJSONObject("current_weather");
-                        float temp = (float) cw.getDouble("temperature");
-                        int code = cw.optInt("weathercode", 0);
-                        String condition = mapWeatherCode(code);
-
-                        rawTempC = temp;
-                        float offset = prefHelper.getTempOffset();
-                        currentTempC = temp + offset;
-                        currentCondition = condition;
-                        prefHelper.setSavedTempCelsius(currentTempC);
-                        prefHelper.setSavedCondition(condition);
-
-                        if (currentCity.isEmpty()) {
-                            resolveCityName(latitude, longitude);
-                        }
-
-                        pollHandler.post(() -> notifyTemp(currentTempC));
+                        final float temp = (float) cw.getDouble("temperature");
+                        final String condition = mapWeatherCode(cw.optInt("weathercode", 0));
+                        final String city = needCity ? resolveCityName(latitude, longitude) : knownCity;
+                        pollHandler.post(() -> onWeatherResult(temp, condition, city, latitude, longitude));
+                        return;
                     }
                 }
             } catch (Exception ignored) {}
+            pollHandler.post(this::onWeatherFailed); // reached on any failure
         }).start();
     }
 
-    private void resolveCityName(double latitude, double longitude) {
+    /** Runs on the main thread: all weather fields change together. */
+    private void onWeatherResult(float tempC, String condition, String city, double lat, double lon) {
+        weatherFetching = false;
+        if (stopped) return;
+        if (!UnitMath.isPlausibleOutsideCelsius(tempC)) {
+            onWeatherFailed();
+            return;
+        }
+        weatherFailures = 0;
+        lastWeatherSuccessAt = SystemClock.elapsedRealtime();
+        lastWeatherLat = lat;
+        lastWeatherLon = lon;
+        weatherCity = city; // "" when unknown, so a city from an earlier place is not kept
+        label[Source.WEATHER.ordinal()] = condition;
+        setReading(Source.WEATHER, tempC);
+    }
+
+    /** Runs on the main thread. The previous value ages out instead of staying "live". */
+    private void onWeatherFailed() {
+        weatherFetching = false;
+        if (stopped) return;
+        weatherFailures++;
+    }
+
+    /** Blocking; call from a worker thread. Returns "" when unknown. */
+    private String resolveCityName(double latitude, double longitude) {
         try {
             String geoUrl = String.format(Locale.US,
-                    "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=%.4f&longitude=%.4f&localityLanguage=en",
+                    "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=%.2f&longitude=%.2f&localityLanguage=en",
                     latitude, longitude);
             URL url = new URL(geoUrl);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -279,56 +410,62 @@ public class CarThermometerWatcher implements SensorEventListener {
                 String city = obj.optString("city", "");
                 if (city.isEmpty()) city = obj.optString("locality", "");
                 if (city.isEmpty()) city = obj.optString("principalSubdivision", "");
-                if (!city.isEmpty()) {
-                    currentCity = city.toUpperCase(Locale.US);
-                    pollHandler.post(() -> notifyTemp(currentTempC));
-                }
+                return city.toUpperCase(Locale.US);
             }
         } catch (Exception ignored) {}
+        return "";
     }
 
     private String mapWeatherCode(int code) {
-        if (code == 0) return "CLEAR";
-        if (code >= 1 && code <= 3) return "PARTLY CLOUDY";
-        if (code == 45 || code == 48) return "FOG";
-        if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return "RAIN";
-        if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return "SNOW";
-        if (code >= 95 && code <= 99) return "THUNDERSTORM";
-        return "OUTSIDE";
+        if (code == 0) return "Clear";
+        if (code >= 1 && code <= 3) return "Partly cloudy";
+        if (code == 45 || code == 48) return "Fog";
+        if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return "Rain";
+        if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return "Snow";
+        if (code >= 95 && code <= 99) return "Thunderstorm";
+        return "Outside";
     }
 
+    /**
+     * Vehicle broadcast. Only extras that name an outside temperature are read; generic
+     * names such as "temp" or "temperature" could be coolant or cabin air, so they are
+     * ignored. Values are taken as degrees Celsius. [verify in car] key names and unit.
+     */
     private void parseCanbusTempIntent(Intent intent) {
+        lastBroadcastAt = SystemClock.elapsedRealtime();
         try {
-            String[] keys = {"out_temp", "temperature", "ext_temp", "ambient_temp", "temp", "celsius", "car_temp"};
-            for (String key : keys) {
-                if (intent.hasExtra(key)) {
-                    float val = intent.getFloatExtra(key, -999f);
-                    if (val == -999f) {
-                        val = intent.getIntExtra(key, -999);
-                    }
-                    if (val == -999f) {
-                        val = (float) intent.getDoubleExtra(key, -999.0);
-                    }
-                    if (val != -999f && val > -40f && val < 65f) {
-                        currentTempC = val;
-                        currentCondition = "VEHICLE SENSOR";
-                        prefHelper.setSavedTempCelsius(val);
-                        prefHelper.setSavedCondition(currentCondition);
-                        notifyTemp(currentTempC);
-                        return;
-                    }
+            Bundle extras = intent.getExtras();
+            if (extras == null) return;
+            note("broadcast " + intent.getAction() + " " + extras.keySet());
+            for (String key : extras.keySet()) {
+                if (!isOutsideTempKey(key)) continue;
+                Object o = extras.get(key);
+                if (o instanceof Number) {
+                    acceptVehicleValue(((Number) o).floatValue());
+                    return;
                 }
-            }
-
-            String strVal = intent.getStringExtra("out_temp");
-            if (strVal != null && !strVal.isEmpty()) {
-                parseAndSetTemp(strVal);
+                if (o instanceof String) {
+                    parseAndSetTemp((String) o);
+                    return;
+                }
             }
         } catch (Exception ignored) {}
     }
 
+    static boolean isOutsideTempKey(String key) {
+        return key != null && OUTSIDE_TEMP_KEY.matcher(key).matches() && !NOT_OUTSIDE_KEY.matcher(key).matches();
+    }
+
     private void pollCanSettings() {
+        if (foundKey != null && readSettingsKey(foundTable, foundKey)) return;
+        long now = SystemClock.elapsedRealtime();
+        if (lastSettingsScanAt == 0 || now - lastSettingsScanAt >= SETTINGS_SCAN_MS) {
+            lastSettingsScanAt = now;
+            if (scanSettingsTable(Settings.System.CONTENT_URI)) return;
+            if (scanSettingsTable(Settings.Global.CONTENT_URI)) return;
+        }
         try {
+            // [verify in car] vendor Settings.System keys; unknown on most units.
             String[] settingKeys = {
                     "can_temperature",
                     "out_temperature",
@@ -347,81 +484,201 @@ public class CarThermometerWatcher implements SensorEventListener {
         } catch (Exception ignored) {}
     }
 
-    private void checkSystemProperties() {
-        new Thread(() -> {
-            String[] props = {
-                    "persist.sys.can.temp",
-                    "sys.car.temp",
-                    "sys.car.outtemp",
-                    "persist.fyt.temp",
-                    "sys.canbus.out_temp"
-            };
-            for (String prop : props) {
-                try {
-                    Process p = Runtime.getRuntime().exec("getprop " + prop);
-                    BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                    String val = r.readLine();
-                    r.close();
-                    if (val != null && !val.trim().isEmpty()) {
-                        pollHandler.post(() -> parseAndSetTemp(val.trim()));
-                        return;
-                    }
-                } catch (Exception ignored) {}
+    /** Searches a whole Settings table for an outside-temperature key with a plausible value. */
+    private boolean scanSettingsTable(Uri table) {
+        Cursor c = null;
+        try {
+            c = context.getContentResolver().query(table, new String[]{"name", "value"}, null, null, null);
+            if (c == null) return false;
+            while (c.moveToNext()) {
+                String name = c.getString(0);
+                if (!isOutsideTempKey(name)) continue;
+                String value = c.getString(1);
+                note("settings " + table.getLastPathSegment() + "/" + name + "=" + value);
+                if (isPlausibleValue(value)) {
+                    foundTable = table;
+                    foundKey = name;
+                    parseAndSetTemp(value);
+                    return true;
+                }
             }
-        }).start();
+        } catch (Exception e) {
+            note("settings " + table.getLastPathSegment() + " not readable: " + e.getClass().getSimpleName());
+        } finally {
+            if (c != null) c.close();
+        }
+        return false;
     }
 
+    private boolean readSettingsKey(Uri table, String key) {
+        try {
+            String value = Settings.System.CONTENT_URI.equals(table)
+                    ? Settings.System.getString(context.getContentResolver(), key)
+                    : Settings.Global.getString(context.getContentResolver(), key);
+            if (isPlausibleValue(value)) {
+                parseAndSetTemp(value);
+                return true;
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    private static boolean isPlausibleValue(String value) {
+        if (value == null) return false;
+        try {
+            String cleaned = value.replaceAll("[^0-9.-]", "");
+            return !cleaned.isEmpty() && UnitMath.isPlausibleOutsideCelsius(Float.parseFloat(cleaned));
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    private void note(String line) {
+        if (history.size() >= 20) history.removeFirst();
+        history.addLast(line);
+    }
+
+    /** What the vehicle sources showed, for the head unit report. Main thread. */
+    public String getDiagnostics() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Showing: ").append(Float.isNaN(displayedC) ? "no reading" : displayedC + " C")
+                .append(" from ").append(displayedCondition).append('\n');
+        sb.append("Vehicle key: ").append(foundKey == null ? "none found"
+                : foundTable.getLastPathSegment() + "/" + foundKey).append('\n');
+        sb.append("Last vehicle broadcast: ").append(lastBroadcastAt == 0 ? "never"
+                : (SystemClock.elapsedRealtime() - lastBroadcastAt) / 1000 + " s ago").append('\n');
+        for (String l : history) sb.append(l).append('\n');
+        return sb.toString();
+    }
+
+    private static java.lang.reflect.Method sysPropGet;
+    private static boolean sysPropUnavailable;
+
+    /**
+     * Reads vendor system properties in-process (no "getprop" process is spawned, P-48).
+     * android.os.SystemProperties is a hidden API; on failure this stays silent and the
+     * properties are simply not used. [verify in car] which property the unit sets.
+     */
+    private void checkSystemProperties() {
+        if (sysPropUnavailable) return;
+        String[] props = {
+                "persist.sys.can.temp",
+                "sys.car.temp",
+                "sys.car.outtemp",
+                "persist.fyt.temp",
+                "sys.canbus.out_temp"
+        };
+        try {
+            if (sysPropGet == null) {
+                Class<?> c = Class.forName("android.os.SystemProperties");
+                sysPropGet = c.getMethod("get", String.class);
+            }
+            for (String prop : props) {
+                String val = (String) sysPropGet.invoke(null, prop);
+                if (val != null && !val.trim().isEmpty()) {
+                    parseAndSetTemp(val.trim());
+                    return;
+                }
+            }
+        } catch (Throwable t) {
+            sysPropUnavailable = true;
+        }
+    }
+
+    /**
+     * Vendor string value (Settings key or property). Taken as degrees Celsius: the unit
+     * cannot be told from the number, so a value outside the plausible range is rejected
+     * rather than guessed to be Fahrenheit. [verify in car] unit used by the head unit.
+     */
     private void parseAndSetTemp(String strVal) {
         try {
             String cleaned = strVal.replaceAll("[^0-9.-]", "");
             if (!cleaned.isEmpty()) {
-                float val = Float.parseFloat(cleaned);
-                if (val > -40f && val < 130f) {
-                    if (val > 55f) {
-                        val = (val - 32f) * 5f / 9f;
-                    }
-                    currentTempC = val;
-                    currentCondition = "VEHICLE SENSOR";
-                    prefHelper.setSavedTempCelsius(val);
-                    prefHelper.setSavedCondition(currentCondition);
-                    notifyTemp(currentTempC);
-                }
+                acceptVehicleValue(Float.parseFloat(cleaned));
             }
         } catch (Exception ignored) {}
+    }
+
+    private void acceptVehicleValue(float valueC) {
+        if (!UnitMath.isPlausibleOutsideCelsius(valueC)) return;
+        setReading(Source.VEHICLE, valueC);
     }
 
     private void startPeriodicPoll() {
         pollHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                pollCanSettings();
-                checkSystemProperties();
-                pollHandler.postDelayed(this, 15000);
+                // Polling is only a fallback: once the unit broadcasts, rely on that.
+                long sinceBroadcast = SystemClock.elapsedRealtime() - lastBroadcastAt;
+                if (lastBroadcastAt == 0 || sinceBroadcast > VEHICLE_MAX_AGE_MS) {
+                    pollCanSettings();
+                    checkSystemProperties();
+                }
+                publish(); // lets a reading that has become stale drop out
+                refreshWeatherIfDue();
+                pollHandler.postDelayed(this, POLL_INTERVAL_MS);
             }
-        }, 15000);
+        }, POLL_INTERVAL_MS);
     }
 
-    private void notifyTemp(float tempC) {
+    private void setReading(Source s, float valueC) {
+        rawC[s.ordinal()] = valueC;
+        readAt[s.ordinal()] = SystemClock.elapsedRealtime();
+        publish();
+    }
+
+    private boolean isUsable(Source s) {
+        int i = s.ordinal();
+        if (Float.isNaN(rawC[i])) return false;
+        long age = SystemClock.elapsedRealtime() - readAt[i];
+        if (s == Source.VEHICLE) return age <= VEHICLE_MAX_AGE_MS;
+        if (s == Source.WEATHER) return age <= WEATHER_MAX_AGE_MS;
+        return true;
+    }
+
+    /** Picks the highest-priority usable source, applies the offset once and notifies. */
+    private void publish() {
+        Source active = null;
+        for (Source s : Source.values()) {
+            if (isUsable(s)) { active = s; break; }
+        }
+        String city = "";
+        if (active == null) {
+            displayedRawC = Float.NaN;
+            displayedC = Float.NaN;
+            displayedCondition = "No data";
+        } else {
+            float raw = rawC[active.ordinal()];
+            displayedRawC = raw;
+            displayedC = (active == Source.MANUAL) ? raw : UnitMath.applyOffset(raw, offsetC);
+            displayedCondition = label[active.ordinal()];
+            if (active == Source.WEATHER) city = weatherCity;
+        }
+        displayedCity = city;
+        notifyListener();
+    }
+
+    private void notifyListener() {
         if (listener == null) return;
+        float tempC = displayedC;
+        String desc = !displayedCity.isEmpty() ? displayedCity + " · " + displayedCondition : displayedCondition;
         String formatted;
-        String desc = !currentCity.isEmpty() ? currentCity + " · " + currentCondition : currentCondition;
-        if (isMph) {
-            float tempF = (tempC * 9f / 5f) + 32f;
-            formatted = String.format(Locale.US, "%.0f°F · %s", tempF, desc);
+        if (Float.isNaN(tempC)) {
+            formatted = String.format(Locale.US, "--°%s · %s", useFahrenheit ? "F" : "C", desc);
+        } else if (useFahrenheit) {
+            formatted = String.format(Locale.US, "%.0f°F · %s", UnitMath.celsiusToFahrenheit(tempC), desc);
         } else {
             formatted = String.format(Locale.US, "%.0f°C · %s", tempC, desc);
         }
-        listener.onTemperatureUpdated(formatted, tempC, currentCondition);
+        listener.onTemperatureUpdated(formatted, tempC, displayedCondition);
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_AMBIENT_TEMPERATURE && event.values.length > 0) {
-            currentTempC = event.values[0];
-            currentCondition = "BUILT-IN SENSOR";
-            prefHelper.setSavedTempCelsius(currentTempC);
-            prefHelper.setSavedCondition(currentCondition);
-            notifyTemp(currentTempC);
+            float v = event.values[0];
+            if (!UnitMath.isPlausibleOutsideCelsius(v)) return;
+            setReading(Source.SENSOR, v);
         }
     }
 
@@ -429,6 +686,8 @@ public class CarThermometerWatcher implements SensorEventListener {
     public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
     public void stop() {
+        stopped = true;
+        weatherFetching = false; // a pending result is discarded with the handler queue
         pollHandler.removeCallbacksAndMessages(null);
         if (sensorManager != null && tempSensor != null) {
             sensorManager.unregisterListener(this);
@@ -437,6 +696,7 @@ public class CarThermometerWatcher implements SensorEventListener {
             try {
                 context.unregisterReceiver(canbusReceiver);
             } catch (Exception ignored) {}
+            canbusReceiver = null;
         }
     }
 }

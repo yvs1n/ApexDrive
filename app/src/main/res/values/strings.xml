@@ -23,4 +23,5 @@
     <string name="media_now_playing">NOW PLAYING</string>
     <string name="media_placeholder_song">No Media Playing</string>
     <string name="media_placeholder_artist">Play audio from Spotify, Radio, or CarPlay</string>
+    <string name="ad_notification_close">Dismiss notification</string>
 </resources>

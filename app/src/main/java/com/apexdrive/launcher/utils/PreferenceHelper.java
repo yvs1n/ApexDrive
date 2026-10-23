@@ -32,12 +32,97 @@ public class PreferenceHelper {
         this.prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
     }
 
+    /**
+     * Accent id from Look.ACCENT_IDS; Look.ACCENT_STYLE (the default) keeps the style's own
+     * accent. Older builds ignored the saved value, so a value left by them is not honoured.
+     */
     public int getAccentColor() {
-        return prefs.getInt(KEY_ACCENT_COLOR, COLOR_AMBER);
+        if (!prefs.getBoolean(KEY_LOOK_ACCENT_SET, false)) return Look.ACCENT_STYLE;
+        return prefs.getInt(KEY_ACCENT_COLOR, Look.ACCENT_STYLE);
     }
 
     public void setAccentColor(int color) {
-        prefs.edit().putInt(KEY_ACCENT_COLOR, color).apply();
+        prefs.edit().putInt(KEY_ACCENT_COLOR, color).putBoolean(KEY_LOOK_ACCENT_SET, true).apply();
+    }
+
+    // --- Look (Settings > Look). Every default gives the design-system look. ---
+    private static final String KEY_LOOK_ACCENT_SET = "look_accent_set";
+    private static final String KEY_LOOK_STYLE = "look_style";
+    private static final String KEY_LOOK_RADIUS = "look_radius";
+    private static final String KEY_LOOK_OPACITY = "look_opacity";
+    private static final String KEY_LOOK_TEXT = "look_text";
+    private static final String KEY_LOOK_WALLPAPER = "look_wallpaper";
+    private static final String KEY_LOOK_CLOCK_SIZE = "look_clock_size";
+    private static final String KEY_LOOK_CLOCK_SECONDS = "look_clock_seconds";
+    private static final String KEY_LOOK_RAIL_LABELS = "look_rail_labels";
+    private static final String KEY_LOOK_STATUS_TEMP = "look_status_temp";
+    private static final String KEY_LOOK_STATUS_GPS = "look_status_gps";
+    private static final String KEY_LOOK_STATUS_PHONE = "look_status_phone";
+    private static final String KEY_LOOK_HOME_TILES = "look_home_tiles";
+
+    /** Colours, corners, card opacity and text size as one Look. */
+    public Look getLook(boolean night) {
+        return new Look(getLookStyle(), getAccentColor(), getLookRadius(), getLookOpacity(), getLookTextSize(), night);
+    }
+
+    public int getLookStyle() { return prefs.getInt(KEY_LOOK_STYLE, Look.STYLE_DEFAULT); }
+
+    /**
+     * Applies a style preset: its accent, corners, card opacity and wallpaper. A wallpaper image
+     * the user chose is kept; they can change any part afterwards.
+     */
+    public void applyLookStyle(int style) {
+        SharedPreferences.Editor e = prefs.edit()
+                .putInt(KEY_LOOK_STYLE, style)
+                .putInt(KEY_LOOK_RADIUS, Look.styleRadius(style))
+                .putInt(KEY_LOOK_OPACITY, Look.styleOpacity(style))
+                .putInt(KEY_ACCENT_COLOR, Look.ACCENT_STYLE);
+        if (getLookWallpaper() != Look.WALLPAPER_CUSTOM) e.putInt(KEY_LOOK_WALLPAPER, Look.styleWallpaper(style));
+        e.apply();
+    }
+
+    public int getLookRadius() { return prefs.getInt(KEY_LOOK_RADIUS, 1); }
+    public void setLookRadius(int v) { prefs.edit().putInt(KEY_LOOK_RADIUS, v).apply(); }
+
+    public int getLookOpacity() { return prefs.getInt(KEY_LOOK_OPACITY, 0); }
+    public void setLookOpacity(int v) { prefs.edit().putInt(KEY_LOOK_OPACITY, v).apply(); }
+
+    public int getLookTextSize() { return prefs.getInt(KEY_LOOK_TEXT, 1); }
+    public void setLookTextSize(int v) { prefs.edit().putInt(KEY_LOOK_TEXT, v).apply(); }
+
+    public int getLookWallpaper() { return prefs.getInt(KEY_LOOK_WALLPAPER, Look.WALLPAPER_NONE); }
+    public void setLookWallpaper(int v) { prefs.edit().putInt(KEY_LOOK_WALLPAPER, v).apply(); }
+
+    public int getClockSize() { return prefs.getInt(KEY_LOOK_CLOCK_SIZE, 1); }
+    public void setClockSize(int v) { prefs.edit().putInt(KEY_LOOK_CLOCK_SIZE, v).apply(); }
+
+    public boolean isClockSeconds() { return prefs.getBoolean(KEY_LOOK_CLOCK_SECONDS, false); }
+    public void setClockSeconds(boolean v) { prefs.edit().putBoolean(KEY_LOOK_CLOCK_SECONDS, v).apply(); }
+
+    public boolean isRailLabels() { return prefs.getBoolean(KEY_LOOK_RAIL_LABELS, true); }
+    public void setRailLabels(boolean v) { prefs.edit().putBoolean(KEY_LOOK_RAIL_LABELS, v).apply(); }
+
+    public boolean isStatusTemp() { return prefs.getBoolean(KEY_LOOK_STATUS_TEMP, true); }
+    public void setStatusTemp(boolean v) { prefs.edit().putBoolean(KEY_LOOK_STATUS_TEMP, v).apply(); }
+
+    public boolean isStatusGps() { return prefs.getBoolean(KEY_LOOK_STATUS_GPS, true); }
+    public void setStatusGps(boolean v) { prefs.edit().putBoolean(KEY_LOOK_STATUS_GPS, v).apply(); }
+
+    public boolean isStatusPhone() { return prefs.getBoolean(KEY_LOOK_STATUS_PHONE, true); }
+    public void setStatusPhone(boolean v) { prefs.edit().putBoolean(KEY_LOOK_STATUS_PHONE, v).apply(); }
+
+    public HomeTiles getHomeTiles() { return HomeTiles.parse(prefs.getString(KEY_LOOK_HOME_TILES, HomeTiles.DEFAULT)); }
+    public void setHomeTiles(HomeTiles tiles) { prefs.edit().putString(KEY_LOOK_HOME_TILES, tiles.serialize()).apply(); }
+
+    /** Puts every Look setting back to the design-system default. Leaves the wallpaper file alone. */
+    public void resetLook() {
+        prefs.edit()
+                .remove(KEY_LOOK_ACCENT_SET).remove(KEY_ACCENT_COLOR).remove(KEY_LOOK_STYLE)
+                .remove(KEY_LOOK_RADIUS).remove(KEY_LOOK_OPACITY).remove(KEY_LOOK_TEXT)
+                .remove(KEY_LOOK_WALLPAPER).remove(KEY_LOOK_CLOCK_SIZE).remove(KEY_LOOK_CLOCK_SECONDS)
+                .remove(KEY_LOOK_RAIL_LABELS).remove(KEY_LOOK_STATUS_TEMP).remove(KEY_LOOK_STATUS_GPS)
+                .remove(KEY_LOOK_STATUS_PHONE).remove(KEY_LOOK_HOME_TILES)
+                .apply();
     }
 
     public String getSpeedUnit() {
@@ -72,12 +157,31 @@ public class PreferenceHelper {
         prefs.edit().putString(KEY_SELECTED_DRIVER_DEVICE, deviceAddress).apply();
     }
 
+    /**
+     * Saves the driver phone with its name. The name is kept because head units often
+     * report no bonded devices to Android's Bluetooth stack, so it can't always be looked up.
+     */
+    public void setSelectedDriverDevice(String deviceAddress, String deviceName) {
+        prefs.edit()
+                .putString(KEY_SELECTED_DRIVER_DEVICE, deviceAddress)
+                .putString(KEY_SELECTED_DRIVER_NAME, deviceName != null ? deviceName : "")
+                .apply();
+    }
+
+    /** Name saved with the driver phone, or "" when none was saved. */
+    public String getSelectedDriverName() {
+        return prefs.getString(KEY_SELECTED_DRIVER_NAME, "");
+    }
+
+    private static final String KEY_SELECTED_DRIVER_NAME = "selected_driver_name";
+
     private static final String KEY_SAVED_TEMP_C = "saved_temp_c";
     private static final String KEY_SAVED_CONDITION = "saved_condition";
     private static final String KEY_MANUAL_TEMP_CALIBRATION = "manual_temp_calibration";
 
     public float getSavedTempCelsius() {
-        return prefs.getFloat(KEY_SAVED_TEMP_C, 32.0f);
+        // NaN = nothing saved. A placeholder value would be shown as a real reading (P-33).
+        return prefs.getFloat(KEY_SAVED_TEMP_C, Float.NaN);
     }
 
     public void setSavedTempCelsius(float temp) {
@@ -85,7 +189,7 @@ public class PreferenceHelper {
     }
 
     public String getSavedCondition() {
-        return prefs.getString(KEY_SAVED_CONDITION, "OUTSIDE");
+        return prefs.getString(KEY_SAVED_CONDITION, "Manual");
     }
 
     public void setSavedCondition(String condition) {
@@ -203,5 +307,70 @@ public class PreferenceHelper {
 
     public void clearRecentApps() {
         prefs.edit().remove(KEY_RECENT_APPS).apply();
+    }
+
+    // --- Online weather consent (P-38). Default OFF: no network call is made until set. ---
+    private static final String KEY_ONLINE_WEATHER_ALLOWED = "online_weather_allowed";
+
+    public boolean isOnlineWeatherAllowed() {
+        return prefs.getBoolean(KEY_ONLINE_WEATHER_ALLOWED, false);
+    }
+
+    public void setOnlineWeatherAllowed(boolean allowed) {
+        prefs.edit().putBoolean(KEY_ONLINE_WEATHER_ALLOWED, allowed).apply();
+    }
+
+    // --- Coarse saved location for weather (rounded to 2 decimals, about 1 km) ---
+    private static final String KEY_WEATHER_LAT = "weather_lat";
+    private static final String KEY_WEATHER_LON = "weather_lon";
+
+    public boolean hasSavedWeatherLocation() {
+        return prefs.contains(KEY_WEATHER_LAT) && prefs.contains(KEY_WEATHER_LON);
+    }
+
+    public double getSavedWeatherLat() {
+        return prefs.getFloat(KEY_WEATHER_LAT, 0f);
+    }
+
+    public double getSavedWeatherLon() {
+        return prefs.getFloat(KEY_WEATHER_LON, 0f);
+    }
+
+    public void setSavedWeatherLocation(double lat, double lon) {
+        prefs.edit().putFloat(KEY_WEATHER_LAT, (float) lat).putFloat(KEY_WEATHER_LON, (float) lon).apply();
+    }
+
+    // --- Temperature unit, independent of the speed unit (P-21) ---
+    private static final String KEY_TEMP_FAHRENHEIT = "temp_fahrenheit";
+
+    public boolean isTempFahrenheitSet() {
+        return prefs.contains(KEY_TEMP_FAHRENHEIT);
+    }
+
+    public boolean isTempFahrenheit() {
+        return prefs.getBoolean(KEY_TEMP_FAHRENHEIT, false);
+    }
+
+    public void setTempFahrenheit(boolean fahrenheit) {
+        prefs.edit().putBoolean(KEY_TEMP_FAHRENHEIT, fahrenheit).apply();
+    }
+
+    // --- Persisted trip A (P-20) ---
+    private static final String KEY_TRIP_DISTANCE_M = "trip_distance_m";
+    private static final String KEY_TRIP_MOVING_MS = "trip_moving_ms";
+
+    public double getTripDistanceMeters() {
+        return Double.longBitsToDouble(prefs.getLong(KEY_TRIP_DISTANCE_M, Double.doubleToLongBits(0.0)));
+    }
+
+    public long getTripMovingMillis() {
+        return prefs.getLong(KEY_TRIP_MOVING_MS, 0L);
+    }
+
+    public void setTrip(double distanceMeters, long movingMillis) {
+        prefs.edit()
+                .putLong(KEY_TRIP_DISTANCE_M, Double.doubleToLongBits(distanceMeters))
+                .putLong(KEY_TRIP_MOVING_MS, movingMillis)
+                .apply();
     }
 }

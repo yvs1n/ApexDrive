@@ -1,75 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Recent app row: surface-1 row, 40 px icon, name and state, Open and Close. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="64dp"
-    android:layout_marginBottom="8dp"
-    android:orientation="horizontal"
-    android:gravity="center_vertical"
-    android:background="@drawable/bg_card_inner"
-    android:paddingStart="14dp"
-    android:paddingEnd="14dp">
+    style="@style/Widget.ApexDrive.Row"
+    android:layout_marginBottom="12dp"
+    android:background="@drawable/ad_bg_row_raised">
 
-    <!-- App Icon -->
     <ImageView
         android:id="@+id/ivTaskIcon"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="16dp"
         android:scaleType="fitCenter"
-        android:contentDescription="App Icon" />
+        android:importantForAccessibility="no" />
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="14dp"
         android:layout_weight="1"
         android:orientation="vertical">
 
         <TextView
             android:id="@+id/tvTaskName"
-            android:layout_width="wrap_content"
+            style="@style/Widget.ApexDrive.RowTitle"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="CarPlay"
-            android:textColor="@color/cockpit_text_primary"
-            android:textSize="14sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.02" />
+            android:fontFamily="@font/atkinson_next_semibold" />
 
         <TextView
             android:id="@+id/tvTaskStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="Active in background"
-            android:textColor="@color/cockpit_text_secondary"
-            android:textSize="11sp"
-            android:fontFamily="sans-serif" />
+            style="@style/Widget.ApexDrive.RowDetail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
     </LinearLayout>
 
-    <!-- Switch Button -->
     <Button
         android:id="@+id/btnSwitchTask"
+        style="@style/Widget.ApexDrive.Button"
         android:layout_width="wrap_content"
-        android:layout_height="42dp"
-        android:background="@drawable/bg_elevated_btn"
-        android:paddingStart="14dp"
-        android:paddingEnd="14dp"
-        android:text="SWITCH"
-        android:textColor="@color/accent_amber"
-        android:textSize="11sp"
-        android:fontFamily="sans-serif-black" />
+        android:layout_height="48dp"
+        android:minHeight="48dp"
+        android:layout_marginStart="12dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:text="Open" />
 
-    <!-- Close Button -->
     <Button
         android:id="@+id/btnCloseTask"
+        style="@style/Widget.ApexDrive.Button.Quiet"
         android:layout_width="wrap_content"
-        android:layout_height="42dp"
-        android:layout_marginStart="8dp"
-        android:background="@drawable/bg_elevated_btn"
-        android:paddingStart="14dp"
-        android:paddingEnd="14dp"
-        android:text="CLOSE"
-        android:textColor="@color/accent_sport_red"
-        android:textSize="11sp"
-        android:fontFamily="sans-serif-black" />
-
+        android:layout_height="48dp"
+        android:minHeight="48dp"
+        android:layout_marginStart="4dp"
+        android:text="Close" />
 </LinearLayout>

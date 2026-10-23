@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Floating notification capsule. Inflated and shown by Notifier. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/notificationRoot"
+    android:layout_width="640dp"
+    android:layout_height="wrap_content"
+    android:minHeight="80dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="12dp"
+    android:elevation="8dp"
+    android:background="@drawable/ad_bg_notification">
+
+    <FrameLayout
+        android:id="@+id/notificationBadge"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:background="@drawable/ad_bg_badge_neutral">
+
+        <ImageView
+            android:id="@+id/notificationIcon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_sym_info" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="12dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/notificationTitle"
+            style="@style/TextAppearance.ApexDrive.Glance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/notificationDetail"
+            style="@style/TextAppearance.ApexDrive.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/notificationAction"
+        style="@style/TextAppearance.ApexDrive.Label"
+        android:layout_width="wrap_content"
+        android:layout_height="56dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/ad_bg_btn_secondary"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:minWidth="64dp"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/notificationClose"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:background="@drawable/ad_bg_btn_secondary"
+        android:clickable="true"
+        android:contentDescription="@string/ad_notification_close"
+        android:focusable="true"
+        android:padding="12dp"
+        android:src="@drawable/ic_sym_close"
+        app:tint="@color/ad_label_1"
+        xmlns:app="http://schemas.android.com/apk/res-auto" />
+</LinearLayout>

@@ -1,137 +1,85 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- "Choose a phone" sheet, as drawn in design/design-system.html (tpl-sheet-overlay): 560 x 448 glass. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="560dp"
+    android:layout_height="448dp"
     android:orientation="vertical"
-    android:background="@drawable/bg_panel"
-    android:padding="20dp"
-    android:minWidth="480dp">
+    android:padding="16dp"
+    android:background="@drawable/ad_bg_glass_sheet">
 
-    <!-- Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="4dp">
 
         <TextView
+            style="@style/TextAppearance.ApexDrive.Title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="SELECT DRIVER PHONE"
-            android:textColor="@color/cockpit_text_primary"
-            android:textSize="18sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.04" />
+            android:text="Choose a phone" />
 
-        <TextView
-            android:id="@+id/tvCountdownTimer"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Auto in 8s"
-            android:textColor="@color/accent_amber"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-bold" />
+        <ImageButton
+            android:id="@+id/btnSkipSelector"
+            style="@style/Widget.ApexDrive.IconButton"
+            android:background="@drawable/ad_bg_btn_close"
+            android:src="@drawable/ic_sym_close"
+            android:contentDescription="Close" />
     </LinearLayout>
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="Tap your phone to lock Bluetooth &amp; CarPlay. Prevents hijacking other phones in the car."
-        android:textColor="@color/cockpit_text_secondary"
-        android:textSize="12sp"
-        android:fontFamily="sans-serif" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="12dp"
-        android:layout_marginBottom="12dp"
-        android:background="@color/cockpit_surface_border_subtle" />
-
-    <!-- Loading State While Bluetooth Stack Initializes at Boot -->
     <LinearLayout
         android:id="@+id/layoutDeviceLoading"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:paddingTop="16dp"
-        android:paddingBottom="16dp"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:minHeight="@dimen/ad_row_height"
+        android:paddingStart="16dp"
         android:visibility="gone">
 
         <ProgressBar
             android:id="@+id/pbDeviceLoading"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:indeterminate="true" />
 
         <TextView
             android:id="@+id/tvDeviceLoadingText"
+            style="@style/TextAppearance.ApexDrive.Label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="INITIALIZING BLUETOOTH &amp; DETECTING PHONES..."
-            android:textColor="@color/cockpit_text_primary"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.06" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Waking head unit Bluetooth stack · Detecting paired driver phones"
-            android:textColor="@color/cockpit_text_secondary"
-            android:textSize="11sp"
-            android:fontFamily="sans-serif" />
+            android:layout_marginStart="16dp"
+            android:textColor="@color/ad_label_2"
+            android:text="Looking for paired phones" />
     </LinearLayout>
 
-    <!-- Container for Paired Phone Cards (Big Fingers Friendly) -->
-    <LinearLayout
-        android:id="@+id/deviceListContainer"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:layout_marginTop="12dp"
-        android:layout_marginBottom="12dp"
-        android:background="@color/cockpit_surface_border_subtle" />
+        android:scrollbars="none"
+        android:overScrollMode="never">
 
-    <!-- Action Buttons (Large Touch Targets >= 54dp) -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        <LinearLayout
+            android:id="@+id/deviceListContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
 
-        <Button
-            android:id="@+id/btnPairNewDevice"
-            android:layout_width="0dp"
-            android:layout_height="54dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_elevated_btn"
-            android:text="PAIR NEW PHONE"
-            android:textColor="@color/cockpit_text_primary"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.08" />
-
-        <Button
-            android:id="@+id/btnSkipSelector"
-            android:layout_width="0dp"
-            android:layout_height="54dp"
-            android:layout_weight="1.2"
-            android:layout_marginStart="12dp"
-            android:background="@drawable/bg_elevated_btn"
-            android:text="CONTINUE TO DASHBOARD"
-            android:textColor="@color/accent_amber"
-            android:textSize="13sp"
-            android:fontFamily="sans-serif-black" />
-    </LinearLayout>
+    <com.apexdrive.launcher.ui.CenteredIconButton
+        android:id="@+id/btnPairNewDevice"
+        style="@style/Widget.ApexDrive.Button"
+        android:layout_width="wrap_content"
+        android:layout_marginTop="12dp"
+        app:drawableStartCompat="@drawable/ic_btn_add"
+        android:text="Pair a phone" />
 
 </LinearLayout>

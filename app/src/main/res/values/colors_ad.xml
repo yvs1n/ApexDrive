@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Design system colour tokens (Day). Generated from design/design-system.html; edit the tokens there first. -->
+<resources>
+    <color name="ad_canvas">#E4E8EC</color>
+    <color name="ad_surface_1">#FFFFFF</color>
+    <color name="ad_surface_2">#F2F4F6</color>
+    <color name="ad_surface_3">#E3E7EB</color>
+    <color name="ad_fill_pressed">#D3D9E0</color>
+    <color name="ad_segment_selected">#FFFFFF</color>
+    <color name="ad_label_1">#0E1116</color>
+    <color name="ad_label_2">#3D4550</color>
+    <color name="ad_label_3">#56606C</color>
+    <color name="ad_label_4">#9AA1AB</color>
+    <color name="ad_separator">#D6DBE1</color>
+    <color name="ad_outline">#6F7886</color>
+    <color name="ad_accent">#007A8E</color>
+    <color name="ad_accent_pressed">#006577</color>
+    <color name="ad_on_accent">#FFFFFF</color>
+    <color name="ad_accent_text">#006E80</color>
+    <color name="ad_ok">#08743F</color>
+    <color name="ad_caution">#8F5D00</color>
+    <color name="ad_alert">#C42E1C</color>
+    <color name="ad_on_ok">#FFFFFF</color>
+    <color name="ad_on_caution">#FFFFFF</color>
+    <color name="ad_on_alert">#FFFFFF</color>
+    <color name="ad_glass">#CCF7F8FA</color>
+    <color name="ad_glass_solid">#F4F6F8</color>
+    <color name="ad_glass_edge">#1A0E1116</color>
+    <color name="ad_glass_hi">#E6FFFFFF</color>
+    <color name="ad_scrim">#520E1116</color>
+    <color name="ad_dim">#8C000000</color>
+    <color name="ad_clear_glass">#1FFFFFFF</color>
+</resources>

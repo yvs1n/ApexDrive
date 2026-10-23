@@ -2,13 +2,24 @@ name: Build ApexDrive APK
 
 on:
   push:
-    branches: [ "**" ]
+    branches: [ "main", "integration/preview" ]
+  pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
     name: Build Android APK
     runs-on: ubuntu-latest
+    permissions:
+      # Write is needed only to publish the APK to a release (see the last step).
+      contents: write
+
+    env:
+      # Newer than every earlier run, so head-unit installers accept the update.
+      VERSION_CODE: ${{ github.run_number }}
 
     steps:
       - name: Checkout Source Code
@@ -32,19 +43,62 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: '8.2'
           cache-disabled: true
 
-      - name: Assemble Debug APK
+      # Secrets are not available to pull requests from forks. Without them the
+      # build is signed with the default debug key (see README, "Signing").
+      - name: Prepare signing key (if secrets are set)
+        env:
+          KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          gradle assembleDebug --stacktrace 2>&1 | tee build.log || (echo "=== GRADLE FAILURE ===" && tail -n 120 build.log && exit 1)
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            {
+              echo "SIGNING_KEYSTORE_FILE=$RUNNER_TEMP/release.jks"
+              echo "SIGNING_KEYSTORE_PASSWORD=$SIGNING_KEYSTORE_PASSWORD"
+              echo "SIGNING_KEY_ALIAS=$SIGNING_KEY_ALIAS"
+              echo "SIGNING_KEY_PASSWORD=$SIGNING_KEY_PASSWORD"
+            } >> "$GITHUB_ENV"
+            echo "Using stable signing key."
+          else
+            echo "No signing secrets; using the debug key."
+          fi
 
+      - name: Lint, unit tests, debug and release APKs
+        shell: bash
+        run: |
+          ./gradlew lintDebug testDebugUnitTest assembleDebug assembleRelease --stacktrace 2>&1 | tee build.log || (echo "=== GRADLE FAILURE ===" && tail -n 120 build.log && exit 1)
+
+      # Install this one in the car: release builds start faster than debug builds.
       - name: Upload ApexDrive APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: ApexDrive-APK
+          path: app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ApexDrive-APK-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      - name: Upload Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            app/build/reports/lint-results-debug.html
+            app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Upload Build Failure Log
         if: failure()
@@ -52,3 +106,20 @@ jobs:
         with:
           name: build-failure-log
           path: build.log
+          retention-days: 14
+
+      # A plain .apk to download, without unzipping an artifact. Each push replaces the
+      # APK in a rolling pre-release: "preview" for integration/preview, "latest" for main.
+      # Its link stays the same: releases/download/<tag>/ApexDrive.apk
+      - name: Publish APK to the rolling release
+        if: success() && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then TAG=latest; else TAG=preview; fi
+          cp app/build/outputs/apk/release/app-release.apk ApexDrive.apk
+          NOTES="Built from ${GITHUB_REF_NAME} at ${GITHUB_SHA::7} (run ${GITHUB_RUN_NUMBER}). Install ApexDrive.apk on the head unit."
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" ApexDrive.apk --target "$GITHUB_SHA" --prerelease \
+            --title "ApexDrive ${TAG} (build ${GITHUB_RUN_NUMBER})" --notes "$NOTES"
