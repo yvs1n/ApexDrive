@@ -1778,7 +1778,7 @@ public class MainActivity extends AppCompatActivity {
         int rise = t != null ? t[0] : SunTimes.FALLBACK_SUNRISE_MIN;
         int set = t != null ? t[1] : SunTimes.FALLBACK_SUNSET_MIN;
         String when = "Night " + hhmm(set) + ", Day " + hhmm(rise);
-        return t != null ? when + " (sunset, sunrise)" : when + " until GPS has a fix";
+        return t != null ? when : when + " until GPS has a fix";
     }
 
     private String hhmm(int minutes) {
