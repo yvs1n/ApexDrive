@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Look (Settings > Look): attributes Skin reads while views are inflated, and the view tags it keeps. -->
+<resources>
+    <declare-styleable name="AdSkin">
+        <attr name="android:background" />
+        <attr name="android:textColor" />
+        <attr name="android:tint" />
+        <attr name="tint" />
+        <attr name="drawableTint" />
+    </declare-styleable>
+
+    <item name="skin_bg" type="id" />
+    <item name="skin_text" type="id" />
+    <item name="skin_tint" type="id" />
+    <item name="skin_dtint" type="id" />
+    <item name="skin_text_px" type="id" />
+    <item name="skin_elevation" type="id" />
+</resources>
