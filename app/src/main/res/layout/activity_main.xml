@@ -2,6 +2,7 @@
 <!-- Shell from design/design-system.html: floating glass rail (8 px inset, 96 wide),
      floating glass status capsule (52 tall) and a 896 x 520 content area. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/appRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/ad_canvas">
@@ -93,6 +94,7 @@
 
         <!-- GPS -->
         <LinearLayout
+            android:id="@+id/statusGps"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="24dp"
