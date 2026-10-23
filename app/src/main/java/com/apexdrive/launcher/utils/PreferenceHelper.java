@@ -67,14 +67,17 @@ public class PreferenceHelper {
 
     public int getLookStyle() { return prefs.getInt(KEY_LOOK_STYLE, Look.STYLE_DEFAULT); }
 
-    /** Applies a style preset: its corners, card opacity and (only if none is set) wallpaper. */
+    /**
+     * Applies a style preset: its accent, corners, card opacity and wallpaper. A wallpaper image
+     * the user chose is kept; they can change any part afterwards.
+     */
     public void applyLookStyle(int style) {
         SharedPreferences.Editor e = prefs.edit()
                 .putInt(KEY_LOOK_STYLE, style)
                 .putInt(KEY_LOOK_RADIUS, Look.styleRadius(style))
                 .putInt(KEY_LOOK_OPACITY, Look.styleOpacity(style))
                 .putInt(KEY_ACCENT_COLOR, Look.ACCENT_STYLE);
-        if (getLookWallpaper() == Look.WALLPAPER_NONE) e.putInt(KEY_LOOK_WALLPAPER, Look.styleWallpaper(style));
+        if (getLookWallpaper() != Look.WALLPAPER_CUSTOM) e.putInt(KEY_LOOK_WALLPAPER, Look.styleWallpaper(style));
         e.apply();
     }
 

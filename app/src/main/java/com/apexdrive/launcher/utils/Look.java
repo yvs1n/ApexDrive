@@ -174,13 +174,13 @@ public final class Look {
     };
     private static final int[][] WALLPAPER_DAY = {
             null,
-            {0xFFE6EAF7, 0xFFE9E1F2, 0xFFF3E4EC},
-            {0xFFDDF1EE, 0xFFE1F2E8, 0xFFEAF4E1},
-            {0xFFFBEDE4, 0xFFF7E1D3, 0xFFF1D6C4},
-            {0xFFE2ECF7, 0xFFD8E5F3, 0xFFCDDFF0},
-            {0xFFEEF0F2, 0xFFE1E4E8, 0xFFD3D8DE},
-            {0xFFE8F1E4, 0xFFDDEAD6, 0xFFD0E2C7},
-            {0xFFFCEEE6, 0xFFF7E0E4, 0xFFEEDAEE},
+            {0xFFD4DCF5, 0xFFDCCDEE, 0xFFEBD3E2},
+            {0xFFC9EAE4, 0xFFD0EBDC, 0xFFDDEDCF},
+            {0xFFF8DFCF, 0xFFF3CFBA, 0xFFEBC2A8},
+            {0xFFCFE0F3, 0xFFC3D7EE, 0xFFB6CDEA},
+            {0xFFE4E7EA, 0xFFD3D7DC, 0xFFC2C8D0},
+            {0xFFD9E8D2, 0xFFCADFC0, 0xFFBAD5AE},
+            {0xFFF9DFD2, 0xFFF2CCD4, 0xFFE6C7E6},
     };
 
     /** Gradient stops for a built-in wallpaper, or null for None and Your image. */
