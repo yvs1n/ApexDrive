@@ -15,6 +15,14 @@ public final class CarPlayLink {
     }
 
     /** "CarPlay", "Wireless CarPlay", "Android Auto" ... or "" when unknown. */
+    /**
+     * The Bluetooth name the CarPlay app advertises to the phone ("ZJ" on TLINK5), or "".
+     * It is separate from the head unit's own Bluetooth (calls and music).
+     */
+    public static String bluetoothName() {
+        return BtHiddenApi.systemProperty("persist.zlink.bt.name").trim();
+    }
+
     public static String kind() {
         return describe(BtHiddenApi.systemProperty("zj.phonelink.type"));
     }
