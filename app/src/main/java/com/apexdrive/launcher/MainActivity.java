@@ -625,10 +625,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showCarPlaySteps() {
+        String linkName = CarPlayLink.bluetoothName();
+        String car = linkName.isEmpty() ? "this car" : "\"" + linkName + "\"";
         new AlertDialog.Builder(this)
                 .setTitle("CarPlay not starting?")
-                .setMessage("1. Unlock your phone.\n"
-                        + "2. Check that Bluetooth is on and the phone is connected.\n"
+                .setMessage("1. Unlock your iPhone and turn on Bluetooth and Wi-Fi.\n"
+                        + "2. On the iPhone, open Settings > General > CarPlay and choose " + car + ".\n"
                         + "3. If CarPlay uses a cable, plug it in again.\n"
                         + "4. Choose your CarPlay app in Settings, then try Open CarPlay.")
                 .setPositiveButton("Done", null)
@@ -2639,8 +2641,13 @@ public class MainActivity extends AppCompatActivity {
     private String pendingCarPlayApp = "";
     private final Runnable carPlayOpenCheck = () -> {
         if (!activityResumed || isFinishing()) return;
+        // Wireless CarPlay is started from the iPhone: TLINK5 has its own Bluetooth name,
+        // which the head unit's Bluetooth app does not list.
+        String linkName = CarPlayLink.bluetoothName();
         notifier.show(Notifier.Kind.ALERT, pendingCarPlayApp + " didn't open CarPlay",
-                "Connect your iPhone in the head unit's Bluetooth app first", "Bluetooth", this::openBluetoothManager);
+                linkName.isEmpty()
+                        ? "On the iPhone, open Settings > General > CarPlay and choose this car"
+                        : "On the iPhone, open Settings > General > CarPlay and choose \"" + linkName + "\"");
     };
 
     /**
