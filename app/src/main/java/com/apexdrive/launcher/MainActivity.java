@@ -65,6 +65,7 @@ import com.apexdrive.launcher.services.MediaSyncService;
 import com.apexdrive.launcher.utils.Notifier;
 import com.apexdrive.launcher.utils.HeadUnitReport;
 import com.apexdrive.launcher.utils.PreferenceHelper;
+import com.apexdrive.launcher.utils.SunTimes;
 
 import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
@@ -136,7 +137,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        AppCompatDelegate.setDefaultNightMode(isNightTheme() ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
+        appliedNight = isNightTheme();
+        AppCompatDelegate.setDefaultNightMode(appliedNight ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
         prefHelper = new PreferenceHelper(this);
         // Installed before AppCompat's own factory, which it wraps: views follow Settings > Look as they are inflated.
         skin = new Skin(this, getDelegate(), prefHelper.getLook(isNightTheme()));
@@ -1104,6 +1106,13 @@ public class MainActivity extends AppCompatActivity {
         swNight.setSaveEnabled(false);
         swNight.setChecked(isNightTheme());
         onSettingsRow("rowSetNight", this::toggleTheme);
+        androidx.appcompat.widget.SwitchCompat swAutoNight = settingsView("switchSetAutoNight");
+        swAutoNight.setSaveEnabled(false);
+        boolean auto = THEME_AUTO.equals(themeMode());
+        swAutoNight.setChecked(auto);
+        TextView tvAuto = settingsView("tvSetAutoNight");
+        tvAuto.setText(auto ? autoThemeDetail() : "Night at sunset, Day at sunrise");
+        onSettingsRow("rowSetAutoNight", this::toggleAutoTheme);
         View kmh = settingsView("segUnitKmh");
         View mph = settingsView("segUnitMph");
         kmh.setOnClickListener(v -> { if (prefHelper.getSpeedUnit().equals(PreferenceHelper.UNIT_MPH)) toggleSpeedUnit(); });
@@ -1710,14 +1719,99 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception ignored) {}
     }
 
-    private boolean isNightTheme() {
-        return getSharedPreferences("ad_display", MODE_PRIVATE).getBoolean("night", true);
+    private static final String THEME_AUTO = "auto", THEME_DAY = "day", THEME_NIGHT = "night";
+    /** Whether the theme in use was built as Night; compared with the clock to switch at sunset. */
+    private boolean appliedNight;
+
+    /** "auto", "day" or "night". Someone who already chose Day or Night keeps that choice. */
+    private String themeMode() {
+        android.content.SharedPreferences d = getSharedPreferences("ad_display", MODE_PRIVATE);
+        String mode = d.getString("theme_mode", null);
+        if (mode != null) return mode;
+        return d.contains("night") ? (d.getBoolean("night", true) ? THEME_NIGHT : THEME_DAY) : THEME_AUTO;
     }
 
-    private void toggleTheme() {
+    private boolean isNightTheme() {
+        String mode = themeMode();
+        return THEME_AUTO.equals(mode) ? autoIsNight() : THEME_NIGHT.equals(mode);
+    }
+
+    /** Night between sunset and sunrise at the car's last known position. */
+    private boolean autoIsNight() {
+        double[] p = sunPosition();
+        return SunTimes.isNight(p[0], p[1], java.util.Calendar.getInstance());
+    }
+
+    /**
+     * The last known position, rounded and kept so the theme is right at start-up before GPS
+     * has a fix. {NaN, NaN} when none was ever known (then 06:30 and 18:30 are used).
+     */
+    @SuppressLint("MissingPermission")
+    private double[] sunPosition() {
+        android.content.SharedPreferences d = getSharedPreferences("ad_display", MODE_PRIVATE);
+        android.location.Location loc = gpsManager != null ? gpsManager.getLastLocation() : null;
+        if (loc == null) {
+            try {
+                android.location.LocationManager lm = (android.location.LocationManager) getSystemService(LOCATION_SERVICE);
+                if (lm != null) {
+                    loc = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER);
+                    if (loc == null) loc = lm.getLastKnownLocation(android.location.LocationManager.PASSIVE_PROVIDER);
+                }
+            } catch (Exception ignored) {
+                // No location permission yet.
+            }
+        }
+        if (loc != null && (loc.getLatitude() != 0 || loc.getLongitude() != 0)) {
+            float lat = Math.round(loc.getLatitude() * 10) / 10f, lon = Math.round(loc.getLongitude() * 10) / 10f;
+            if (d.getFloat("sun_lat", Float.NaN) != lat || d.getFloat("sun_lon", Float.NaN) != lon) {
+                d.edit().putFloat("sun_lat", lat).putFloat("sun_lon", lon).apply();
+            }
+            return new double[]{lat, lon};
+        }
+        return new double[]{d.getFloat("sun_lat", Float.NaN), d.getFloat("sun_lon", Float.NaN)};
+    }
+
+    /** Detail line for the automatic row: when the theme changes today. */
+    private String autoThemeDetail() {
+        double[] p = sunPosition();
+        int[] t = Double.isNaN(p[0]) ? null : SunTimes.localMinutes(p[0], p[1], java.util.Calendar.getInstance());
+        int rise = t != null ? t[0] : SunTimes.FALLBACK_SUNRISE_MIN;
+        int set = t != null ? t[1] : SunTimes.FALLBACK_SUNSET_MIN;
+        String when = "Night " + hhmm(set) + ", Day " + hhmm(rise);
+        return t != null ? when + " (sunset, sunrise)" : when + " until GPS has a fix";
+    }
+
+    private String hhmm(int minutes) {
+        java.util.Calendar c = java.util.Calendar.getInstance();
+        c.set(java.util.Calendar.HOUR_OF_DAY, minutes / 60);
+        c.set(java.util.Calendar.MINUTE, minutes % 60);
+        return new SimpleDateFormat(is24HourClock() ? "H:mm" : "h:mm a", Locale.getDefault()).format(c.getTime());
+    }
+
+    private void setThemeMode(String mode) {
         getSharedPreferences("ad_display", MODE_PRIVATE).edit()
-                .putBoolean("night", !isNightTheme()).putBoolean("reopen_settings", true).apply();
+                .putString("theme_mode", mode).putBoolean("reopen_settings", true).apply();
         recreate();
+    }
+
+    /** The Night switch picks Day or Night by hand, which turns Automatic off. */
+    private void toggleTheme() {
+        setThemeMode(isNightTheme() ? THEME_DAY : THEME_NIGHT);
+    }
+
+    private void toggleAutoTheme() {
+        setThemeMode(THEME_AUTO.equals(themeMode()) ? (isNightTheme() ? THEME_NIGHT : THEME_DAY) : THEME_AUTO);
+    }
+
+    /** In Automatic, switches the theme when sunset or sunrise has passed. */
+    private void checkAutoTheme() {
+        if (!activityResumed || !THEME_AUTO.equals(themeMode())) return;
+        if (autoIsNight() != appliedNight) {
+            if (viewSetup != null && viewSetup.getVisibility() == View.VISIBLE) {
+                getSharedPreferences("ad_display", MODE_PRIVATE).edit().putBoolean("reopen_settings", true).apply();
+            }
+            recreate();
+        }
     }
 
     // --- Look (Settings > Look) -----------------------------------------------------------
@@ -2290,6 +2384,7 @@ public class MainActivity extends AppCompatActivity {
                 boolean h24 = is24HourClock();
                 long now = System.currentTimeMillis();
                 tvClock.setText((clockSeconds ? (h24 ? sdf24s : sdf12s) : (h24 ? sdf24 : sdf12)).format(new Date(now)));
+                if (now % 60000 < 1000) checkAutoTheme(); // once a minute
                 // Tick just after each new second so seconds never skip.
                 clockHandler.postDelayed(this, 1000 - now % 1000 + 5);
             }
@@ -3274,6 +3369,7 @@ public class MainActivity extends AppCompatActivity {
         if (btWatcher != null) btWatcher.forceRefresh();
         clockHandler.removeCallbacks(carPlayLinkPoll);
         clockHandler.post(carPlayLinkPoll);
+        checkAutoTheme();
     }
 
     @Override

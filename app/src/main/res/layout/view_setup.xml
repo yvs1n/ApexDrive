@@ -399,6 +399,46 @@
                     android:text="Display" />
 
                 <LinearLayout
+                    android:id="@+id/rowSetAutoNight"
+                    style="@style/Widget.ApexDrive.Row"
+                    android:layout_marginTop="12dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        style="@style/Widget.ApexDrive.RowIcon"
+                        android:src="@drawable/ic_sym_schedule" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/Widget.ApexDrive.RowTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Automatic Day and Night" />
+
+                        <TextView
+                            android:id="@+id/tvSetAutoNight"
+                            style="@style/Widget.ApexDrive.RowDetail"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Night at sunset, Day at sunrise" />
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchSetAutoNight"
+                        style="@style/Widget.ApexDrive.Switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:clickable="false"
+                        android:focusable="false" />
+                </LinearLayout>
+
+                <LinearLayout
                     android:id="@+id/rowSetNight"
                     style="@style/Widget.ApexDrive.Row"
                     android:layout_marginTop="12dp"
