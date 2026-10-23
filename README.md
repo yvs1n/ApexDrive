@@ -1,6 +1,27 @@
 # ApexDrive — Minimalist Car Launcher
 *Custom Cockpit Interface for 2015 Hyundai Santa Fe & Allwinner T3L Head Units*
 
+![ApexDrive Home screen at night](docs/screenshots/home-night.png)
+
+**Get the latest preview build:** [ApexDrive.apk](https://github.com/yvs1n/ApexDrive/releases/download/preview/ApexDrive.apk). Open the link on the head unit, or copy the file to a USB drive and install it with the head unit's file manager.
+
+## Screenshots
+
+The screenshots were taken on a 1024×600 emulator set up like the head unit. The car data (29°C, CarPlay connected) is simulated.
+
+| | |
+|:---:|:---:|
+| ![Home in the Day theme](docs/screenshots/home-day.png) | ![Phone screen with CarPlay connected](docs/screenshots/phone-night.png) |
+| **Home, Day theme.** Drive shortcuts, live speed and trip, now playing, and the phone. | **Phone.** Connection state, one-tap CarPlay, and help when it doesn't start. |
+| ![Maps screen](docs/screenshots/maps-night.png) | ![Audio screen with the radio](docs/screenshots/audio-night.png) |
+| **Maps.** Quick destinations, heading, GPS state and trip; opens OsmAnd or your map app. | **Audio.** Now playing, sources, and the head unit's FM radio. |
+| ![Apps grid](docs/screenshots/apps-day.png) | ![Settings, Look page](docs/screenshots/settings-look-day.png) |
+| **Apps.** Every installed app, with search. | **Settings › Look.** Styles, accent colours, wallpapers and Home tiles, with a live preview. |
+| ![Home in the Glass style](docs/screenshots/home-glass.png) | ![Home in the OLED style](docs/screenshots/home-oled.png) |
+| **Glass style** over a wallpaper. | **OLED style**, true black for night driving. |
+| ![Settings, Display page](docs/screenshots/settings-display-night.png) | ![Settings, About page](docs/screenshots/settings-about-day.png) |
+| **Settings › Display.** Automatic Day and Night from sunset and sunrise, units and clock. | **Settings › About.** Version, Home app status, licence, car and head unit details. |
+
 ---
 
 ## 1. Project Overview
@@ -14,6 +35,9 @@ ApexDrive is a lightweight, zero-lag Android automotive launcher engineered spec
 * **Live Media Controller:** Hooks into Android `MediaSessionManager` to display real song titles, artists, and playback controls for Spotify, Apple Music, YouTube Music, Radio, or CarPlay audio.
 * **Bluetooth Connection Strip:** Compact, low-profile status card for your head unit's `SantafemR` Bluetooth connection.
 * **Driver Ergonomics:** Left-hand drive navigation rail with touch targets $\ge 52\,\text{dp}$, glanceable typography, and customizable accent colors.
+* **Your Look:** Styles (Default, OLED, Glass, Contrast, Warm), accent colours, wallpapers and Home tile order in **Settings › Look**, applied live.
+* **Automatic Day and Night:** Switches theme at sunset and sunrise, worked out on the head unit from the GPS position. No internet needed.
+* **Head Unit Report:** **Settings › Advanced › Head unit report** collects what the launcher needs to support a new head unit, without a computer.
 * **Low Memory Footprint:** Built with lightweight native Android views (no unnecessary libraries; memory use has not been measured yet).
 
 ---
