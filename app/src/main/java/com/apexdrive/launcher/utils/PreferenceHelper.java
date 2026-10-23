@@ -32,12 +32,97 @@ public class PreferenceHelper {
         this.prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
     }
 
+    /**
+     * Accent id from Look.ACCENT_IDS; Look.ACCENT_STYLE (the default) keeps the style's own
+     * accent. Older builds ignored the saved value, so a value left by them is not honoured.
+     */
     public int getAccentColor() {
-        return prefs.getInt(KEY_ACCENT_COLOR, COLOR_AMBER);
+        if (!prefs.getBoolean(KEY_LOOK_ACCENT_SET, false)) return Look.ACCENT_STYLE;
+        return prefs.getInt(KEY_ACCENT_COLOR, Look.ACCENT_STYLE);
     }
 
     public void setAccentColor(int color) {
-        prefs.edit().putInt(KEY_ACCENT_COLOR, color).apply();
+        prefs.edit().putInt(KEY_ACCENT_COLOR, color).putBoolean(KEY_LOOK_ACCENT_SET, true).apply();
+    }
+
+    // --- Look (Settings > Look). Every default gives the design-system look. ---
+    private static final String KEY_LOOK_ACCENT_SET = "look_accent_set";
+    private static final String KEY_LOOK_STYLE = "look_style";
+    private static final String KEY_LOOK_RADIUS = "look_radius";
+    private static final String KEY_LOOK_OPACITY = "look_opacity";
+    private static final String KEY_LOOK_TEXT = "look_text";
+    private static final String KEY_LOOK_WALLPAPER = "look_wallpaper";
+    private static final String KEY_LOOK_CLOCK_SIZE = "look_clock_size";
+    private static final String KEY_LOOK_CLOCK_SECONDS = "look_clock_seconds";
+    private static final String KEY_LOOK_RAIL_LABELS = "look_rail_labels";
+    private static final String KEY_LOOK_STATUS_TEMP = "look_status_temp";
+    private static final String KEY_LOOK_STATUS_GPS = "look_status_gps";
+    private static final String KEY_LOOK_STATUS_PHONE = "look_status_phone";
+    private static final String KEY_LOOK_HOME_TILES = "look_home_tiles";
+
+    /** Colours, corners, card opacity and text size as one Look. */
+    public Look getLook(boolean night) {
+        return new Look(getLookStyle(), getAccentColor(), getLookRadius(), getLookOpacity(), getLookTextSize(), night);
+    }
+
+    public int getLookStyle() { return prefs.getInt(KEY_LOOK_STYLE, Look.STYLE_DEFAULT); }
+
+    /**
+     * Applies a style preset: its accent, corners, card opacity and wallpaper. A wallpaper image
+     * the user chose is kept; they can change any part afterwards.
+     */
+    public void applyLookStyle(int style) {
+        SharedPreferences.Editor e = prefs.edit()
+                .putInt(KEY_LOOK_STYLE, style)
+                .putInt(KEY_LOOK_RADIUS, Look.styleRadius(style))
+                .putInt(KEY_LOOK_OPACITY, Look.styleOpacity(style))
+                .putInt(KEY_ACCENT_COLOR, Look.ACCENT_STYLE);
+        if (getLookWallpaper() != Look.WALLPAPER_CUSTOM) e.putInt(KEY_LOOK_WALLPAPER, Look.styleWallpaper(style));
+        e.apply();
+    }
+
+    public int getLookRadius() { return prefs.getInt(KEY_LOOK_RADIUS, 1); }
+    public void setLookRadius(int v) { prefs.edit().putInt(KEY_LOOK_RADIUS, v).apply(); }
+
+    public int getLookOpacity() { return prefs.getInt(KEY_LOOK_OPACITY, 0); }
+    public void setLookOpacity(int v) { prefs.edit().putInt(KEY_LOOK_OPACITY, v).apply(); }
+
+    public int getLookTextSize() { return prefs.getInt(KEY_LOOK_TEXT, 1); }
+    public void setLookTextSize(int v) { prefs.edit().putInt(KEY_LOOK_TEXT, v).apply(); }
+
+    public int getLookWallpaper() { return prefs.getInt(KEY_LOOK_WALLPAPER, Look.WALLPAPER_NONE); }
+    public void setLookWallpaper(int v) { prefs.edit().putInt(KEY_LOOK_WALLPAPER, v).apply(); }
+
+    public int getClockSize() { return prefs.getInt(KEY_LOOK_CLOCK_SIZE, 1); }
+    public void setClockSize(int v) { prefs.edit().putInt(KEY_LOOK_CLOCK_SIZE, v).apply(); }
+
+    public boolean isClockSeconds() { return prefs.getBoolean(KEY_LOOK_CLOCK_SECONDS, false); }
+    public void setClockSeconds(boolean v) { prefs.edit().putBoolean(KEY_LOOK_CLOCK_SECONDS, v).apply(); }
+
+    public boolean isRailLabels() { return prefs.getBoolean(KEY_LOOK_RAIL_LABELS, true); }
+    public void setRailLabels(boolean v) { prefs.edit().putBoolean(KEY_LOOK_RAIL_LABELS, v).apply(); }
+
+    public boolean isStatusTemp() { return prefs.getBoolean(KEY_LOOK_STATUS_TEMP, true); }
+    public void setStatusTemp(boolean v) { prefs.edit().putBoolean(KEY_LOOK_STATUS_TEMP, v).apply(); }
+
+    public boolean isStatusGps() { return prefs.getBoolean(KEY_LOOK_STATUS_GPS, true); }
+    public void setStatusGps(boolean v) { prefs.edit().putBoolean(KEY_LOOK_STATUS_GPS, v).apply(); }
+
+    public boolean isStatusPhone() { return prefs.getBoolean(KEY_LOOK_STATUS_PHONE, true); }
+    public void setStatusPhone(boolean v) { prefs.edit().putBoolean(KEY_LOOK_STATUS_PHONE, v).apply(); }
+
+    public HomeTiles getHomeTiles() { return HomeTiles.parse(prefs.getString(KEY_LOOK_HOME_TILES, HomeTiles.DEFAULT)); }
+    public void setHomeTiles(HomeTiles tiles) { prefs.edit().putString(KEY_LOOK_HOME_TILES, tiles.serialize()).apply(); }
+
+    /** Puts every Look setting back to the design-system default. Leaves the wallpaper file alone. */
+    public void resetLook() {
+        prefs.edit()
+                .remove(KEY_LOOK_ACCENT_SET).remove(KEY_ACCENT_COLOR).remove(KEY_LOOK_STYLE)
+                .remove(KEY_LOOK_RADIUS).remove(KEY_LOOK_OPACITY).remove(KEY_LOOK_TEXT)
+                .remove(KEY_LOOK_WALLPAPER).remove(KEY_LOOK_CLOCK_SIZE).remove(KEY_LOOK_CLOCK_SECONDS)
+                .remove(KEY_LOOK_RAIL_LABELS).remove(KEY_LOOK_STATUS_TEMP).remove(KEY_LOOK_STATUS_GPS)
+                .remove(KEY_LOOK_STATUS_PHONE).remove(KEY_LOOK_HOME_TILES)
+                .apply();
     }
 
     public String getSpeedUnit() {

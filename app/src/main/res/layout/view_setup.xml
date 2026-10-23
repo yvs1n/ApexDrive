@@ -39,6 +39,12 @@
             android:text="Display" />
 
         <TextView
+            android:id="@+id/setGrpLook"
+            style="@style/Widget.ApexDrive.ListItem"
+            app:drawableStartCompat="@drawable/ic_sym_palette"
+            android:text="Look" />
+
+        <TextView
             android:id="@+id/setGrpAdvanced"
             style="@style/Widget.ApexDrive.ListItem"
             app:drawableStartCompat="@drawable/ic_sym_tune"
@@ -522,6 +528,13 @@
                         android:focusable="false" />
                 </LinearLayout>
             </LinearLayout>
+
+            <ViewStub
+                android:id="@+id/setPageLookStub"
+                android:inflatedId="@+id/setPageLook"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout="@layout/view_setup_look" />
 
             <LinearLayout
                 android:id="@+id/setPageAdvanced"

@@ -46,6 +46,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
+import androidx.core.widget.ImageViewCompat;
+import com.apexdrive.launcher.ui.Skin;
+import com.apexdrive.launcher.utils.HomeTiles;
+import com.apexdrive.launcher.utils.Look;
+import com.apexdrive.launcher.utils.WallpaperStore;
 
 import com.apexdrive.launcher.adapters.AppsGridAdapter;
 import com.apexdrive.launcher.models.AppInfo;
@@ -76,6 +81,10 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQ_CODE = 1001;
 
     private PreferenceHelper prefHelper;
+    private Skin skin;
+    private android.graphics.Bitmap wallpaperImage;
+    private boolean clockSeconds;
+    private static final int REQ_WALLPAPER = 1002;
     private GpsTelemetryManager gpsManager;
     private BluetoothWatcher btWatcher;
     private CarThermometerWatcher thermometerWatcher;
@@ -127,13 +136,17 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         AppCompatDelegate.setDefaultNightMode(isNightTheme() ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
+        prefHelper = new PreferenceHelper(this);
+        // Installed before AppCompat's own factory, which it wraps: views follow Settings > Look as they are inflated.
+        skin = new Skin(this, getDelegate(), prefHelper.getLook(isNightTheme()));
+        androidx.core.view.LayoutInflaterCompat.setFactory2(getLayoutInflater(), skin);
         super.onCreate(savedInstanceState);
         makeFullScreen();
 
-        prefHelper = new PreferenceHelper(this);
         setContentView(R.layout.activity_main);
         notifier = new Notifier(this);
         initViews();
+        applyLook(false);
         initNavigation();
         initClock();
         checkPermissions();
@@ -1040,7 +1053,7 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    private static final String[] SETTINGS_GROUPS = {"Phone", "Navigation", "Audio", "Display", "Advanced", "About"};
+    private static final String[] SETTINGS_GROUPS = {"Phone", "Navigation", "Audio", "Display", "Look", "Advanced", "About"};
 
     private void setupSetupWidgets() {
         for (String key : SETTINGS_GROUPS) {
@@ -1142,6 +1155,7 @@ public class MainActivity extends AppCompatActivity {
             View item = settingsView("setGrp" + k);
             View page = settingsView("setPage" + k);
             boolean on = k.equals(key);
+            if (on && page == null && "Look".equals(k)) page = inflateLookPage();
             if (item != null) {
                 item.setSelected(on);
                 ((TextView) item).setTypeface(androidx.core.content.res.ResourcesCompat.getFont(this,
@@ -1656,9 +1670,403 @@ public class MainActivity extends AppCompatActivity {
         recreate();
     }
 
-    /** The single design-system accent (Day and Night variants come from resources). */
+    // --- Look (Settings > Look) -----------------------------------------------------------
+
+    private interface IntPref { int get(); }
+    private interface IntSetter { void set(int value); }
+    private interface BoolPref { boolean get(); }
+    private interface BoolSetter { void set(boolean value); }
+
+    private static final String[] TILE_KEYS = {"Drive", "Speed", "Media", "Phone"};
+    private static final String[] TILE_IDS = {HomeTiles.DRIVE, HomeTiles.SPEED, HomeTiles.MEDIA, HomeTiles.PHONE};
+    private String appliedHomeTiles = HomeTiles.DEFAULT;
+    private java.util.Map<String, View> homeTileViews;
+    private boolean wallpaperLoading;
+
+    /**
+     * Applies Settings > Look to the whole launcher at once, without restarting. At start-up
+     * (repaint false) the views were already painted while they were inflated, so only the
+     * wallpaper, status bar, rail labels and Home tiles are set.
+     */
+    private void applyLook(boolean repaint) {
+        Look look = prefHelper.getLook(isNightTheme());
+        boolean changed = !look.sameSkin(skin.look());
+        skin.setLook(look);
+        if (repaint && changed) {
+            skin.apply(findViewById(R.id.appRoot));
+            for (View v : new View[]{viewDash, viewCarPlay, viewMaps, viewAudio, viewApps, viewSetup}) {
+                if (v != null && v.getParent() == null) skin.apply(v);
+            }
+            // Hidden Home tiles are detached from Home; repaint them too so they match when shown again.
+            if (homeTileViews != null) {
+                for (View tile : homeTileViews.values()) if (tile.getParent() == null) skin.apply(tile);
+            }
+            if (currentActiveRailBtn != null) updateRailAppearance(currentActiveRailBtn);
+            if (lastPhoneName != null) {
+                showPhoneState(lastPhoneName, lastPhoneDetail, lastPhoneStatus, lastPhoneStatusColor, lastPhoneConnected);
+            }
+        }
+        applyWallpaper();
+        applyStatusBar();
+        int labels = prefHelper.isRailLabels() ? View.VISIBLE : View.GONE;
+        // Rail labels keep the caption size at every text size: the 80 dp rail has no room for more.
+        float caption = getResources().getDimension(R.dimen.ad_text_caption);
+        for (TextView t : new TextView[]{tvDashLabel, tvCarPlayLabel, tvMapsLabel, tvAudioLabel, tvAppsLabel, tvSetupLabel}) {
+            t.setVisibility(labels);
+            t.setTag(R.id.skin_text_px, caption / look.textScale());
+            t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, caption);
+        }
+        applyHomeTiles();
+        if (viewSetup != null) refreshLookPage();
+    }
+
+    private void applyWallpaper() {
+        int wp = prefHelper.getLookWallpaper();
+        if (wp == Look.WALLPAPER_CUSTOM && wallpaperImage == null) loadWallpaperImage();
+        findViewById(R.id.appRoot).setBackground(skin.wallpaper(wp, wallpaperImage));
+        View preview = viewSetup != null ? viewSetup.findViewById(R.id.lookPreview) : null;
+        if (preview != null) preview.setBackground(skin.wallpaper(wp, wallpaperImage));
+    }
+
+    /** Reads the saved wallpaper image off the main thread; the canvas colour shows until then. */
+    private void loadWallpaperImage() {
+        if (wallpaperLoading) return;
+        wallpaperLoading = true;
+        final Context app = getApplicationContext();
+        new Thread(() -> {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+            final android.graphics.Bitmap bmp = WallpaperStore.load(app);
+            runOnUiThread(() -> {
+                wallpaperLoading = false;
+                if (bmp == null || isFinishing()) return;
+                wallpaperImage = bmp;
+                applyWallpaper();
+                if (viewSetup != null) refreshLookPage();
+            });
+        }, "wallpaper").start();
+    }
+
+    private void pickWallpaperImage() {
+        Intent pick = new Intent(Intent.ACTION_GET_CONTENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE);
+        try {
+            startActivityForResult(Intent.createChooser(pick, "Choose a wallpaper"), REQ_WALLPAPER);
+        } catch (Exception e) {
+            notifier.show(Notifier.Kind.ALERT, "No app here can choose an image");
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQ_WALLPAPER || resultCode != RESULT_OK || data == null || data.getData() == null) return;
+        final Uri uri = data.getData();
+        final Context app = getApplicationContext();
+        final android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+        final int w = Math.max(dm.widthPixels, dm.heightPixels), h = Math.min(dm.widthPixels, dm.heightPixels);
+        new Thread(() -> {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+            final android.graphics.Bitmap bmp = WallpaperStore.save(app, uri, w, h) ? WallpaperStore.load(app) : null;
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                if (bmp == null) {
+                    notifier.show(Notifier.Kind.ALERT, "Can't use that image");
+                    return;
+                }
+                wallpaperImage = bmp;
+                prefHelper.setLookWallpaper(Look.WALLPAPER_CUSTOM);
+                applyLook(true);
+            });
+        }, "wallpaper").start();
+    }
+
+    private void applyStatusBar() {
+        setShown(pillHeaderWeather, prefHelper.isStatusTemp());
+        setShown(findViewById(R.id.statusGps), prefHelper.isStatusGps());
+        setShown(pillHeaderBluetooth, prefHelper.isStatusPhone());
+        clockSeconds = prefHelper.isClockSeconds();
+        float px = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP,
+                Look.clockSp(prefHelper.getClockSize()), getResources().getDisplayMetrics());
+        tvClock.setTag(R.id.skin_text_px, px);
+        tvClock.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, px * skin.look().textScale());
+    }
+
+    private static void setShown(View v, boolean shown) {
+        if (v != null) v.setVisibility(shown ? View.VISIBLE : View.GONE);
+    }
+
+    /** Lays out the visible Home tiles in their saved order: two per row, or one per row for two or fewer. */
+    private void applyHomeTiles() {
+        if (viewDash == null) return;
+        HomeTiles saved = prefHelper.getHomeTiles();
+        if (saved.serialize().equals(appliedHomeTiles)) return;
+        appliedHomeTiles = saved.serialize();
+        LinearLayout top = viewDash.findViewById(R.id.rowHomeTop);
+        LinearLayout bottom = viewDash.findViewById(R.id.rowHomeBottom);
+        // Kept here because a hidden tile is detached and can no longer be found in the tree.
+        if (homeTileViews == null) {
+            homeTileViews = new java.util.HashMap<>();
+            homeTileViews.put(HomeTiles.DRIVE, viewDash.findViewById(R.id.tileDrive));
+            homeTileViews.put(HomeTiles.SPEED, viewDash.findViewById(R.id.tileSpeed));
+            homeTileViews.put(HomeTiles.MEDIA, viewDash.findViewById(R.id.tileNowPlaying));
+            homeTileViews.put(HomeTiles.PHONE, viewDash.findViewById(R.id.cardBluetooth));
+        }
+        java.util.Map<String, View> tiles = homeTileViews;
+        top.removeAllViews();
+        bottom.removeAllViews();
+        List<String> shown = saved.visible();
+        int perRow = shown.size() > 2 ? 2 : 1;
+        int gap = getResources().getDimensionPixelSize(R.dimen.ad_tile_gap);
+        for (int i = 0; i < shown.size(); i++) {
+            LinearLayout row = i < perRow ? top : bottom;
+            View tile = tiles.get(shown.get(i));
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) tile.getLayoutParams();
+            lp.setMarginStart(row.getChildCount() == 0 ? 0 : gap);
+            row.addView(tile, lp);
+        }
+        bottom.setVisibility(bottom.getChildCount() == 0 ? View.GONE : View.VISIBLE);
+    }
+
+    /** The Look page is built the first time it is opened, so Settings itself stays as light as before. */
+    private View inflateLookPage() {
+        android.view.ViewStub stub = settingsView("setPageLookStub");
+        if (stub == null) return null;
+        View page = stub.inflate();
+        setupLookPage();
+        return page;
+    }
+
+    private void setupLookPage() {
+        for (int i = 0; i < Look.STYLE_NAMES.length; i++) {
+            final int style = i;
+            settingsView("segLookStyle" + i).setOnClickListener(v -> {
+                prefHelper.applyLookStyle(style);
+                applyLook(true);
+            });
+        }
+        lookSegments("segLookRadius", "rowLookRadius", Look.RADIUS_NAMES.length, prefHelper::getLookRadius, prefHelper::setLookRadius);
+        lookSegments("segLookOpacity", "rowLookOpacity", Look.OPACITY_NAMES.length, prefHelper::getLookOpacity, prefHelper::setLookOpacity);
+        lookSegments("segLookText", "rowLookText", Look.TEXT_NAMES.length, prefHelper::getLookTextSize, prefHelper::setLookTextSize);
+        lookSegments("segLookClock", "rowLookClockSize", Look.CLOCK_NAMES.length, prefHelper::getClockSize, prefHelper::setClockSize);
+        ((TextView) settingsView("tvLookRadius")).setText("Cards and buttons");
+        ((TextView) settingsView("tvLookOpacity")).setText("See-through amount");
+        ((TextView) settingsView("tvLookText")).setText("All text");
+        ((TextView) settingsView("tvLookClockSize")).setText("Status bar clock");
+
+        lookSwitch("rowLookSeconds", prefHelper::isClockSeconds, prefHelper::setClockSeconds);
+        lookSwitch("rowLookStatusTemp", prefHelper::isStatusTemp, prefHelper::setStatusTemp);
+        lookSwitch("rowLookStatusGps", prefHelper::isStatusGps, prefHelper::setStatusGps);
+        lookSwitch("rowLookStatusPhone", prefHelper::isStatusPhone, prefHelper::setStatusPhone);
+        lookSwitch("rowLookRailLabels", prefHelper::isRailLabels, prefHelper::setRailLabels);
+
+        for (int i = 0; i < TILE_KEYS.length; i++) {
+            final String id = TILE_IDS[i];
+            onSettingsRow("rowLookTile" + TILE_KEYS[i], () -> {
+                HomeTiles tiles = prefHelper.getHomeTiles();
+                if (tiles.isShown(id) && tiles.visible().size() == 1) {
+                    notifier.show(Notifier.Kind.INFO, "Home needs at least one tile");
+                    return;
+                }
+                tiles.setShown(id, !tiles.isShown(id));
+                prefHelper.setHomeTiles(tiles);
+                applyLook(true);
+            });
+            settingsView("btnLookTileUp" + TILE_KEYS[i]).setOnClickListener(v -> {
+                HomeTiles tiles = prefHelper.getHomeTiles();
+                tiles.moveUp(id);
+                prefHelper.setHomeTiles(tiles);
+                applyLook(true);
+            });
+        }
+        onSettingsRow("rowLookReset", () -> {
+            prefHelper.resetLook();
+            applyLook(true);
+        });
+
+        // The preview's wallpaper is clipped to the art corner radius.
+        View preview = settingsView("lookPreview");
+        preview.setOutlineProvider(new android.view.ViewOutlineProvider() {
+            @Override
+            public void getOutline(View view, android.graphics.Outline outline) {
+                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(),
+                        getResources().getDimension(R.dimen.ad_radius_control) * skin.look().radiusScale());
+            }
+        });
+        preview.setClipToOutline(true);
+        applyWallpaper();
+        refreshLookPage();
+    }
+
+    /** Segments set a value at once; tapping the rest of the row steps to the next value. */
+    private void lookSegments(String prefix, String rowId, int count, IntPref getter, IntSetter setter) {
+        for (int i = 0; i < count; i++) {
+            final int value = i;
+            settingsView(prefix + i).setOnClickListener(v -> {
+                setter.set(value);
+                applyLook(true);
+            });
+        }
+        onSettingsRow(rowId, () -> {
+            setter.set((getter.get() + 1) % count);
+            applyLook(true);
+        });
+    }
+
+    private void lookSwitch(String rowId, BoolPref getter, BoolSetter setter) {
+        onSettingsRow(rowId, () -> {
+            setter.set(!getter.get());
+            applyLook(true);
+        });
+    }
+
+    /** Shows the saved Look settings on the Look page: segments, switches, swatches and tile order. */
+    private void refreshLookPage() {
+        if (viewSetup == null || settingsView("setPageLook") == null) return;
+        Look look = skin.look();
+        selectSegment("segLookStyle", Look.STYLE_NAMES.length, look.style);
+        selectSegment("segLookRadius", Look.RADIUS_NAMES.length, look.radius);
+        selectSegment("segLookOpacity", Look.OPACITY_NAMES.length, look.opacity);
+        selectSegment("segLookText", Look.TEXT_NAMES.length, look.textSize);
+        selectSegment("segLookClock", Look.CLOCK_NAMES.length, prefHelper.getClockSize());
+        ((TextView) settingsView("tvLookStyle")).setText(Look.STYLE_DETAILS[look.style]);
+        int wp = prefHelper.getLookWallpaper();
+        ((TextView) settingsView("tvLookWallpaper")).setText(wp == Look.WALLPAPER_CUSTOM
+                ? "Your image. Tap it again to choose another" : Look.WALLPAPER_NAMES[wp]);
+        int accentIndex = Look.accentIndex(look.accent);
+        ((TextView) settingsView("tvLookAccent")).setText(accentIndex == 0
+                ? "From the style" : Look.ACCENT_NAMES[accentIndex]);
+        ((androidx.appcompat.widget.SwitchCompat) settingsView("switchLookSeconds")).setChecked(prefHelper.isClockSeconds());
+        ((androidx.appcompat.widget.SwitchCompat) settingsView("switchLookStatusTemp")).setChecked(prefHelper.isStatusTemp());
+        ((androidx.appcompat.widget.SwitchCompat) settingsView("switchLookStatusGps")).setChecked(prefHelper.isStatusGps());
+        ((androidx.appcompat.widget.SwitchCompat) settingsView("switchLookStatusPhone")).setChecked(prefHelper.isStatusPhone());
+        ((androidx.appcompat.widget.SwitchCompat) settingsView("switchLookRailLabels")).setChecked(prefHelper.isRailLabels());
+        ((TextView) settingsView("tvLookSeconds")).setText(is24HourClock() ? "Shows 17:30:05" : "Shows 5:30:05 PM");
+
+        // Tile rows follow the Home order.
+        HomeTiles tiles = prefHelper.getHomeTiles();
+        View first = settingsView("rowLookTileDrive");
+        LinearLayout page = (LinearLayout) first.getParent();
+        int at = page.getChildCount();
+        View[] rows = new View[TILE_KEYS.length];
+        for (int i = 0; i < TILE_KEYS.length; i++) {
+            rows[i] = settingsView("rowLookTile" + TILE_KEYS[i]);
+            at = Math.min(at, page.indexOfChild(rows[i]));
+        }
+        for (View row : rows) page.removeView(row);
+        List<String> order = tiles.order();
+        List<String> visible = tiles.visible();
+        for (int n = 0; n < order.size(); n++) {
+            int i = java.util.Arrays.asList(TILE_IDS).indexOf(order.get(n));
+            page.addView(rows[i], at + n);
+            boolean shown = tiles.isShown(TILE_IDS[i]);
+            ((androidx.appcompat.widget.SwitchCompat) settingsView("switchLookTile" + TILE_KEYS[i])).setChecked(shown);
+            ((TextView) settingsView("tvLookTile" + TILE_KEYS[i])).setText(shown
+                    ? "Shown, place " + (visible.indexOf(TILE_IDS[i]) + 1) + " of " + visible.size() : "Hidden");
+        }
+
+        buildAccentSwatches(accentIndex);
+        buildWallpaperSwatches(wp);
+    }
+
+    private void selectSegment(String prefix, int count, int selected) {
+        for (int i = 0; i < count; i++) {
+            View seg = settingsView(prefix + i);
+            if (seg != null) seg.setSelected(i == selected);
+        }
+    }
+
+    private void buildAccentSwatches(int selected) {
+        LinearLayout strip = settingsView("lookAccents");
+        strip.removeAllViews();
+        int size = dp(52), gap = dp(7);
+        for (int i = 0; i < Look.ACCENT_IDS.length; i++) {
+            final int id = Look.ACCENT_IDS[i];
+            Look sample = new Look(skin.look().style, id, 1, 0, 1, skin.look().night);
+            int fill = sample.color(Look.Token.ACCENT);
+            ImageView sw = new ImageView(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(size, size);
+            if (i > 0) lp.setMarginStart(gap);
+            sw.setLayoutParams(lp);
+            sw.setBackground(swatch(fill, i == selected));
+            sw.setScaleType(ImageView.ScaleType.CENTER);
+            if (i == 0 || i == selected) {
+                sw.setImageResource(i == selected ? R.drawable.ic_sym_check : R.drawable.ic_sym_palette);
+                ImageViewCompat.setImageTintList(sw, ColorStateList.valueOf(sample.color(Look.Token.ON_ACCENT)));
+            }
+            sw.setContentDescription(i == 0 ? "Accent from the style" : Look.ACCENT_NAMES[i] + " accent");
+            sw.setOnClickListener(v -> {
+                prefHelper.setAccentColor(id);
+                applyLook(true);
+            });
+            strip.addView(sw);
+        }
+    }
+
+    private void buildWallpaperSwatches(int selected) {
+        LinearLayout strip = settingsView("lookWallpapers");
+        strip.removeAllViews();
+        int w = dp(96), h = dp(64), gap = dp(12);
+        float radius = dp(12);
+        boolean hasImage = wallpaperImage != null || WallpaperStore.exists(this);
+        for (int i = 0; i < Look.WALLPAPER_NAMES.length; i++) {
+            final int wp = i;
+            FrameLayout sw = new FrameLayout(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(w, h);
+            if (i > 0) lp.setMarginStart(gap);
+            sw.setLayoutParams(lp);
+            android.graphics.drawable.Drawable art = i == Look.WALLPAPER_CUSTOM && wallpaperImage == null
+                    ? new android.graphics.drawable.ColorDrawable(color(R.color.ad_surface_3))
+                    : skin.wallpaper(i, wallpaperImage);
+            sw.setBackground(art);
+            sw.setOutlineProvider(new android.view.ViewOutlineProvider() {
+                @Override
+                public void getOutline(View view, android.graphics.Outline outline) {
+                    outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius);
+                }
+            });
+            sw.setClipToOutline(true);
+            android.graphics.drawable.GradientDrawable ring = new android.graphics.drawable.GradientDrawable();
+            ring.setCornerRadius(radius);
+            ring.setStroke(dp(i == selected ? 4 : 1), color(i == selected ? R.color.ad_accent : R.color.ad_separator));
+            sw.setForeground(ring);
+            if (i == Look.WALLPAPER_CUSTOM && (wallpaperImage == null || i == selected)) {
+                ImageView icon = new ImageView(this);
+                icon.setImageResource(hasImage && wallpaperImage != null ? R.drawable.ic_sym_wallpaper : R.drawable.ic_sym_add);
+                ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(color(R.color.ad_label_1)));
+                sw.addView(icon, new FrameLayout.LayoutParams(dp(32), dp(32), Gravity.CENTER));
+            }
+            sw.setContentDescription(Look.WALLPAPER_NAMES[i] + " wallpaper");
+            sw.setOnClickListener(v -> {
+                if (wp == Look.WALLPAPER_CUSTOM && (wp == prefHelper.getLookWallpaper() || !WallpaperStore.exists(this))) {
+                    pickWallpaperImage();
+                    return;
+                }
+                prefHelper.setLookWallpaper(wp);
+                applyLook(true);
+            });
+            strip.addView(sw);
+        }
+    }
+
+    /** A round colour swatch; the selected one gets a ring in the label colour. */
+    private android.graphics.drawable.Drawable swatch(int fill, boolean selected) {
+        android.graphics.drawable.GradientDrawable dot = new android.graphics.drawable.GradientDrawable();
+        dot.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        dot.setColor(fill);
+        if (!selected) return new android.graphics.drawable.InsetDrawable(dot, dp(4));
+        android.graphics.drawable.GradientDrawable ring = new android.graphics.drawable.GradientDrawable();
+        ring.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        ring.setStroke(dp(3), color(R.color.ad_label_1));
+        return new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{
+                ring, new android.graphics.drawable.InsetDrawable(dot, dp(6))});
+    }
+
+    private int dp(float v) {
+        return Math.round(v * getResources().getDisplayMetrics().density);
+    }
+
+    /** The design-system accent in the current look. */
     private int accent() {
-        return ContextCompat.getColor(this, R.color.ad_accent_text);
+        return color(R.color.ad_accent_text);
     }
 
     private void initNavigation() {
@@ -1745,8 +2153,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateRailAppearance(View activeRailBtn) {
-        int normal = ContextCompat.getColor(this, R.color.ad_label_1);
-        int selected = ContextCompat.getColor(this, R.color.ad_on_accent);
+        int normal = color(R.color.ad_label_1);
+        int selected = color(R.color.ad_on_accent);
         View[] buttons = {railBtnDash, railBtnCarPlay, railBtnMaps, railBtnAudio, railBtnApps, railBtnSetup};
         ImageView[] icons = {ivDashIcon, ivCarPlayIcon, ivMapsIcon, ivAudioIcon, ivAppsIcon, ivSetupIcon};
         TextView[] labels = {tvDashLabel, tvCarPlayLabel, tvMapsLabel, tvAudioLabel, tvAppsLabel, tvSetupLabel};
@@ -1810,18 +2218,30 @@ public class MainActivity extends AppCompatActivity {
 
     private void setDot(View dot, int colorRes) {
         if (dot instanceof ImageView) {
-            ((ImageView) dot).setColorFilter(ContextCompat.getColor(this, colorRes), PorterDuff.Mode.SRC_IN);
+            // Kept as the view's tint resource so a Look change repaints the dot in its current state.
+            dot.setTag(R.id.skin_tint, colorRes);
+            ImageViewCompat.setImageTintList((ImageView) dot, ColorStateList.valueOf(color(colorRes)));
         }
+    }
+
+    /** A design-system colour in the current look (Settings > Look). */
+    private int color(int colorRes) {
+        return skin.color(colorRes);
     }
 
     private void initClock() {
         final SimpleDateFormat sdf24 = new SimpleDateFormat("H:mm", Locale.getDefault());
         final SimpleDateFormat sdf12 = new SimpleDateFormat("h:mm a", Locale.getDefault());
+        final SimpleDateFormat sdf24s = new SimpleDateFormat("H:mm:ss", Locale.getDefault());
+        final SimpleDateFormat sdf12s = new SimpleDateFormat("h:mm:ss a", Locale.getDefault());
         clockHandler.post(new Runnable() {
             @Override
             public void run() {
-                tvClock.setText((is24HourClock() ? sdf24 : sdf12).format(new Date()));
-                clockHandler.postDelayed(this, 1000);
+                boolean h24 = is24HourClock();
+                long now = System.currentTimeMillis();
+                tvClock.setText((clockSeconds ? (h24 ? sdf24s : sdf12s) : (h24 ? sdf24 : sdf12)).format(new Date(now)));
+                // Tick just after each new second so seconds never skip.
+                clockHandler.postDelayed(this, 1000 - now % 1000 + 5);
             }
         });
     }
@@ -1991,7 +2411,7 @@ public class MainActivity extends AppCompatActivity {
         lastPhoneStatusColor = statusColor;
         lastPhoneConnected = connected;
         int accent = accent();
-        int inactive = ContextCompat.getColor(this, R.color.ad_label_3);
+        int inactive = color(R.color.ad_label_3);
         if (tvHeaderBluetooth != null) tvHeaderBluetooth.setText(connected ? name : "No phone");
         setDot(ivHeaderBtIcon, connected ? R.color.ad_ok : R.color.ad_label_3);
         if (viewDash != null) setDot(viewDash.findViewById(R.id.ivBtStatusDot), connected ? R.color.ad_ok : R.color.ad_label_3);
@@ -2338,7 +2758,7 @@ public class MainActivity extends AppCompatActivity {
                 tvEmpty.setText(btNow != null && !btNow.isEnabled()
                         ? "Bluetooth is off. Turn it on in Phone settings, then try again."
                         : "No paired phones. Pair a phone to use it here.");
-                tvEmpty.setTextColor(ContextCompat.getColor(this, R.color.ad_label_2));
+                tvEmpty.setTextColor(color(R.color.ad_label_2));
                 tvEmpty.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, getResources().getDimension(R.dimen.ad_text_label));
                 tvEmpty.setPadding(16, 24, 16, 24);
                 tvEmpty.setGravity(android.view.Gravity.CENTER);
@@ -2361,7 +2781,7 @@ public class MainActivity extends AppCompatActivity {
             TextView btnConnect = card.findViewById(R.id.btnConnectPill);
             View ivConnected = card.findViewById(R.id.ivDialogConnected);
             ImageView ivIcon = card.findViewById(R.id.ivDialogDeviceIcon);
-            int label2 = ContextCompat.getColor(MainActivity.this, R.color.ad_label_2);
+            int label2 = color(R.color.ad_label_2);
 
             @SuppressLint("MissingPermission")
             String name = (device.getName() != null && !device.getName().isEmpty()) ? device.getName() : "Phone (" + device.getAddress() + ")";

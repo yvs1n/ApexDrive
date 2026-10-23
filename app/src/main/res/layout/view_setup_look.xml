@@ -1,0 +1,976 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings > Look. Inflated from a ViewStub in view_setup.xml the first time the page is opened. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/setPageLook"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <TextView
+        style="@style/TextAppearance.ApexDrive.Glance"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:text="Look" />
+
+    <!-- Live preview: a small Home on the chosen wallpaper. Every change also applies to the whole launcher at once. -->
+    <LinearLayout
+        android:id="@+id/lookPreview"
+        android:layout_width="match_parent"
+        android:layout_height="152dp"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal"
+        android:padding="16dp"
+>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="3"
+            android:orientation="vertical"
+            android:padding="@dimen/ad_tile_padding"
+            android:elevation="2dp"
+            android:background="@drawable/ad_bg_tile">
+
+            <TextView
+                style="@style/Widget.ApexDrive.TileHeader"
+                app:drawableStartCompat="@drawable/ic_hdr_speed"
+                android:text="Speed" />
+
+            <TextView
+                style="@style/TextAppearance.ApexDrive.Title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="48" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="4"
+            android:layout_marginStart="16dp"
+            android:orientation="vertical"
+            android:padding="@dimen/ad_tile_padding"
+            android:elevation="2dp"
+            android:background="@drawable/ad_bg_tile">
+
+            <TextView
+                style="@style/Widget.ApexDrive.TileHeader"
+                app:drawableStartCompat="@drawable/ic_hdr_phone_iphone"
+                android:text="Phone" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <TextView
+                style="@style/Widget.ApexDrive.Button.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:minHeight="48dp"
+                android:importantForAccessibility="no"
+                android:text="Open CarPlay" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowLookStyle"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:orientation="vertical"
+        android:gravity="start"
+        android:paddingTop="12dp"
+        android:paddingBottom="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                style="@style/Widget.ApexDrive.RowIcon"
+                android:src="@drawable/ic_sym_palette" />
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Style" />
+
+            <TextView
+                android:id="@+id/tvLookStyle"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginTop="0dp"
+                android:layout_marginStart="12dp"
+                android:gravity="end"
+                android:text="" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:padding="4dp"
+            android:background="@drawable/ad_bg_segment">
+
+            <TextView
+                android:id="@+id/segLookStyle0"
+                style="@style/Widget.ApexDrive.Segment"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:minWidth="0dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:text="Default" />
+
+            <TextView
+                android:id="@+id/segLookStyle1"
+                style="@style/Widget.ApexDrive.Segment"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:minWidth="0dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:text="OLED" />
+
+            <TextView
+                android:id="@+id/segLookStyle2"
+                style="@style/Widget.ApexDrive.Segment"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:minWidth="0dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:text="Glass" />
+
+            <TextView
+                android:id="@+id/segLookStyle3"
+                style="@style/Widget.ApexDrive.Segment"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:minWidth="0dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:text="Contrast" />
+
+            <TextView
+                android:id="@+id/segLookStyle4"
+                style="@style/Widget.ApexDrive.Segment"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:minWidth="0dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:text="Warm" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowLookAccent"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:orientation="vertical"
+        android:gravity="start"
+        android:paddingTop="12dp"
+        android:paddingBottom="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                style="@style/Widget.ApexDrive.RowIcon"
+                android:src="@drawable/ic_sym_palette" />
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Accent" />
+
+            <TextView
+                android:id="@+id/tvLookAccent"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginTop="0dp"
+                android:layout_marginStart="12dp"
+                android:gravity="end"
+                android:text="" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/lookAccents"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowLookWallpaper"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:orientation="vertical"
+        android:gravity="start"
+        android:paddingTop="12dp"
+        android:paddingBottom="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                style="@style/Widget.ApexDrive.RowIcon"
+                android:src="@drawable/ic_sym_wallpaper" />
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Wallpaper" />
+
+            <TextView
+                android:id="@+id/tvLookWallpaper"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginTop="0dp"
+                android:layout_marginStart="12dp"
+                android:gravity="end"
+                android:text="" />
+        </LinearLayout>
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:scrollbars="none"
+            android:overScrollMode="never">
+
+            <LinearLayout
+                android:id="@+id/lookWallpapers"
+                android:layout_width="wrap_content"
+                android:layout_height="72dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical" />
+        </HorizontalScrollView>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowLookRadius"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            style="@style/Widget.ApexDrive.RowIcon"
+            android:src="@drawable/ic_sym_rounded_corner" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Corners" />
+
+            <TextView
+                android:id="@+id/tvLookRadius"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="56dp"
+            android:layout_marginStart="16dp"
+            android:orientation="horizontal"
+            android:padding="4dp"
+            android:background="@drawable/ad_bg_segment">
+
+            <TextView
+                android:id="@+id/segLookRadius0"
+                style="@style/Widget.ApexDrive.Segment"
+                android:minWidth="0dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Square" />
+
+            <TextView
+                android:id="@+id/segLookRadius1"
+                style="@style/Widget.ApexDrive.Segment"
+                android:minWidth="0dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Default" />
+
+            <TextView
+                android:id="@+id/segLookRadius2"
+                style="@style/Widget.ApexDrive.Segment"
+                android:minWidth="0dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Round" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowLookOpacity"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            style="@style/Widget.ApexDrive.RowIcon"
+            android:src="@drawable/ic_sym_opacity" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Cards" />
+
+            <TextView
+                android:id="@+id/tvLookOpacity"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="56dp"
+            android:layout_marginStart="16dp"
+            android:orientation="horizontal"
+            android:padding="4dp"
+            android:background="@drawable/ad_bg_segment">
+
+            <TextView
+                android:id="@+id/segLookOpacity0"
+                style="@style/Widget.ApexDrive.Segment"
+                android:minWidth="0dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Solid" />
+
+            <TextView
+                android:id="@+id/segLookOpacity1"
+                style="@style/Widget.ApexDrive.Segment"
+                android:minWidth="0dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Frosted" />
+
+            <TextView
+                android:id="@+id/segLookOpacity2"
+                style="@style/Widget.ApexDrive.Segment"
+                android:minWidth="0dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Clear" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowLookText"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            style="@style/Widget.ApexDrive.RowIcon"
+            android:src="@drawable/ic_sym_format_size" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Text size" />
+
+            <TextView
+                android:id="@+id/tvLookText"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="56dp"
+            android:layout_marginStart="16dp"
+            android:orientation="horizontal"
+            android:padding="4dp"
+            android:background="@drawable/ad_bg_segment">
+
+            <TextView
+                android:id="@+id/segLookText0"
+                style="@style/Widget.ApexDrive.Segment"
+                android:minWidth="0dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Small" />
+
+            <TextView
+                android:id="@+id/segLookText1"
+                style="@style/Widget.ApexDrive.Segment"
+                android:minWidth="0dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Default" />
+
+            <TextView
+                android:id="@+id/segLookText2"
+                style="@style/Widget.ApexDrive.Segment"
+                android:minWidth="0dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Large" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <TextView
+        style="@style/TextAppearance.ApexDrive.Label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="24dp"
+        android:textColor="@color/ad_label_2"
+        android:text="Status bar" />
+
+    <LinearLayout
+        android:id="@+id/rowLookClockSize"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            style="@style/Widget.ApexDrive.RowIcon"
+            android:src="@drawable/ic_sym_schedule" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Clock size" />
+
+            <TextView
+                android:id="@+id/tvLookClockSize"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="56dp"
+            android:layout_marginStart="16dp"
+            android:orientation="horizontal"
+            android:padding="4dp"
+            android:background="@drawable/ad_bg_segment">
+
+            <TextView
+                android:id="@+id/segLookClock0"
+                style="@style/Widget.ApexDrive.Segment"
+                android:minWidth="0dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Small" />
+
+            <TextView
+                android:id="@+id/segLookClock1"
+                style="@style/Widget.ApexDrive.Segment"
+                android:minWidth="0dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Default" />
+
+            <TextView
+                android:id="@+id/segLookClock2"
+                style="@style/Widget.ApexDrive.Segment"
+                android:minWidth="0dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Large" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowLookSeconds"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            style="@style/Widget.ApexDrive.RowIcon"
+            android:src="@drawable/ic_sym_schedule" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Clock seconds" />
+
+            <TextView
+                android:id="@+id/tvLookSeconds"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Shows 17:30:05" />
+        </LinearLayout>
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchLookSeconds"
+            style="@style/Widget.ApexDrive.Switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:clickable="false"
+            android:focusable="false" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowLookStatusTemp"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            style="@style/Widget.ApexDrive.RowIcon"
+            android:src="@drawable/ic_sym_thermostat" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Temperature" />
+
+            <TextView
+                android:id="@+id/tvLookStatusTemp"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Outside temperature" />
+        </LinearLayout>
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchLookStatusTemp"
+            style="@style/Widget.ApexDrive.Switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:clickable="false"
+            android:focusable="false" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowLookStatusGps"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            style="@style/Widget.ApexDrive.RowIcon"
+            android:src="@drawable/ic_sym_my_location" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="GPS" />
+
+            <TextView
+                android:id="@+id/tvLookStatusGps"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="GPS fix" />
+        </LinearLayout>
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchLookStatusGps"
+            style="@style/Widget.ApexDrive.Switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:clickable="false"
+            android:focusable="false" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowLookStatusPhone"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            style="@style/Widget.ApexDrive.RowIcon"
+            android:src="@drawable/ic_sym_phone_iphone" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Phone" />
+
+            <TextView
+                android:id="@+id/tvLookStatusPhone"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Connected phone" />
+        </LinearLayout>
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchLookStatusPhone"
+            style="@style/Widget.ApexDrive.Switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:clickable="false"
+            android:focusable="false" />
+    </LinearLayout>
+
+    <TextView
+        style="@style/TextAppearance.ApexDrive.Label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="24dp"
+        android:textColor="@color/ad_label_2"
+        android:text="Side rail and Home" />
+
+    <LinearLayout
+        android:id="@+id/rowLookRailLabels"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            style="@style/Widget.ApexDrive.RowIcon"
+            android:src="@drawable/ic_sym_view_sidebar" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Rail labels" />
+
+            <TextView
+                android:id="@+id/tvLookRailLabels"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Names under the rail icons" />
+        </LinearLayout>
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchLookRailLabels"
+            style="@style/Widget.ApexDrive.Switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:clickable="false"
+            android:focusable="false" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowLookTileDrive"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            style="@style/Widget.ApexDrive.RowIcon"
+            android:src="@drawable/ic_sym_navigation" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Drive" />
+
+            <TextView
+                android:id="@+id/tvLookTileDrive"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="" />
+        </LinearLayout>
+        <ImageButton
+            android:id="@+id/btnLookTileUpDrive"
+            style="@style/Widget.ApexDrive.IconButton"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="12dp"
+            android:padding="14dp"
+            android:src="@drawable/ic_sym_arrow_upward"
+            android:contentDescription="Move Drive up" />
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchLookTileDrive"
+            style="@style/Widget.ApexDrive.Switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:clickable="false"
+            android:focusable="false" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowLookTileSpeed"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            style="@style/Widget.ApexDrive.RowIcon"
+            android:src="@drawable/ic_sym_speed" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Speed" />
+
+            <TextView
+                android:id="@+id/tvLookTileSpeed"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="" />
+        </LinearLayout>
+        <ImageButton
+            android:id="@+id/btnLookTileUpSpeed"
+            style="@style/Widget.ApexDrive.IconButton"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="12dp"
+            android:padding="14dp"
+            android:src="@drawable/ic_sym_arrow_upward"
+            android:contentDescription="Move Speed up" />
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchLookTileSpeed"
+            style="@style/Widget.ApexDrive.Switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:clickable="false"
+            android:focusable="false" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowLookTileMedia"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            style="@style/Widget.ApexDrive.RowIcon"
+            android:src="@drawable/ic_sym_music_note" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Now playing" />
+
+            <TextView
+                android:id="@+id/tvLookTileMedia"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="" />
+        </LinearLayout>
+        <ImageButton
+            android:id="@+id/btnLookTileUpMedia"
+            style="@style/Widget.ApexDrive.IconButton"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="12dp"
+            android:padding="14dp"
+            android:src="@drawable/ic_sym_arrow_upward"
+            android:contentDescription="Move Now playing up" />
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchLookTileMedia"
+            style="@style/Widget.ApexDrive.Switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:clickable="false"
+            android:focusable="false" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowLookTilePhone"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            style="@style/Widget.ApexDrive.RowIcon"
+            android:src="@drawable/ic_sym_phone_iphone" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Phone" />
+
+            <TextView
+                android:id="@+id/tvLookTilePhone"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="" />
+        </LinearLayout>
+        <ImageButton
+            android:id="@+id/btnLookTileUpPhone"
+            style="@style/Widget.ApexDrive.IconButton"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="12dp"
+            android:padding="14dp"
+            android:src="@drawable/ic_sym_arrow_upward"
+            android:contentDescription="Move Phone up" />
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchLookTilePhone"
+            style="@style/Widget.ApexDrive.Switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:clickable="false"
+            android:focusable="false" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/rowLookReset"
+        style="@style/Widget.ApexDrive.Row"
+        android:layout_marginTop="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            style="@style/Widget.ApexDrive.RowIcon"
+            android:src="@drawable/ic_sym_restart_alt" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.ApexDrive.RowTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Reset look" />
+
+            <TextView
+                android:id="@+id/tvLookReset"
+                style="@style/Widget.ApexDrive.RowDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Back to the standard look" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

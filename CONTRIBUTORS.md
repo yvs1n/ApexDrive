@@ -15,7 +15,8 @@ ApexDrive is built by the people below. If you contribute, add yourself (see
 * **Ousama**: production-readiness, UI/UX and feature-roadmap audits (`audits/`); the
   design system (tokens, Atkinson Hyperlegible Next type scale, Day and Night themes);
   the redesign of every screen; fixes for Bluetooth, media session, GPS, weather,
-  thermometer and CarPlay state; start-up speed work; the Gradle wrapper, stable
+  thermometer and CarPlay state; the Look settings (styles, accents, wallpapers and
+  Home tile order); start-up speed work; the Gradle wrapper, stable
   signing and the CI pipeline.
 
 ## Third-party work

@@ -6,7 +6,9 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <!-- Tile order and visibility come from Settings > Look (MainActivity.applyHomeTiles). -->
     <LinearLayout
+        android:id="@+id/rowHomeTop"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -184,6 +186,7 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/rowHomeBottom"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
