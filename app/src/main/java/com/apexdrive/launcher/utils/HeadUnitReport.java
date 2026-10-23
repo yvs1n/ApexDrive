@@ -39,7 +39,7 @@ public final class HeadUnitReport {
 
     /** Properties and package names worth reading; the rest is AOSP noise. */
     private static final Pattern INTERESTING = Pattern.compile(
-            "(?i).*(can|temp|bt|blue|car|mcu|fyt|syu|hct|goc|zlink|tlink|carplay|link|radio|vendor|"
+            "(?i).*(can|temp|bt|blue|car|mcu|fyt|syu|hct|goc|zlink|tlink|carplay|link|radio|vendor|tw|zj|rw\\.|"
                     + "ro\\.product|ro\\.build\\.(display|version\\.incremental)|ro\\.board|ro\\.hardware|"
                     + "persist\\.sys|sys\\.).*");
     private static final Pattern SECRET = Pattern.compile(
@@ -79,6 +79,9 @@ public final class HeadUnitReport {
 
         section(sb, "Sensors");
         appendSensors(sb, context);
+
+        section(sb, "Vendor classes");
+        appendVendorClasses(sb);
 
         section(sb, "Vendor apps");
         appendVendorApps(sb, context);
@@ -179,6 +182,60 @@ public final class HeadUnitReport {
                 sb.append(s.getType()).append(' ').append(s.getName()).append(" (").append(s.getVendor()).append(")\n");
             }
         } catch (Exception ignored) {}
+    }
+
+    /**
+     * Vendor framework classes that carry car data. TW (Topway) units pass CAN-bus values such
+     * as the outside temperature through TWUtil; its constants and methods show how.
+     */
+    private static final String[] VENDOR_CLASSES = {
+            "android.tw.john.TWUtil", "android.tw.john.TWUtilEx", "android.tw.TWUtil",
+            "com.tw.john.TWUtil", "android.os.TWUtil", "android.microntek.CarManager",
+            "android.os.SystemProperties"
+    };
+
+    private static void appendVendorClasses(StringBuilder sb) {
+        for (String name : VENDOR_CLASSES) {
+            Class<?> c;
+            try {
+                c = Class.forName(name);
+            } catch (Throwable t) {
+                continue;
+            }
+            sb.append(name).append('\n');
+            if (name.equals("android.os.SystemProperties")) continue; // only shows it is reachable
+            try {
+                for (java.lang.reflect.Field f : c.getDeclaredFields()) {
+                    int m = f.getModifiers();
+                    sb.append("  field ").append(f.getType().getSimpleName()).append(' ').append(f.getName());
+                    if (java.lang.reflect.Modifier.isStatic(m) && java.lang.reflect.Modifier.isFinal(m)) {
+                        try {
+                            f.setAccessible(true);
+                            sb.append(" = ").append(f.get(null));
+                        } catch (Throwable ignored) {}
+                    }
+                    sb.append('\n');
+                }
+                for (java.lang.reflect.Constructor<?> k : c.getDeclaredConstructors()) {
+                    sb.append("  new(").append(paramNames(k.getParameterTypes())).append(")\n");
+                }
+                for (java.lang.reflect.Method m : c.getDeclaredMethods()) {
+                    sb.append("  ").append(m.getReturnType().getSimpleName()).append(' ').append(m.getName())
+                            .append('(').append(paramNames(m.getParameterTypes())).append(")\n");
+                }
+            } catch (Throwable t) {
+                sb.append("  not readable: ").append(t.getClass().getSimpleName()).append('\n');
+            }
+        }
+    }
+
+    private static String paramNames(Class<?>[] types) {
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < types.length; i++) {
+            if (i > 0) b.append(", ");
+            b.append(types[i].getSimpleName());
+        }
+        return b.toString();
     }
 
     /** Apps that are not part of plain Android, with the components that hint at what they do. */
