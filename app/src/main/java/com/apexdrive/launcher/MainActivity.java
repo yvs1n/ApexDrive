@@ -50,6 +50,7 @@ import androidx.core.content.ContextCompat;
 import com.apexdrive.launcher.adapters.AppsGridAdapter;
 import com.apexdrive.launcher.models.AppInfo;
 import com.apexdrive.launcher.services.BluetoothWatcher;
+import com.apexdrive.launcher.services.CarPlayLink;
 import com.apexdrive.launcher.services.CarThermometerWatcher;
 import com.apexdrive.launcher.services.GpsTelemetryManager;
 import com.apexdrive.launcher.services.MediaStateHolder;
@@ -1909,6 +1910,22 @@ public class MainActivity extends AppCompatActivity {
         return dev != null && saved.equalsIgnoreCase(dev.getAddress());
     }
 
+    /** True while the CarPlay app has a phone linked (see {@link CarPlayLink}). */
+    private boolean carPlayLinked;
+    private static final long CARPLAY_LINK_POLL_MS = 3000;
+    private final Runnable carPlayLinkPoll = new Runnable() {
+        @Override
+        public void run() {
+            boolean linked = CarPlayLink.isActive();
+            if (linked != carPlayLinked) {
+                carPlayLinked = linked;
+                // Android's Bluetooth evidence wins when it has a phone; otherwise show the link.
+                if (!isCarPlayConnected) updateDisconnectedPhoneUi();
+            }
+            if (activityResumed) clockHandler.postDelayed(this, CARPLAY_LINK_POLL_MS);
+        }
+    };
+
     private String lastPhoneName, lastPhoneDetail, lastPhoneStatus;
     private int lastPhoneStatusColor;
     private boolean lastPhoneConnected;
@@ -1921,6 +1938,12 @@ public class MainActivity extends AppCompatActivity {
     private void updateDisconnectedPhoneUi() {
         String savedAddr = prefHelper.getSelectedDriverDevice();
         String savedName = getDeviceNameFromAddress(savedAddr);
+
+        if (carPlayLinked) {
+            String kind = CarPlayLink.kind();
+            updateConnectedPhoneUi(savedName != null ? savedName : "iPhone", kind.isEmpty() ? "CarPlay" : kind);
+            return;
+        }
 
         if (isCarPlayConnected && savedName != null) {
             updateConnectedPhoneUi(savedName, "Projection active");
@@ -2749,12 +2772,15 @@ public class MainActivity extends AppCompatActivity {
         makeFullScreen();
         if (gpsManager != null) gpsManager.start();
         if (btWatcher != null) btWatcher.forceRefresh();
+        clockHandler.removeCallbacks(carPlayLinkPoll);
+        clockHandler.post(carPlayLinkPoll);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         activityResumed = false;
+        clockHandler.removeCallbacks(carPlayLinkPoll);
     }
 
     @Override
