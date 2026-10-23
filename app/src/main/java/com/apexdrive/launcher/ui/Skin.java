@@ -297,7 +297,7 @@ public final class Skin implements LayoutInflater.Factory2 {
         if (res == R.drawable.ad_bg_glass_sheet) return glass(radius(r, R.dimen.ad_radius_sheet));
         if (res == R.drawable.ad_bg_notification) return glass(dp(40));
         if (res == R.drawable.ad_bg_list_item) {
-            return states(PRESSED, shape(control, pressed), SELECTED, shape(control, color(Token.SEGMENT_SELECTED)),
+            return states(PRESSED, shape(control, pressed), SELECTED, shape(control, s3),
                     ANY, shape(control, clear));
         }
         if (res == R.drawable.ad_bg_rail_item) {
