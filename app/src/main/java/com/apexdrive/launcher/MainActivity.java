@@ -1216,9 +1216,16 @@ public class MainActivity extends AppCompatActivity {
         final String temp = thermometerWatcher != null ? thermometerWatcher.getDiagnostics() : "Thermometer not running\n";
         final Context app = getApplicationContext();
         new Thread(() -> {
-            final String report = listenToCar
-                    ? "\n== Car data (TWUtil) ==\n" + TwCarData.capture(20000) + HeadUnitReport.build(app, bt, temp)
-                    : HeadUnitReport.build(app, bt, temp);
+            String text = HeadUnitReport.build(app, bt, temp);
+            if (listenToCar) {
+                // The vendor apps' code shows the Bluetooth connect and car-data commands.
+                StringBuilder export = new StringBuilder();
+                java.io.File zip = HeadUnitReport.exportVendorApps(app, export);
+                text = "\n== Car data (TWUtil) ==\n" + TwCarData.capture(20000)
+                        + "\n== Vendor apps exported ==\n"
+                        + (zip != null ? zip.getAbsolutePath() + "\n" : "nothing exported\n") + export + text;
+            }
+            final String report = text;
             final java.io.File file = HeadUnitReport.save(app, report);
             runOnUiThread(() -> {
                 if (isFinishing()) return;

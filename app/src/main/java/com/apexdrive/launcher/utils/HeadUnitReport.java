@@ -101,6 +101,65 @@ public final class HeadUnitReport {
         }
     }
 
+    /**
+     * Vendor apps whose code shows how the head unit connects phones and passes car data
+     * (TW units: Bluetooth, car info, core services and the status bar that shows the
+     * outside temperature). Only these packages are copied, never user apps.
+     */
+    private static final String[] EXPORT_PACKAGES = {
+            "com.tw.bt", "com.tw.carinfoservice", "com.tw.car", "com.tw.service", "com.tw.core",
+            "com.tw.coreservice", "com.android.systemui", "com.dofun.variety"
+    };
+    public static final String EXPORT_ZIP = "vendor-apps.zip";
+
+    /**
+     * Copies the APK files of {@link #EXPORT_PACKAGES} that are installed into one zip in the
+     * app's folder, so they can be taken off the head unit with its file manager.
+     * Blocks; call from a worker thread. Returns the zip, or null when nothing was copied.
+     */
+    public static File exportVendorApps(Context context, StringBuilder log) {
+        File dir = context.getExternalFilesDir(null);
+        if (dir == null) dir = context.getFilesDir();
+        File zip = new File(dir, EXPORT_ZIP);
+        PackageManager pm = context.getPackageManager();
+        int copied = 0;
+        byte[] buf = new byte[64 * 1024];
+        try (java.util.zip.ZipOutputStream out = new java.util.zip.ZipOutputStream(new FileOutputStream(zip))) {
+            for (String pkg : EXPORT_PACKAGES) {
+                ApplicationInfo ai;
+                try {
+                    ai = pm.getApplicationInfo(pkg, 0);
+                } catch (PackageManager.NameNotFoundException e) {
+                    continue;
+                }
+                List<String> paths = new ArrayList<>();
+                paths.add(ai.sourceDir);
+                if (ai.splitSourceDirs != null) Collections.addAll(paths, ai.splitSourceDirs);
+                for (int i = 0; i < paths.size(); i++) {
+                    File apk = new File(paths.get(i));
+                    try (java.io.InputStream in = new java.io.FileInputStream(apk)) {
+                        out.putNextEntry(new java.util.zip.ZipEntry(pkg + (i == 0 ? "" : "-split" + i) + ".apk"));
+                        int n;
+                        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                        out.closeEntry();
+                        copied++;
+                        log.append(pkg).append(' ').append(apk.length() / 1024).append(" KB\n");
+                    } catch (Exception e) {
+                        log.append(pkg).append(" not readable: ").append(e.getClass().getSimpleName()).append('\n');
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.append("zip failed: ").append(e.getClass().getSimpleName()).append('\n');
+            return null;
+        }
+        if (copied == 0) {
+            zip.delete();
+            return null;
+        }
+        return zip;
+    }
+
     private static void section(StringBuilder sb, String title) {
         sb.append("\n== ").append(title).append(" ==\n");
     }
