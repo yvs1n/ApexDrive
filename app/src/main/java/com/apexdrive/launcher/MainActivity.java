@@ -48,6 +48,7 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
 import androidx.core.widget.ImageViewCompat;
 import com.apexdrive.launcher.ui.Skin;
+import com.apexdrive.launcher.utils.AboutInfo;
 import com.apexdrive.launcher.utils.HomeTiles;
 import com.apexdrive.launcher.utils.Look;
 import com.apexdrive.launcher.utils.WallpaperStore;
@@ -1130,12 +1131,7 @@ public class MainActivity extends AppCompatActivity {
         onSettingsRow("rowSetBluetooth", this::openBluetoothManager);
         onSettingsRow("rowSetRestart", this::recreate);
         onSettingsRow("rowSetReport", this::showHeadUnitReport);
-
-        // About
-        TextView version = settingsView("tvSetVersion");
-        try {
-            version.setText(getPackageManager().getPackageInfo(getPackageName(), 0).versionName);
-        } catch (Exception ignored) {}
+        // About is filled by refreshAbout() each time it is opened.
     }
 
     @SuppressWarnings("unchecked")
@@ -1165,6 +1161,58 @@ public class MainActivity extends AppCompatActivity {
             }
             if (page != null) page.setVisibility(on ? View.VISIBLE : View.GONE);
         }
+        if ("About".equals(key)) refreshAbout();
+    }
+
+    private String lastLocationText = "";
+    private boolean aboutLoading;
+
+    /** Reads the About facts on a background thread and lists them under their headings. */
+    private void refreshAbout() {
+        if (aboutLoading || settingsView("aboutList") == null) return;
+        aboutLoading = true;
+        final AboutInfo.Live live = new AboutInfo.Live();
+        live.phone = tvHeaderBluetooth != null ? String.valueOf(tvHeaderBluetooth.getText()) : "";
+        if (CarPlayLink.isActive()) live.phone = live.phone + " · " + AboutInfo.or(CarPlayLink.kind(), "CarPlay") + " linked";
+        live.temperature = tvWeatherText != null ? String.valueOf(tvWeatherText.getText()) : "";
+        live.location = lastLocationText;
+        if (gpsManager != null) {
+            switch (gpsManager.getGpsState()) {
+                case FIX: live.gps = "has a fix"; break;
+                case SEARCHING: live.gps = "searching for satellites"; break;
+                case PROVIDER_OFF: live.gps = "location is off"; break;
+                default: live.gps = "no location permission"; break;
+            }
+        }
+        live.carPlayPackage = prefHelper.getCarPlayPackage();
+        live.mapPackage = prefHelper.getMapPackage();
+        live.radioPackage = prefHelper.getRadioPackage();
+        final Context app = getApplicationContext();
+        new Thread(() -> {
+            final List<AboutInfo.Section> sections = AboutInfo.collect(app, live);
+            runOnUiThread(() -> {
+                aboutLoading = false;
+                LinearLayout list = settingsView("aboutList");
+                if (isFinishing() || list == null) return;
+                list.removeAllViews();
+                LayoutInflater inflater = getLayoutInflater();
+                for (AboutInfo.Section section : sections) {
+                    TextView heading = (TextView) inflater.inflate(R.layout.item_about_heading, list, false);
+                    heading.setText(section.title);
+                    list.addView(heading);
+                    for (AboutInfo.Row row : section.rows) {
+                        View v = inflater.inflate(R.layout.item_about_row, list, false);
+                        ((ImageView) v.findViewById(R.id.aboutIcon)).setImageResource(row.icon);
+                        ((TextView) v.findViewById(R.id.aboutTitle)).setText(row.title);
+                        TextView detail = v.findViewById(R.id.aboutDetail);
+                        detail.setText(row.detail);
+                        if (row.detailId != 0) detail.setId(row.detailId);
+                        list.addView(v);
+                    }
+                }
+                if (skin != null) skin.apply(list);
+            });
+        }, "AboutInfo").start();
     }
 
     private void updateUnitSegment() {
@@ -2275,12 +2323,11 @@ public class MainActivity extends AppCompatActivity {
             public void onCoordinatesUpdated(double latitude, double longitude, double altitudeMeters, float accuracyMeters) {
                 runOnUiThread(() -> {
                     setDot(findViewById(R.id.ivGpsDot), R.color.ad_ok);
+                    lastLocationText = String.format(Locale.US, "%.4f° %s, %.4f° %s · %.0f m · ±%.0f m",
+                            Math.abs(latitude), latitude >= 0 ? "N" : "S",
+                            Math.abs(longitude), longitude >= 0 ? "E" : "W", altitudeMeters, accuracyMeters);
                     TextView about = viewSetup != null ? viewSetup.findViewById(R.id.tvSetLocation) : null;
-                    if (about != null) {
-                        about.setText(String.format(Locale.US, "%.4f° %s, %.4f° %s · %.0f m · ±%.0f m",
-                                Math.abs(latitude), latitude >= 0 ? "N" : "S",
-                                Math.abs(longitude), longitude >= 0 ? "E" : "W", altitudeMeters, accuracyMeters));
-                    }
+                    if (about != null) about.setText(lastLocationText);
                     if (tvNavAccuracy != null) {
                         tvNavAccuracy.setText(accuracyMeters <= 10 ? "GPS good" : accuracyMeters <= 30 ? "GPS weak" : "GPS poor");
                         if (viewMaps != null) setDot(viewMaps.findViewById(R.id.ivNavGpsDot),
