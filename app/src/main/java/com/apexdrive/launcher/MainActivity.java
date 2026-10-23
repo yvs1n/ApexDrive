@@ -52,6 +52,7 @@ import com.apexdrive.launcher.models.AppInfo;
 import com.apexdrive.launcher.services.BluetoothWatcher;
 import com.apexdrive.launcher.services.CarPlayLink;
 import com.apexdrive.launcher.services.CarThermometerWatcher;
+import com.apexdrive.launcher.services.TwCarData;
 import com.apexdrive.launcher.services.GpsTelemetryManager;
 import com.apexdrive.launcher.services.MediaStateHolder;
 import com.apexdrive.launcher.services.MediaSyncService;
@@ -1202,12 +1203,20 @@ public class MainActivity extends AppCompatActivity {
      * the phone connection and outside temperature in vendor places; this shows where.
      */
     private void showHeadUnitReport() {
-        notifier.show(Notifier.Kind.INFO, "Making the report", "This takes a few seconds");
+        showHeadUnitReport(false);
+    }
+
+    /** @param listenToCar also record the TW car-data messages for 20 s (TW head units only) */
+    private void showHeadUnitReport(final boolean listenToCar) {
+        notifier.show(Notifier.Kind.INFO, "Making the report",
+                listenToCar ? "Listening to the car for 20 seconds" : "This takes a few seconds");
         final String bt = btWatcher != null ? btWatcher.getDiagnostics() : "Bluetooth watcher not running\n";
         final String temp = thermometerWatcher != null ? thermometerWatcher.getDiagnostics() : "Thermometer not running\n";
         final Context app = getApplicationContext();
         new Thread(() -> {
-            final String report = HeadUnitReport.build(app, bt, temp);
+            final String report = listenToCar
+                    ? "\n== Car data (TWUtil) ==\n" + TwCarData.capture(20000) + HeadUnitReport.build(app, bt, temp)
+                    : HeadUnitReport.build(app, bt, temp);
             final java.io.File file = HeadUnitReport.save(app, report);
             runOnUiThread(() -> {
                 if (isFinishing()) return;
@@ -1236,6 +1245,9 @@ public class MainActivity extends AppCompatActivity {
                             notifier.show(Notifier.Kind.ALERT, "Can't share the report", "Copy it from " + (file != null ? file.getAbsolutePath() : "the screen"));
                         }
                     });
+                }
+                if (!listenToCar && TwCarData.isAvailable()) {
+                    b.setNeutralButton("Listen to car", (d, w) -> showHeadUnitReport(true));
                 }
                 b.show();
             });
