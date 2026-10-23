@@ -2,7 +2,7 @@ name: Build ApexDrive APK
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "integration/preview" ]
   pull_request:
   workflow_dispatch:
 
@@ -13,6 +13,9 @@ jobs:
   build:
     name: Build Android APK
     runs-on: ubuntu-latest
+    permissions:
+      # Write is needed only to publish the APK to a release (see the last step).
+      contents: write
 
     env:
       # Newer than every earlier run, so head-unit installers accept the update.
@@ -104,3 +107,19 @@ jobs:
           name: build-failure-log
           path: build.log
           retention-days: 14
+
+      # A plain .apk to download, without unzipping an artifact. Each push replaces the
+      # APK in a rolling pre-release: "preview" for integration/preview, "latest" for main.
+      # Its link stays the same: releases/download/<tag>/ApexDrive.apk
+      - name: Publish APK to the rolling release
+        if: success() && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then TAG=latest; else TAG=preview; fi
+          cp app/build/outputs/apk/release/app-release.apk ApexDrive.apk
+          NOTES="Built from ${GITHUB_REF_NAME} at ${GITHUB_SHA::7} (run ${GITHUB_RUN_NUMBER}). Install ApexDrive.apk on the head unit."
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" ApexDrive.apk --target "$GITHUB_SHA" --prerelease \
+            --title "ApexDrive ${TAG} (build ${GITHUB_RUN_NUMBER})" --notes "$NOTES"
